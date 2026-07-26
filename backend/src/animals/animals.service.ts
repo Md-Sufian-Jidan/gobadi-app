@@ -16,7 +16,9 @@ export class AnimalsService {
   }
 
   async getAnimalById(id: string): Promise<Animal> {
-    const animal = await this.animalRepository.findOneBy({ id: parseInt(id, 10) });
+    const animal = await this.animalRepository.findOneBy({
+      id: parseInt(id, 10),
+    });
     if (!animal) {
       throw new BadRequestException('Animal not found');
     }

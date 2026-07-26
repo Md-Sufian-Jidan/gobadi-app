@@ -33,10 +33,16 @@ export class MarketplaceService {
       console.warn('Failed to read catalog cache from Redis', err);
     }
 
-    const catalog = await this.marketItemRepository.find({ order: { id: 'ASC' } });
+    const catalog = await this.marketItemRepository.find({
+      order: { id: 'ASC' },
+    });
 
     try {
-      await this.redisService.set('cache:marketplace:catalog', JSON.stringify(catalog), 300);
+      await this.redisService.set(
+        'cache:marketplace:catalog',
+        JSON.stringify(catalog),
+        300,
+      );
     } catch (err) {
       console.warn('Failed to write catalog cache to Redis', err);
     }
@@ -45,7 +51,9 @@ export class MarketplaceService {
   }
 
   async getCatalogItemById(id: string): Promise<MarketItem> {
-    const item = await this.marketItemRepository.findOneBy({ id: parseInt(id, 10) });
+    const item = await this.marketItemRepository.findOneBy({
+      id: parseInt(id, 10),
+    });
     if (!item) {
       throw new BadRequestException('Item not found');
     }

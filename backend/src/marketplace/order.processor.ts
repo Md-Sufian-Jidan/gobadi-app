@@ -13,13 +13,17 @@ export class OrderProcessor extends WorkerHost {
       const { orderId, totalPrice, deliveryAddress, items } = job.data;
       this.logger.log(`[Order Async Processor] Order ID: ${orderId}`);
       this.logger.log(`[Order Async Processor] Total: BDT ${totalPrice}`);
-      this.logger.log(`[Order Async Processor] Destination: ${deliveryAddress}`);
+      this.logger.log(
+        `[Order Async Processor] Destination: ${deliveryAddress}`,
+      );
       this.logger.log(`[Order Async Processor] Items count: ${items?.length}`);
 
       // Simulate asynchronous background invoice generation or SMS alert dispatch
       await new Promise((resolve) => setTimeout(resolve, 2000));
 
-      this.logger.log(`[Order Async Processor] Order ${orderId} successfully processed in background!`);
+      this.logger.log(
+        `[Order Async Processor] Order ${orderId} successfully processed in background!`,
+      );
       return { success: true, orderId };
     }
   }
