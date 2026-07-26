@@ -8,14 +8,18 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { RedisModule } from './redis/redis.module';
 import { AuthModule } from './auth/auth.module';
+import { UsersModule } from './users/users.module';
 import { AnimalsModule } from './animals/animals.module';
 import { DoctorsModule } from './doctors/doctors.module';
+import { AppointmentsModule } from './appointments/appointments.module';
 import { MarketplaceModule } from './marketplace/marketplace.module';
 import { ChatModule } from './chat/chat.module';
 import { SeedModule } from './seed/seed.module';
 import { CloudinaryModule } from './cloudinary/cloudinary.module';
 import { HealthController } from './health/health.controller';
 import { MailModule } from './mail/mail.module';
+import { MedicalRecordsModule } from './medical-records/medical-records.module';
+import { RemindersModule } from './reminders/reminders.module';
 
 @Module({
   imports: [
@@ -35,19 +39,25 @@ import { MailModule } from './mail/mail.module';
         port: parseInt(process.env.REDIS_PORT || '6379', 10),
       },
     }),
-    ThrottlerModule.forRoot([{
-      ttl: 60000,
-      limit: 100,
-    }]),
+    ThrottlerModule.forRoot([
+      {
+        ttl: 60000,
+        limit: 100,
+      },
+    ]),
     RedisModule,
     AuthModule,
+    UsersModule,
     AnimalsModule,
     DoctorsModule,
+    AppointmentsModule,
     MarketplaceModule,
     ChatModule,
     SeedModule,
     CloudinaryModule,
     MailModule,
+    MedicalRecordsModule,
+    RemindersModule,
   ],
   controllers: [AppController, HealthController],
   providers: [

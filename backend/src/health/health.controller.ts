@@ -1,7 +1,9 @@
 import { Controller, Get, ServiceUnavailableException } from '@nestjs/common';
+import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { DataSource } from 'typeorm';
 import { RedisService } from '../redis/redis.service';
 
+@ApiTags('health')
 @Controller('health')
 export class HealthController {
   constructor(
@@ -10,6 +12,9 @@ export class HealthController {
   ) {}
 
   @Get()
+  @ApiOperation({ summary: 'Check database and Redis connectivity' })
+  @ApiResponse({ status: 200, description: 'System is healthy' })
+  @ApiResponse({ status: 503, description: 'Database or Redis is unreachable' })
   async getHealth() {
     let dbStatus = 'UP';
     let redisStatus = 'UP';

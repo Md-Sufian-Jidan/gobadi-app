@@ -23,7 +23,9 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     });
 
     this.client.on('error', (err) => {
-      console.warn(`Redis connection error: ${err.message}. (Authentication Mock OTP fallback will work anyway)`);
+      console.warn(
+        `Redis connection error: ${err.message}. (Authentication Mock OTP fallback will work anyway)`,
+      );
     });
   }
 

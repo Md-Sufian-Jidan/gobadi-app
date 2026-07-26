@@ -23,13 +23,22 @@ export class MailService {
         },
       });
       this.useRealSMTP = true;
-      this.logger.log(`Nodemailer SMTP successfully configured for server ${host}:${port}.`);
+      this.logger.log(
+        `Nodemailer SMTP successfully configured for server ${host}:${port}.`,
+      );
     } else {
-      this.logger.warn(`SMTP credentials not found in env variables. Mock local fallback will be used.`);
+      this.logger.warn(
+        `SMTP credentials not found in env variables. Mock local fallback will be used.`,
+      );
     }
   }
 
-  async sendMail(to: string, subject: string, text: string, html?: string): Promise<boolean> {
+  async sendMail(
+    to: string,
+    subject: string,
+    text: string,
+    html?: string,
+  ): Promise<boolean> {
     const from = process.env.SMTP_FROM || '"Gobadi App" <no-reply@gobadi.com>';
 
     if (this.useRealSMTP && this.transporter) {
@@ -41,7 +50,9 @@ export class MailService {
           text,
           html,
         });
-        this.logger.log(`Email successfully dispatched to ${to} (Subject: "${subject}").`);
+        this.logger.log(
+          `Email successfully dispatched to ${to} (Subject: "${subject}").`,
+        );
         return true;
       } catch (err) {
         this.logger.error(`Failed to dispatch SMTP email to ${to}`, err.stack);

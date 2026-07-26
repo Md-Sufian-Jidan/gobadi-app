@@ -34,6 +34,16 @@ export class MailProcessor extends WorkerHost {
       return { success: true, email };
     }
 
+    if (job.name === 'send-appointment-reminder') {
+      const { email, doctorName, date, time, windowLabel } = job.data;
+      const subject = `Gobadi Appointment Reminder (${windowLabel})`;
+      const text = `Hello,\n\nThis is a reminder that your appointment with ${doctorName} is coming up:\nDate: ${date}\nTime: ${time}.\n\nBest regards,\nGobadi App Team`;
+      const html = `<p>Hello,</p><p>This is a reminder that your appointment with <strong>${doctorName}</strong> is coming up:</p><ul><li><strong>Date:</strong> ${date}</li><li><strong>Time:</strong> ${time}</li></ul><p>Best regards,<br>Gobadi App Team</p>`;
+
+      await this.mailService.sendMail(email, subject, text, html);
+      return { success: true, email };
+    }
+
     if (job.name === 'send-payment-confirmation') {
       const { email, orderId, totalPrice, transactionId } = job.data;
       const subject = `Gobadi Order Payment Confirmed - ${orderId}`;
