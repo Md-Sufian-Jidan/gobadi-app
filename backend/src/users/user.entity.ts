@@ -1,0 +1,52 @@
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  Index,
+  CreateDateColumn,
+} from 'typeorm';
+
+export enum UserRole {
+  PATIENT = 'patient',
+  DOCTOR = 'doctor',
+}
+
+@Entity('users')
+export class User {
+  @PrimaryGeneratedColumn()
+  id: number;
+
+  @Index({ unique: true })
+  @Column()
+  phone: string;
+
+  @Column({ type: 'enum', enum: UserRole, default: UserRole.PATIENT })
+  role: UserRole;
+
+  @Column({ nullable: true })
+  name?: string;
+
+  @Index({ unique: true, where: '"email" IS NOT NULL' })
+  @Column({ nullable: true })
+  email?: string;
+
+  @Column({ nullable: true })
+  avatar?: string;
+
+  @Column({ nullable: true, select: false })
+  password?: string;
+
+  @Column({ default: false })
+  verified: boolean;
+
+  @Index({ unique: true, where: '"googleId" IS NOT NULL' })
+  @Column({ nullable: true })
+  googleId?: string;
+
+  @Index({ unique: true, where: '"facebookId" IS NOT NULL' })
+  @Column({ nullable: true })
+  facebookId?: string;
+
+  @CreateDateColumn()
+  createdAt: Date;
+}
