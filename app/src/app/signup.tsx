@@ -12,15 +12,21 @@ import {
   Platform,
   Modal,
   FlatList,
+  ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 
+import { useRegisterMutation } from '@/store/authApi';
+import { useSocialAuth } from '@/hooks/use-social-auth';
+
+// Farm-domain labels shown in the picker have no equivalent in the backend's
+// UserRole enum (patient/doctor) yet, so every selection maps to PATIENT for now.
 const ROLES = ['Farmer', 'Supplier', 'Retailer', 'Distributor', 'Veterinarian'];
 
 export default function SignUpScreen() {
   const router = useRouter();
 
-  const [name, setName] = useState('Abdul Kader');
+  const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [role, setRole] = useState('');
   const [password, setPassword] = useState('');
@@ -29,20 +35,33 @@ export default function SignUpScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [roleModalVisible, setRoleModalVisible] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
-  const handleSignUp = () => {
-    // Navigate to OTP page, passing the phone number
-    router.push({
-      pathname: '/otp',
-      params: { phone: phone || '01712345678' },
-    });
+  const [register, { isLoading }] = useRegisterMutation();
+  const { withGoogle, withFacebook, isLoading: isSocialLoading, error: socialError } = useSocialAuth(
+    () => router.replace('/(tabs)'),
+  );
+
+  const handleSignUp = async () => {
+    setErrorMessage('');
+
+    if (!phone || !password) {
+      setErrorMessage('Phone number and password are required.');
+      return;
+    }
+    if (password !== confirmPassword) {
+      setErrorMessage('Passwords do not match.');
+      return;
+    }
+
+    try {
+      await register({ name, phone, password, role: 'patient' }).unwrap();
+      router.push({ pathname: '/otp', params: { phone, purpose: 'verify' } });
+    } catch (err: any) {
+      setErrorMessage(err?.data?.message || 'Could not create account. Please try again.');
+    }
   };
 
-  const handleSocialLogin = (platform: string) => {
-    console.log(`Social login with ${platform}`);
-    // Simulate navigation to home
-    router.push('/(tabs)');
-  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -161,9 +180,21 @@ export default function SignUpScreen() {
               <Text style={styles.termsHighlight}>terms of services</Text>
             </Text>
 
+            {/* Error message */}
+            {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
+
             {/* Sign Up Button */}
-            <TouchableOpacity style={styles.signUpButton} activeOpacity={0.8} onPress={handleSignUp}>
-              <Text style={styles.signUpButtonText}>Sign Up</Text>
+            <TouchableOpacity
+              style={[styles.signUpButton, isLoading && styles.signUpButtonDisabled]}
+              activeOpacity={0.8}
+              onPress={handleSignUp}
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <ActivityIndicator color="#FFFFFF" />
+              ) : (
+                <Text style={styles.signUpButtonText}>Sign Up</Text>
+              )}
             </TouchableOpacity>
 
             {/* Divider */}
@@ -173,12 +204,16 @@ export default function SignUpScreen() {
               <View style={styles.dividerLine} />
             </View>
 
+            {/* Social login error */}
+            {socialError ? <Text style={styles.errorText}>{socialError}</Text> : null}
+
             {/* Social Logins */}
             <View style={styles.socialButtonsContainer}>
               <TouchableOpacity
                 style={styles.socialButton}
                 activeOpacity={0.7}
-                onPress={() => handleSocialLogin('Google')}
+                onPress={withGoogle}
+                disabled={isSocialLoading}
               >
                 <Image
                   source={require('@/assets/images/Google.png')}
@@ -189,7 +224,8 @@ export default function SignUpScreen() {
               <TouchableOpacity
                 style={styles.socialButton}
                 activeOpacity={0.7}
-                onPress={() => handleSocialLogin('Facebook')}
+                onPress={withFacebook}
+                disabled={isSocialLoading}
               >
                 <Image
                   source={require('@/assets/images/selfhst_facebook.png')}
@@ -406,6 +442,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginTop: 8,
+  },
+  signUpButtonDisabled: {
+    opacity: 0.7,
+  },
+  errorText: {
+    color: '#E53935',
+    fontSize: 13,
+    marginBottom: 8,
+    textAlign: 'center',
   },
   signUpButtonText: {
     color: '#FFFFFF',

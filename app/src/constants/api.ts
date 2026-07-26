@@ -1,16 +1,33 @@
 import { Platform } from 'react-native';
+import * as SecureStore from 'expo-secure-store';
 
 export const API_URL = Platform.select({
   android: 'http://10.0.2.2:3000',
   default: 'http://localhost:3000',
 });
 
+const AUTH_TOKEN_KEY = 'gobadi_jwt';
+
+export async function getToken(): Promise<string | null> {
+  return SecureStore.getItemAsync(AUTH_TOKEN_KEY);
+}
+
+export async function setToken(token: string): Promise<void> {
+  await SecureStore.setItemAsync(AUTH_TOKEN_KEY, token);
+}
+
+export async function clearToken(): Promise<void> {
+  await SecureStore.deleteItemAsync(AUTH_TOKEN_KEY);
+}
+
 export async function apiFetch<T>(endpoint: string, options?: RequestInit): Promise<T> {
   const url = `${API_URL}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
-  
-  const headers = {
+
+  const token = await getToken();
+  const headers: Record<string, string> = {
     'Content-Type': 'application/json',
-    ...(options?.headers || {}),
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...(options?.headers as Record<string, string> || {}),
   };
 
   try {

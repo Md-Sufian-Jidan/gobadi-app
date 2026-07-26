@@ -9,9 +9,13 @@ import {
   Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useDispatch } from 'react-redux';
+
+import { logout } from '@/store/authApi';
 
 export default function ProfileScreen() {
   const router = useRouter();
+  const dispatch = useDispatch();
 
   const menuItems = [
     { id: '1', label: 'My Task', icon: '📈', route: '/my-task' },
@@ -101,7 +105,10 @@ export default function ProfileScreen() {
         {/* Sign Out Button */}
         <TouchableOpacity
           style={styles.signOutButton}
-          onPress={() => router.replace('/')}
+          onPress={async () => {
+            await logout(dispatch);
+            router.replace('/');
+          }}
           activeOpacity={0.8}
         >
           <Text style={styles.signOutText}>Sign Out</Text>

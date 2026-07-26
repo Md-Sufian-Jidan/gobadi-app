@@ -10,8 +10,12 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+
+import { useLoginMutation } from '@/store/authApi';
+import { useSocialAuth } from '@/hooks/use-social-auth';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -19,15 +23,20 @@ export default function LoginScreen() {
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
-  const handleLogin = () => {
-    // Navigate directly to tabs main screen
-    router.replace('/(tabs)');
-  };
+  const [login, { isLoading }] = useLoginMutation();
+  const goToTabs = () => router.replace('/(tabs)');
+  const { withGoogle, withFacebook, isLoading: isSocialLoading, error: socialError } = useSocialAuth(goToTabs);
 
-  const handleSocialLogin = (platform: string) => {
-    console.log(`Social login with ${platform}`);
-    router.replace('/(tabs)');
+  const handleLogin = async () => {
+    setErrorMessage('');
+    try {
+      await login({ identifier: phone, password }).unwrap();
+      goToTabs();
+    } catch (err: any) {
+      setErrorMessage(err?.data?.message || 'Invalid credentials. Please try again.');
+    }
   };
 
   return (
@@ -99,9 +108,21 @@ export default function LoginScreen() {
               </TouchableOpacity>
             </View>
 
+            {/* Error message */}
+            {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
+
             {/* Sign In Button */}
-            <TouchableOpacity style={styles.loginButton} activeOpacity={0.8} onPress={handleLogin}>
-              <Text style={styles.loginButtonText}>Sign In</Text>
+            <TouchableOpacity
+              style={[styles.loginButton, isLoading && styles.loginButtonDisabled]}
+              activeOpacity={0.8}
+              onPress={handleLogin}
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <ActivityIndicator color="#FFFFFF" />
+              ) : (
+                <Text style={styles.loginButtonText}>Sign In</Text>
+              )}
             </TouchableOpacity>
 
             {/* Divider */}
@@ -111,12 +132,16 @@ export default function LoginScreen() {
               <View style={styles.dividerLine} />
             </View>
 
+            {/* Social login error */}
+            {socialError ? <Text style={styles.errorText}>{socialError}</Text> : null}
+
             {/* Social Logins */}
             <View style={styles.socialButtonsContainer}>
               <TouchableOpacity
                 style={styles.socialButton}
                 activeOpacity={0.7}
-                onPress={() => handleSocialLogin('Google')}
+                onPress={withGoogle}
+                disabled={isSocialLoading}
               >
                 <Image
                   source={require('@/assets/images/Google.png')}
@@ -127,7 +152,8 @@ export default function LoginScreen() {
               <TouchableOpacity
                 style={styles.socialButton}
                 activeOpacity={0.7}
-                onPress={() => handleSocialLogin('Facebook')}
+                onPress={withFacebook}
+                disabled={isSocialLoading}
               >
                 <Image
                   source={require('@/assets/images/selfhst_facebook.png')}
@@ -274,6 +300,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginTop: 8,
+  },
+  loginButtonDisabled: {
+    opacity: 0.7,
+  },
+  errorText: {
+    color: '#E53935',
+    fontSize: 13,
+    marginBottom: 8,
+    textAlign: 'center',
   },
   loginButtonText: {
     color: '#FFFFFF',

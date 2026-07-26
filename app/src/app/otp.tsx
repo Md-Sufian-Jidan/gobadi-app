@@ -9,24 +9,30 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  ActivityIndicator,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 
-import { apiFetch } from '@/constants/api';
+import { useVerifyOtpMutation, useSendOtpMutation } from '@/store/authApi';
 
 export default function OTPScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
-  const phone = params.phone || '+88 01712-345678';
+  const phone = String(params.phone || '+88 01712-345678');
   const otpHint = params.otpHint || '';
+  const purpose = (params.purpose as 'login' | 'verify' | 'reset' | undefined) ?? 'verify';
 
   const [otp, setOtp] = useState([otpHint ? otpHint[0] || '5' : '5', '', '', '']); // First prefilled with hint or '5' per mockup
+  const [errorMessage, setErrorMessage] = useState('');
   const inputRefs = [
     useRef<TextInput>(null),
     useRef<TextInput>(null),
     useRef<TextInput>(null),
     useRef<TextInput>(null),
   ];
+
+  const [verifyOtp, { isLoading: isVerifying }] = useVerifyOtpMutation();
+  const [sendOtp, { isLoading: isResending }] = useSendOtpMutation();
 
   const handleOtpChange = (value: string, index: number) => {
     const newOtp = [...otp];
@@ -47,22 +53,31 @@ export default function OTPScreen() {
 
   const handleVerify = async () => {
     const code = otp.join('');
-    console.log(`Verifying OTP: ${code}`);
+    setErrorMessage('');
 
     try {
-      await apiFetch<{ verified: boolean }>('/auth/verify-otp', {
-        method: 'POST',
-        body: JSON.stringify({ phone, code }),
-      });
+      const res = await verifyOtp({ phone, code, purpose }).unwrap();
+      if (!res.verified) {
+        setErrorMessage(res.message);
+        return;
+      }
+      if (purpose === 'reset' && res.resetToken) {
+        router.replace({ pathname: '/reset-password', params: { resetToken: res.resetToken } });
+        return;
+      }
       router.replace('/congo');
-    } catch (err) {
-      console.log('Error verifying OTP:', err);
-      router.replace('/congo');
+    } catch (err: any) {
+      setErrorMessage(err?.data?.message || 'Could not verify OTP. Please try again.');
     }
   };
 
-  const handleResend = () => {
-    console.log('Resending OTP');
+  const handleResend = async () => {
+    setErrorMessage('');
+    try {
+      await sendOtp({ phone, purpose }).unwrap();
+    } catch (err: any) {
+      setErrorMessage(err?.data?.message || 'Could not resend OTP. Please try again.');
+    }
   };
 
   return (
@@ -120,14 +135,26 @@ export default function OTPScreen() {
           {/* Resend text */}
           <View style={styles.resendContainer}>
             <Text style={styles.resendText}>Didn't receive an OTP?</Text>
-            <TouchableOpacity onPress={handleResend} activeOpacity={0.7}>
-              <Text style={styles.resendLink}>Resend OTP</Text>
+            <TouchableOpacity onPress={handleResend} activeOpacity={0.7} disabled={isResending}>
+              <Text style={styles.resendLink}>{isResending ? 'Resending...' : 'Resend OTP'}</Text>
             </TouchableOpacity>
           </View>
 
+          {/* Error message */}
+          {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
+
           {/* Verify Button */}
-          <TouchableOpacity style={styles.verifyButton} activeOpacity={0.8} onPress={handleVerify}>
-            <Text style={styles.verifyButtonText}>Verify</Text>
+          <TouchableOpacity
+            style={[styles.verifyButton, isVerifying && styles.verifyButtonDisabled]}
+            activeOpacity={0.8}
+            onPress={handleVerify}
+            disabled={isVerifying}
+          >
+            {isVerifying ? (
+              <ActivityIndicator color="#FFFFFF" />
+            ) : (
+              <Text style={styles.verifyButtonText}>Verify</Text>
+            )}
           </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -271,5 +298,14 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 18,
     fontWeight: '600',
+  },
+  verifyButtonDisabled: {
+    opacity: 0.7,
+  },
+  errorText: {
+    color: '#E53935',
+    fontSize: 13,
+    marginBottom: 16,
+    textAlign: 'center',
   },
 });
