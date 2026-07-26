@@ -1,62 +1,92 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { InjectQueue } from '@nestjs/bullmq';
-import { Queue } from 'bullmq';
 import { Doctor } from './doctor.entity';
-import { Booking } from './booking.entity';
+import { Availability } from './availability.entity';
 export { Doctor } from './doctor.entity';
-export { Booking } from './booking.entity';
+export { Availability } from './availability.entity';
+
+export interface AvailabilityEntry {
+  dayOfWeek: number;
+  startTime: string;
+  endTime: string;
+  slotDurationMinutes?: number;
+  bufferMinutes?: number;
+}
 
 @Injectable()
 export class DoctorsService {
   constructor(
     @InjectRepository(Doctor)
     private readonly doctorRepository: Repository<Doctor>,
-    @InjectRepository(Booking)
-    private readonly bookingRepository: Repository<Booking>,
-    @InjectQueue('mail-queue')
-    private readonly mailQueue: Queue,
+    @InjectRepository(Availability)
+    private readonly availabilityRepository: Repository<Availability>,
   ) {}
 
   async getDoctors(): Promise<Doctor[]> {
     return this.doctorRepository.find({ order: { id: 'ASC' } });
   }
 
-  async getDoctorById(id: string): Promise<Doctor> {
-    const doctor = await this.doctorRepository.findOneBy({ id: parseInt(id, 10) });
+  async getDoctorById(id: string | number): Promise<Doctor> {
+    const doctor = await this.doctorRepository.findOneBy({
+      id: typeof id === 'string' ? parseInt(id, 10) : id,
+    });
     if (!doctor) {
       throw new BadRequestException('Doctor not found');
     }
     return doctor;
   }
 
-  async bookSlot(doctorId: string, date: string, time: string): Promise<Booking> {
-    const doctor = await this.getDoctorById(doctorId);
-    const newBooking = this.bookingRepository.create({
-      doctorId: doctor.id,
-      slotDate: date,
-      slotTime: time,
-      status: 'confirmed',
-    });
-    const savedBooking = await this.bookingRepository.save(newBooking);
-
-    // Queue booking confirmation email asynchronously via BullMQ
-    try {
-      await this.mailQueue.add('send-booking-confirmation', {
-        email: 'user@gobadi.com',
-        doctorName: doctor.name,
-        date: savedBooking.slotDate,
-        time: savedBooking.slotTime,
-      });
-    } catch (err) {
-      console.warn('Failed to queue booking confirmation email job', err);
-    }
-
-    return savedBooking;
+  async getDoctorByUserId(userId: number): Promise<Doctor | null> {
+    return this.doctorRepository.findOneBy({ userId });
   }
 
-  async getBookings(): Promise<Booking[]> {
-    return this.bookingRepository.find({ order: { id: 'DESC' } });
+  async getAvailability(doctorId: string | number): Promise<Availability[]> {
+    const id = typeof doctorId === 'string' ? parseInt(doctorId, 10) : doctorId;
+    return this.availabilityRepository.find({
+      where: { doctorId: id },
+      order: { dayOfWeek: 'ASC' },
+    });
+  }
+
+  async setAvailability(
+    doctorId: number,
+    entries: AvailabilityEntry[],
+  ): Promise<Availability[]> {
+    await this.availabilityRepository.delete({ doctorId });
+    const created = entries.map((entry) =>
+      this.availabilityRepository.create({
+        doctorId,
+        dayOfWeek: entry.dayOfWeek,
+        startTime: entry.startTime,
+        endTime: entry.endTime,
+        slotDurationMinutes: entry.slotDurationMinutes ?? 30,
+        bufferMinutes: entry.bufferMinutes ?? 10,
+      }),
+    );
+    return this.availabilityRepository.save(created);
+  }
+
+  /** Finds the active availability window covering the time-of-day of `at` for the doctor's day-of-week. */
+  async findAvailabilityWindow(
+    doctorId: number,
+    at: Date,
+  ): Promise<Availability | null> {
+    const dayOfWeek = at.getDay();
+    const windows = await this.availabilityRepository.find({
+      where: { doctorId, dayOfWeek, isActive: true },
+    });
+
+    const minutesOfDay = at.getHours() * 60 + at.getMinutes();
+    for (const window of windows) {
+      const [startH, startM] = window.startTime.split(':').map(Number);
+      const [endH, endM] = window.endTime.split(':').map(Number);
+      const startMinutes = startH * 60 + startM;
+      const endMinutes = endH * 60 + endM;
+      if (minutesOfDay >= startMinutes && minutesOfDay < endMinutes) {
+        return window;
+      }
+    }
+    return null;
   }
 }

@@ -1,29 +1,75 @@
-import { Controller, Get, Post, Param, Body } from '@nestjs/common';
-import { DoctorsService, Doctor, Booking } from './doctors.service';
+import {
+  Controller,
+  Get,
+  Post,
+  Param,
+  Body,
+  UseGuards,
+  ForbiddenException,
+} from '@nestjs/common';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiParam,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
+import { DoctorsService, Doctor, Availability } from './doctors.service';
+import { SetAvailabilityDto } from './dto/set-availability.dto';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { UserRole } from '../users/user.entity';
+import type { JwtPayload } from '../auth/jwt-payload.interface';
 
+@ApiTags('doctors')
 @Controller('doctors')
 export class DoctorsController {
   constructor(private readonly doctorsService: DoctorsService) {}
 
   @Get()
+  @ApiOperation({ summary: 'List all doctors' })
+  @ApiResponse({ status: 200, description: 'List of doctors' })
   async getDoctors(): Promise<Doctor[]> {
     return this.doctorsService.getDoctors();
   }
 
   @Get(':id')
+  @ApiOperation({ summary: 'Get a doctor by id' })
+  @ApiParam({ name: 'id', example: '1' })
+  @ApiResponse({ status: 200, description: 'The doctor' })
   async getDoctorById(@Param('id') id: string): Promise<Doctor> {
     return this.doctorsService.getDoctorById(id);
   }
 
-  @Post('book')
-  async bookSlot(
-    @Body() body: { doctorId: string; date: string; time: string }
-  ): Promise<Booking> {
-    return this.doctorsService.bookSlot(body.doctorId, body.date, body.time);
+  @Get(':id/availability')
+  @ApiOperation({ summary: "Get a doctor's weekly availability" })
+  @ApiParam({ name: 'id', example: '1' })
+  @ApiResponse({ status: 200, description: 'List of availability windows' })
+  async getAvailability(@Param('id') id: string): Promise<Availability[]> {
+    return this.doctorsService.getAvailability(id);
   }
 
-  @Get('bookings/all')
-  async getBookings(): Promise<Booking[]> {
-    return this.doctorsService.getBookings();
+  @Post(':id/availability')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.DOCTOR)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary:
+      "Replace a doctor's weekly availability (doctor-only, own profile)",
+  })
+  @ApiParam({ name: 'id', example: '1' })
+  @ApiResponse({ status: 201, description: 'Availability replaced' })
+  async setAvailability(
+    @Param('id') id: string,
+    @Body() body: SetAvailabilityDto,
+    @CurrentUser() user: JwtPayload,
+  ): Promise<Availability[]> {
+    const doctor = await this.doctorsService.getDoctorByUserId(user.sub);
+    if (!doctor || doctor.id !== parseInt(id, 10)) {
+      throw new ForbiddenException('You may only manage your own availability');
+    }
+    return this.doctorsService.setAvailability(doctor.id, body.entries);
   }
 }
