@@ -1,7 +1,8 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { ILike, Repository } from 'typeorm';
 import { User, UserRole } from './user.entity';
+import { PaginatedResult } from '../common/paginated-result.interface';
 
 interface CreateWithPasswordInput {
   name?: string;
@@ -108,5 +109,31 @@ export class UsersService {
 
   async markVerified(userId: number): Promise<void> {
     await this.userRepository.update(userId, { verified: true });
+  }
+
+  async findPaginated(
+    page: number,
+    limit: number,
+    search?: string,
+  ): Promise<PaginatedResult<User>> {
+    const where = search
+      ? [{ name: ILike(`%${search}%`) }, { phone: ILike(`%${search}%`) }, { email: ILike(`%${search}%`) }]
+      : {};
+    const [data, total] = await this.userRepository.findAndCount({
+      where,
+      order: { id: 'ASC' },
+      skip: (page - 1) * limit,
+      take: limit,
+    });
+    return { data, page, limit, total };
+  }
+
+  async updateRole(id: number, role: UserRole): Promise<User> {
+    const user = await this.userRepository.findOneBy({ id });
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+    user.role = role;
+    return this.userRepository.save(user);
   }
 }

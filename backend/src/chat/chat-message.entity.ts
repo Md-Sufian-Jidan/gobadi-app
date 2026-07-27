@@ -22,6 +22,7 @@ export class ChatMessage {
   @Column()
   conversationId: number;
 
+  @Index()
   @Column()
   senderId: number;
 

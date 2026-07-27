@@ -1,0 +1,102 @@
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Between, Repository } from 'typeorm';
+import { Task } from './task.entity';
+import { RedisService } from '../redis/redis.service';
+import { CreateTaskDto } from './dto/create-task.dto';
+export { Task } from './task.entity';
+
+@Injectable()
+export class TasksService {
+  constructor(
+    @InjectRepository(Task)
+    private readonly taskRepository: Repository<Task>,
+    private readonly redisService: RedisService,
+  ) {}
+
+  async getTasksForDate(userId: number, date: string): Promise<Task[]> {
+    const cacheKey = this.buildCacheKey(userId, date);
+    try {
+      const cached = await this.redisService.get(cacheKey);
+      if (cached) {
+        return JSON.parse(cached);
+      }
+    } catch (err) {
+      console.warn('Failed to read tasks cache from Redis', err);
+    }
+
+    const { start, end } = this.dayBounds(date);
+    const tasks = await this.taskRepository.find({
+      where: { userId, scheduledTime: Between(start, end) },
+      order: { scheduledTime: 'ASC' },
+    });
+
+    try {
+      await this.redisService.set(cacheKey, JSON.stringify(tasks), 300);
+    } catch (err) {
+      console.warn('Failed to write tasks cache to Redis', err);
+    }
+
+    return tasks;
+  }
+
+  async createTask(userId: number, dto: CreateTaskDto): Promise<Task> {
+    const task = this.taskRepository.create({
+      userId,
+      title: dto.title,
+      detail: dto.detail,
+      scheduledTime: new Date(dto.scheduledTime),
+    });
+    const saved = await this.taskRepository.save(task);
+    await this.invalidateCacheForTask(saved);
+    return saved;
+  }
+
+  async toggleTask(userId: number, id: number): Promise<Task> {
+    const task = await this.getOwnedTask(userId, id);
+    task.isDone = !task.isDone;
+    const saved = await this.taskRepository.save(task);
+    await this.invalidateCacheForTask(saved);
+    return saved;
+  }
+
+  async deleteTask(userId: number, id: number): Promise<void> {
+    const task = await this.getOwnedTask(userId, id);
+    await this.taskRepository.remove(task);
+    await this.invalidateCacheForTask(task);
+  }
+
+  private async getOwnedTask(userId: number, id: number): Promise<Task> {
+    const task = await this.taskRepository.findOneBy({ id });
+    if (!task) {
+      throw new NotFoundException('Task not found');
+    }
+    if (task.userId !== userId) {
+      throw new ForbiddenException('You may only manage your own tasks');
+    }
+    return task;
+  }
+
+  private async invalidateCacheForTask(task: Task): Promise<void> {
+    const date = this.toDateKey(task.scheduledTime);
+    try {
+      await this.redisService.del(this.buildCacheKey(task.userId, date));
+    } catch (err) {
+      console.warn('Failed to invalidate tasks cache in Redis', err);
+    }
+  }
+
+  private buildCacheKey(userId: number, date: string): string {
+    return `cache:tasks:user:${userId}:date:${date}`;
+  }
+
+  private toDateKey(date: Date): string {
+    return new Date(date).toISOString().slice(0, 10);
+  }
+
+  private dayBounds(date: string): { start: Date; end: Date } {
+    const start = new Date(`${date}T00:00:00.000Z`);
+    const end = new Date(`${date}T23:59:59.999Z`);
+    return { start, end };
+  }
+}

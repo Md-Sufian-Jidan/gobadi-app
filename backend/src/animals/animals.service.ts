@@ -1,7 +1,8 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { ILike, Repository } from 'typeorm';
 import { Animal } from './animal.entity';
+import { PaginatedResult } from '../common/paginated-result.interface';
 export { Animal } from './animal.entity';
 
 @Injectable()
@@ -11,8 +12,31 @@ export class AnimalsService {
     private readonly animalRepository: Repository<Animal>,
   ) {}
 
-  async getAnimals(): Promise<Animal[]> {
-    return this.animalRepository.find({ order: { id: 'ASC' } });
+  async getAnimals(
+    page?: number,
+    limit?: number,
+  ): Promise<Animal[] | PaginatedResult<Animal>> {
+    if (!page && !limit) {
+      return this.animalRepository.find({ order: { id: 'ASC' } });
+    }
+    const currentPage = page && page > 0 ? page : 1;
+    const pageSize = limit && limit > 0 ? limit : 20;
+    const [data, total] = await this.animalRepository.findAndCount({
+      order: { id: 'ASC' },
+      skip: (currentPage - 1) * pageSize,
+      take: pageSize,
+    });
+    return { data, page: currentPage, limit: pageSize, total };
+  }
+
+  async search(q: string): Promise<Animal[]> {
+    if (!q) {
+      return [];
+    }
+    return this.animalRepository.find({
+      where: [{ name: ILike(`%${q}%`) }, { breed: ILike(`%${q}%`) }],
+      take: 10,
+    });
   }
 
   async getAnimalById(id: string): Promise<Animal> {

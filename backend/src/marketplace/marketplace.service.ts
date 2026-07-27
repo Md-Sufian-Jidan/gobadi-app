@@ -1,11 +1,12 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { ILike, In, Repository } from 'typeorm';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { MarketItem } from './market-item.entity';
 import { Order } from './order.entity';
 import { RedisService } from '../redis/redis.service';
+import { PaginatedResult } from '../common/paginated-result.interface';
 export { MarketItem } from './market-item.entity';
 export { Order } from './order.entity';
 
@@ -23,31 +24,57 @@ export class MarketplaceService {
     private readonly redisService: RedisService,
   ) {}
 
-  async getCatalog(): Promise<MarketItem[]> {
+  async getCatalog(
+    page?: number,
+    limit?: number,
+  ): Promise<MarketItem[] | PaginatedResult<MarketItem>> {
+    let catalog: MarketItem[] | null;
     try {
       const cached = await this.redisService.get('cache:marketplace:catalog');
-      if (cached) {
-        return JSON.parse(cached);
-      }
+      catalog = cached ? JSON.parse(cached) : null;
     } catch (err) {
       console.warn('Failed to read catalog cache from Redis', err);
+      catalog = null;
     }
 
-    const catalog = await this.marketItemRepository.find({
-      order: { id: 'ASC' },
+    if (!catalog) {
+      catalog = await this.marketItemRepository.find({
+        order: { id: 'ASC' },
+      });
+
+      try {
+        await this.redisService.set(
+          'cache:marketplace:catalog',
+          JSON.stringify(catalog),
+          300,
+        );
+      } catch (err) {
+        console.warn('Failed to write catalog cache to Redis', err);
+      }
+    }
+
+    if (!page && !limit) {
+      return catalog;
+    }
+    const currentPage = page && page > 0 ? page : 1;
+    const pageSize = limit && limit > 0 ? limit : 20;
+    const start = (currentPage - 1) * pageSize;
+    return {
+      data: catalog.slice(start, start + pageSize),
+      page: currentPage,
+      limit: pageSize,
+      total: catalog.length,
+    };
+  }
+
+  async search(q: string): Promise<MarketItem[]> {
+    if (!q) {
+      return [];
+    }
+    return this.marketItemRepository.find({
+      where: [{ name: ILike(`%${q}%`) }, { category: ILike(`%${q}%`) }],
+      take: 10,
     });
-
-    try {
-      await this.redisService.set(
-        'cache:marketplace:catalog',
-        JSON.stringify(catalog),
-        300,
-      );
-    } catch (err) {
-      console.warn('Failed to write catalog cache to Redis', err);
-    }
-
-    return catalog;
   }
 
   async getCatalogItemById(id: string): Promise<MarketItem> {
@@ -68,9 +95,16 @@ export class MarketplaceService {
       throw new BadRequestException('No items in order');
     }
 
+    const itemIds = data.items.map((itemRef) => parseInt(itemRef.itemId, 10));
+    const dbItems = await this.marketItemRepository.findBy({ id: In(itemIds) });
+    const dbItemsById = new Map(dbItems.map((item) => [item.id, item]));
+
     let totalPrice = 0;
     for (const itemRef of data.items) {
-      const dbItem = await this.getCatalogItemById(itemRef.itemId);
+      const dbItem = dbItemsById.get(parseInt(itemRef.itemId, 10));
+      if (!dbItem) {
+        throw new BadRequestException(`Item not found: ${itemRef.itemId}`);
+      }
       totalPrice += dbItem.price * itemRef.quantity;
     }
 
@@ -131,7 +165,32 @@ export class MarketplaceService {
     return savedOrder;
   }
 
-  async getOrders(): Promise<Order[]> {
-    return this.orderRepository.find({ order: { id: 'DESC' } });
+  async getOrders(
+    page?: number,
+    limit?: number,
+    status?: string,
+  ): Promise<Order[] | PaginatedResult<Order>> {
+    const where = status ? { status } : {};
+    if (!page && !limit) {
+      return this.orderRepository.find({ where, order: { id: 'DESC' } });
+    }
+    const currentPage = page && page > 0 ? page : 1;
+    const pageSize = limit && limit > 0 ? limit : 20;
+    const [data, total] = await this.orderRepository.findAndCount({
+      where,
+      order: { id: 'DESC' },
+      skip: (currentPage - 1) * pageSize,
+      take: pageSize,
+    });
+    return { data, page: currentPage, limit: pageSize, total };
+  }
+
+  async updateOrderStatus(id: string, status: string): Promise<Order> {
+    const order = await this.orderRepository.findOneBy({ id });
+    if (!order) {
+      throw new BadRequestException('Order not found');
+    }
+    order.status = status;
+    return this.orderRepository.save(order);
   }
 }
