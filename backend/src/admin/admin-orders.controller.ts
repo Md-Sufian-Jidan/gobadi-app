@@ -1,4 +1,12 @@
-import { Body, Controller, Get, Param, Patch, Query, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Patch,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiOperation,
@@ -24,7 +32,9 @@ export class AdminOrdersController {
   constructor(private readonly marketplaceService: MarketplaceService) {}
 
   @Get()
-  @ApiOperation({ summary: 'List orders, paginated and filterable by status (admin only)' })
+  @ApiOperation({
+    summary: 'List orders, paginated and filterable by status (admin only)',
+  })
   @ApiQuery({ name: 'page', required: false })
   @ApiQuery({ name: 'limit', required: false })
   @ApiQuery({ name: 'status', required: false })

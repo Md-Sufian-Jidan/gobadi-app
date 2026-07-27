@@ -1,4 +1,12 @@
-import { Controller, Get, Param, Post, Body, Query, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Param,
+  Post,
+  Body,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiOperation,
@@ -25,7 +33,9 @@ export class AlertsController {
   @ApiOperation({ summary: 'List active regional crop/disease risk alerts' })
   @ApiQuery({ name: 'severity', required: false, enum: AlertSeverity })
   @ApiResponse({ status: 200, description: 'List of active alerts' })
-  async getAlerts(@Query('severity') severity?: AlertSeverity): Promise<Alert[]> {
+  async getAlerts(
+    @Query('severity') severity?: AlertSeverity,
+  ): Promise<Alert[]> {
     return this.alertsService.getActiveAlerts(severity);
   }
 

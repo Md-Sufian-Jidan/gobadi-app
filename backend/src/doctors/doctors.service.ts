@@ -52,10 +52,14 @@ export class DoctorsService {
     if (!q) {
       return [];
     }
-    const hits = await this.meilisearchService.search<Doctor>(DOCTORS_INDEX, q, {
-      limit: 10,
-      filter: specialty ? `specialty = "${specialty}"` : undefined,
-    });
+    const hits = await this.meilisearchService.search<Doctor>(
+      DOCTORS_INDEX,
+      q,
+      {
+        limit: 10,
+        filter: specialty ? `specialty = "${specialty}"` : undefined,
+      },
+    );
     if (hits !== null) {
       return hits;
     }

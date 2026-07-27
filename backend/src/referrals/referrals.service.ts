@@ -46,14 +46,19 @@ export class ReferralsService {
         .getOne();
       if (!claimant) {
         claimant = await repo.save(
-          repo.create({ userId, referralCode: await this.generateUniqueCode() }),
+          repo.create({
+            userId,
+            referralCode: await this.generateUniqueCode(),
+          }),
         );
       }
       if (claimant.redeemedReferralCode) {
         throw new ConflictException('You have already claimed a referral code');
       }
       if (claimant.referralCode === code) {
-        throw new BadRequestException('You cannot claim your own referral code');
+        throw new BadRequestException(
+          'You cannot claim your own referral code',
+        );
       }
 
       const referrer = await repo
@@ -65,7 +70,9 @@ export class ReferralsService {
         throw new NotFoundException('Referral code not found');
       }
       if (referrer.userId === userId) {
-        throw new BadRequestException('You cannot claim your own referral code');
+        throw new BadRequestException(
+          'You cannot claim your own referral code',
+        );
       }
 
       referrer.referralCount += 1;
