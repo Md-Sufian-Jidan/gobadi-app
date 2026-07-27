@@ -5,9 +5,15 @@ import { AppointmentsController } from './appointments.controller';
 import { Appointment } from './appointment.entity';
 import { DoctorsModule } from '../doctors/doctors.module';
 import { ChatModule } from '../chat/chat.module';
+import { UsersModule } from '../users/users.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Appointment]), DoctorsModule, ChatModule],
+  imports: [
+    TypeOrmModule.forFeature([Appointment]),
+    DoctorsModule,
+    ChatModule,
+    UsersModule,
+  ],
   controllers: [AppointmentsController],
   providers: [AppointmentsService],
   exports: [AppointmentsService],

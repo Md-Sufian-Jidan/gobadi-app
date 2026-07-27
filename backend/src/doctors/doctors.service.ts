@@ -4,8 +4,11 @@ import { ILike, Repository } from 'typeorm';
 import { Doctor } from './doctor.entity';
 import { Availability } from './availability.entity';
 import { PaginatedResult } from '../common/paginated-result.interface';
+import { MeilisearchService } from '../meilisearch/meilisearch.service';
 export { Doctor } from './doctor.entity';
 export { Availability } from './availability.entity';
+
+const DOCTORS_INDEX = 'doctors';
 
 export interface AvailabilityEntry {
   dayOfWeek: number;
@@ -22,18 +25,22 @@ export class DoctorsService {
     private readonly doctorRepository: Repository<Doctor>,
     @InjectRepository(Availability)
     private readonly availabilityRepository: Repository<Availability>,
+    private readonly meilisearchService: MeilisearchService,
   ) {}
 
   async getDoctors(
     page?: number,
     limit?: number,
+    specialty?: string,
   ): Promise<Doctor[] | PaginatedResult<Doctor>> {
+    const where = specialty ? { specialty: ILike(`%${specialty}%`) } : {};
     if (!page && !limit) {
-      return this.doctorRepository.find({ order: { id: 'ASC' } });
+      return this.doctorRepository.find({ where, order: { id: 'ASC' } });
     }
     const currentPage = page && page > 0 ? page : 1;
     const pageSize = limit && limit > 0 ? limit : 20;
     const [data, total] = await this.doctorRepository.findAndCount({
+      where,
       order: { id: 'ASC' },
       skip: (currentPage - 1) * pageSize,
       take: pageSize,
@@ -41,9 +48,16 @@ export class DoctorsService {
     return { data, page: currentPage, limit: pageSize, total };
   }
 
-  async search(q: string): Promise<Doctor[]> {
+  async search(q: string, specialty?: string): Promise<Doctor[]> {
     if (!q) {
       return [];
+    }
+    const hits = await this.meilisearchService.search<Doctor>(DOCTORS_INDEX, q, {
+      limit: 10,
+      filter: specialty ? `specialty = "${specialty}"` : undefined,
+    });
+    if (hits !== null) {
+      return hits;
     }
     return this.doctorRepository.find({
       where: [{ name: ILike(`%${q}%`) }, { specialty: ILike(`%${q}%`) }],

@@ -10,6 +10,7 @@ import { DataSource, Repository } from 'typeorm';
 import { Appointment, AppointmentStatus } from './appointment.entity';
 import { DoctorsService, Doctor } from '../doctors/doctors.service';
 import { UserRole } from '../users/user.entity';
+import { UsersService } from '../users/users.service';
 import {
   addMinutes,
   parseSlotDateTime,
@@ -18,6 +19,11 @@ import {
 
 const RESCHEDULE_CANCEL_BUFFER_MS = 2 * 60 * 60 * 1000; // 2 hours
 
+export interface AppointmentWithPatient extends Appointment {
+  patientName?: string;
+  patientPhone?: string;
+}
+
 @Injectable()
 export class AppointmentsService {
   constructor(
@@ -25,6 +31,7 @@ export class AppointmentsService {
     private readonly appointmentRepository: Repository<Appointment>,
     private readonly dataSource: DataSource,
     private readonly doctorsService: DoctorsService,
+    private readonly usersService: UsersService,
   ) {}
 
   async bookAppointment(
@@ -98,7 +105,7 @@ export class AppointmentsService {
     userId: number,
     role: UserRole,
     status?: AppointmentStatus,
-  ): Promise<Appointment[]> {
+  ): Promise<AppointmentWithPatient[]> {
     const where: any = {};
     if (role === UserRole.PATIENT) {
       where.patientId = userId;
@@ -112,10 +119,28 @@ export class AppointmentsService {
     if (status) {
       where.status = status;
     }
-    return this.appointmentRepository.find({
+    const appointments = await this.appointmentRepository.find({
       where,
       order: { startAt: 'DESC' },
     });
+
+    if (role !== UserRole.DOCTOR || appointments.length === 0) {
+      return appointments;
+    }
+
+    const distinctPatientIds = [...new Set(appointments.map((a) => a.patientId))];
+    const patients = await Promise.all(
+      distinctPatientIds.map((id) => this.usersService.findById(id)),
+    );
+    const patientsById = new Map(
+      patients.filter((p): p is NonNullable<typeof p> => !!p).map((p) => [p.id, p]),
+    );
+
+    return appointments.map((appointment) => ({
+      ...appointment,
+      patientName: patientsById.get(appointment.patientId)?.name,
+      patientPhone: patientsById.get(appointment.patientId)?.phone,
+    }));
   }
 
   async rescheduleAppointment(

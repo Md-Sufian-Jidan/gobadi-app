@@ -35,15 +35,32 @@ export class DoctorsController {
   @ApiOperation({ summary: 'List all doctors' })
   @ApiQuery({ name: 'page', required: false })
   @ApiQuery({ name: 'limit', required: false })
+  @ApiQuery({ name: 'specialty', required: false })
   @ApiResponse({ status: 200, description: 'List of doctors' })
   async getDoctors(
     @Query('page') page?: string,
     @Query('limit') limit?: string,
+    @Query('specialty') specialty?: string,
   ): Promise<Doctor[] | PaginatedResult<Doctor>> {
     return this.doctorsService.getDoctors(
       page ? parseInt(page, 10) : undefined,
       limit ? parseInt(limit, 10) : undefined,
+      specialty,
     );
+  }
+
+  @Get('me')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.DOCTOR)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Get the current logged-in doctor's own profile" })
+  @ApiResponse({ status: 200, description: 'The doctor profile' })
+  async getMyDoctorProfile(@CurrentUser() user: JwtPayload): Promise<Doctor> {
+    const doctor = await this.doctorsService.getDoctorByUserId(user.sub);
+    if (!doctor) {
+      throw new ForbiddenException('No doctor profile linked to this account');
+    }
+    return doctor;
   }
 
   @Get(':id')
