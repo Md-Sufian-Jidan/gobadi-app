@@ -7,39 +7,17 @@ import {
   ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 
-interface ActionItem {
-  number: number;
-  title: string;
-  desc: string;
-}
+import { useGetDiagnosisHistoryQuery } from '@/store/aiDiagnosisApi';
 
 export default function AiSummaryScreen() {
   const router = useRouter();
+  const { id } = useLocalSearchParams<{ id?: string }>();
+  const { data: history } = useGetDiagnosisHistoryQuery();
+  const diagnosis = history?.find((d) => String(d.id) === id) ?? history?.[0];
 
-  const actionItems: ActionItem[] = [
-    {
-      number: 1,
-      title: 'Quarantine the Herd',
-      desc: 'Stop all animal movements immediately. Do not move cattle off the property.',
-    },
-    {
-      number: 2,
-      title: 'Report the Case',
-      desc: 'Contact your local veterinarian or national agricultural authority right away. This is a legally reportable disease in most nations.',
-    },
-    {
-      number: 3,
-      title: 'Lock Down Biosecurity',
-      desc: 'Restrict human and vehicle access to your farm. Disinfect all boots, clothing, and equipment.',
-    },
-    {
-      number: 4,
-      title: 'Isolate Symptomatic Animals',
-      desc: 'Separate sick cows from healthy ones to reduce the viral load in shared spaces.',
-    },
-  ];
+  const confidencePct = diagnosis ? Math.round(diagnosis.confidenceScore * 100) : null;
 
   return (
     <SafeAreaView style={styles.container}>
@@ -69,42 +47,43 @@ export default function AiSummaryScreen() {
             </View>
             <View style={styles.cowMetaCol}>
               <Text style={styles.cowTitle}>Cow</Text>
-              <Text style={styles.cowTime}>Detected : 2 Min Ago</Text>
+              <Text style={styles.cowTime}>
+                {diagnosis ? new Date(diagnosis.createdAt).toLocaleString() : 'No scan found'}
+              </Text>
             </View>
           </View>
           <View style={styles.matchBadge}>
-            <Text style={styles.matchBadgeText}>82% ✅</Text>
+            <Text style={styles.matchBadgeText}>{confidencePct !== null ? `${confidencePct}% ✅` : '—'}</Text>
           </View>
         </View>
 
         {/* Diagnostic Detail Card */}
         <View style={styles.detailsCard}>
-          <Text style={styles.diagnosticTitle}>Foot and mouth disease detected</Text>
-          <Text style={styles.diagnosticSubtitle}>Highly contagious viral disease</Text>
-
-          <Text style={styles.diagnosticParagraph}>
-            Foot-and-Mouth Disease (FMD) is a highly contagious viral illness affecting cloven-hoofed livestock like cattle, pigs, and sheep, but it poses absolutely no threat to human health or food safety. <Text style={styles.linkText}>[1, 2]</Text>
-          </Text>
-
-          <Text style={styles.diagnosticParagraph}>
-            If FMD has been detected in your herd or region, immediate action is required to prevent widespread transmission and massive economic losses. <Text style={styles.linkText}>[1, 2]</Text>
-          </Text>
+          <Text style={styles.diagnosticTitle}>{diagnosis?.analysisResult ?? 'No diagnosis available'}</Text>
 
           <View style={styles.divider} />
 
           {/* Action plan list */}
-          <Text style={styles.actionPlanHeader}>Immediate Action Plan</Text>
+          <Text style={styles.actionPlanHeader}>Recommendations</Text>
 
-          {actionItems.map((item) => (
-            <View key={item.number} style={styles.actionRow}>
-              <Text style={styles.actionNumber}>{item.number}.</Text>
+          {(diagnosis?.recommendations ?? []).map((rec, index) => (
+            <View key={index} style={styles.actionRow}>
+              <Text style={styles.actionNumber}>{index + 1}.</Text>
               <View style={styles.actionTextCol}>
-                <Text style={styles.actionTitle}>
-                  {item.title}: <Text style={styles.actionDesc}>{item.desc}</Text>
-                </Text>
+                <Text style={styles.actionTitle}>{rec}</Text>
               </View>
             </View>
           ))}
+
+          {!!diagnosis?.recommendedDoctorIds.length && (
+            <TouchableOpacity
+              style={styles.summaryButton}
+              onPress={() => router.push({ pathname: '/doctor-detail', params: { id: String(diagnosis.recommendedDoctorIds[0]) } })}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.summaryButtonText}>View Recommended Doctor</Text>
+            </TouchableOpacity>
+          )}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -240,6 +219,19 @@ const styles = StyleSheet.create({
   linkText: {
     color: '#BD632F',
     textDecorationLine: 'underline',
+  },
+  summaryButton: {
+    backgroundColor: '#BD632F',
+    height: 52,
+    borderRadius: 26,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 20,
+  },
+  summaryButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
   },
   divider: {
     height: 1,

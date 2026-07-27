@@ -11,6 +11,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 
+import { useAnalyzeSymptomsMutation } from '@/store/aiDiagnosisApi';
+
 const { width, height } = Dimensions.get('window');
 
 export default function AiHoldScreen() {
@@ -18,28 +20,31 @@ export default function AiHoldScreen() {
   const [scanState, setScanState] = useState<'holding' | 'scanning' | 'done'>('holding');
   const [progress] = useState(new Animated.Value(0));
   const [modalY] = useState(new Animated.Value(height));
+  const [analyzeSymptoms, { data: diagnosis, error }] = useAnalyzeSymptomsMutation();
 
   useEffect(() => {
-    // Automatically trigger scanner line/animation simulation on mount
+    // Trigger the scanner line animation while the analysis request runs
     Animated.timing(progress, {
       toValue: 1,
       duration: 3500,
       useNativeDriver: true,
     }).start();
 
-    // Auto complete scan after 3.5 seconds
-    const timer = setTimeout(() => {
-      setScanState('done');
-      // Slide up the summary modal sheet
-      Animated.spring(modalY, {
-        toValue: 0,
-        tension: 50,
-        friction: 8,
-        useNativeDriver: true,
-      }).start();
-    }, 3800);
-
-    return () => clearTimeout(timer);
+    analyzeSymptoms({ symptoms: ['visual_scan'] })
+      .unwrap()
+      .then(() => {
+        setScanState('done');
+        Animated.spring(modalY, {
+          toValue: 0,
+          tension: 50,
+          friction: 8,
+          useNativeDriver: true,
+        }).start();
+      })
+      .catch(() => {
+        // Surfaced via `error` below; leave the scan line running so the
+        // user isn't stuck on a silently-frozen screen.
+      });
   }, []);
 
   // Scan line animation interpolation
@@ -116,34 +121,37 @@ export default function AiHoldScreen() {
               </View>
               <View style={styles.cowMetaCol}>
                 <Text style={styles.cowTitle}>Cow</Text>
-                <Text style={styles.cowTime}>Detected : 2 Min Ago</Text>
+                <Text style={styles.cowTime}>Detected : just now</Text>
               </View>
             </View>
             <View style={styles.matchBadge}>
-              <Text style={styles.matchBadgeText}>82% ✅</Text>
+              <Text style={styles.matchBadgeText}>
+                {diagnosis ? `${Math.round(diagnosis.confidenceScore * 100)}% ✅` : '—'}
+              </Text>
             </View>
           </View>
 
           {/* Diagnosis detail block */}
           <View style={styles.diagnosticBody}>
-            <Text style={styles.diagnosticTitle}>Foot and mouth disease detected</Text>
-            <Text style={styles.diagnosticSubtitle}>Highly contagious viral disease</Text>
-
-            <Text style={styles.diagnosticParagraph}>
-              Foot-and-Mouth Disease (FMD) is a highly contagious viral illness affecting cloven-hoofed livestock like cattle, pigs, and sheep, but it poses absolutely no threat to human health or food safety. [1, 2]
-            </Text>
-
-            <Text style={styles.diagnosticParagraph}>
-              If FMD has been detected in your herd or region, immediate action is required to prevent widespread transmission and massive economic losses. [1, 2]
-            </Text>
-
-            <Text style={styles.actionPlanLabel}>Immediate Action Plan</Text>
+            {error ? (
+              <Text style={styles.diagnosticParagraph}>
+                Something went wrong analyzing this scan. Please try again.
+              </Text>
+            ) : (
+              <>
+                <Text style={styles.diagnosticTitle}>{diagnosis?.analysisResult ?? 'Analyzing...'}</Text>
+                {diagnosis?.recommendations?.length ? (
+                  <Text style={styles.actionPlanLabel}>Immediate Action Plan</Text>
+                ) : null}
+              </>
+            )}
           </View>
 
           {/* Details Summary Action button */}
           <TouchableOpacity
             style={styles.summaryButton}
-            onPress={() => router.replace('/ai-summary')}
+            disabled={!diagnosis}
+            onPress={() => router.replace({ pathname: '/ai-summary', params: { id: String(diagnosis!.id) } })}
             activeOpacity={0.85}
           >
             <Text style={styles.summaryButtonText}>Details Summary</Text>
