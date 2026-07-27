@@ -51,7 +51,7 @@ export class AppointmentsController {
 
   @Post('book')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.PATIENT)
+  @Roles(UserRole.USER, 'patient' as any)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Book an appointment slot with a doctor' })
   @ApiResponse({ status: 201, description: 'Appointment created' })
@@ -65,6 +65,8 @@ export class AppointmentsController {
       user.sub,
       body.date,
       body.time,
+      body.clinicId,
+      body.serviceId,
     );
   }
 
