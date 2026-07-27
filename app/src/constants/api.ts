@@ -7,6 +7,7 @@ export const API_URL = Platform.select({
 });
 
 const AUTH_TOKEN_KEY = 'gobadi_jwt';
+const REFRESH_TOKEN_KEY = 'gobadi_refresh_jwt';
 
 export async function getToken(): Promise<string | null> {
   return SecureStore.getItemAsync(AUTH_TOKEN_KEY);
@@ -18,6 +19,18 @@ export async function setToken(token: string): Promise<void> {
 
 export async function clearToken(): Promise<void> {
   await SecureStore.deleteItemAsync(AUTH_TOKEN_KEY);
+}
+
+export async function getRefreshToken(): Promise<string | null> {
+  return SecureStore.getItemAsync(REFRESH_TOKEN_KEY);
+}
+
+export async function setRefreshToken(token: string): Promise<void> {
+  await SecureStore.setItemAsync(REFRESH_TOKEN_KEY, token);
+}
+
+export async function clearRefreshToken(): Promise<void> {
+  await SecureStore.deleteItemAsync(REFRESH_TOKEN_KEY);
 }
 
 export async function apiFetch<T>(endpoint: string, options?: RequestInit): Promise<T> {

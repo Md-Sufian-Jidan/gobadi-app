@@ -13,8 +13,9 @@ import { referralsApi } from './referralsApi';
 import { chatApi } from './chatApi';
 import { searchApi } from './searchApi';
 import { usersApi } from './usersApi';
-import { getToken } from '@/constants/api';
-import { jwtToAuthUser } from './decode-jwt';
+import { getToken, getRefreshToken } from '@/constants/api';
+import { decodeJwt } from './decode-jwt';
+import type { AuthUser } from './authSlice';
 
 export const store = configureStore({
   reducer: {
@@ -56,9 +57,17 @@ export type AppDispatch = typeof store.dispatch;
 
 export async function bootstrapAuth() {
   const token = await getToken();
-  const user = token ? jwtToAuthUser(token) : null;
-  if (token && user) {
-    store.dispatch(setCredentials({ user, token }));
+  const refreshToken = await getRefreshToken();
+  // Decode without an expiry check: the 15-minute access token routinely
+  // expires while the app is closed, but a valid refresh token means the
+  // session is still good — baseQueryWithReauth will silently renew it on
+  // the first request rather than forcing a fresh login here.
+  const decoded = token ? decodeJwt(token) : null;
+  const user: AuthUser | null = decoded
+    ? { id: decoded.sub, phone: decoded.phone, role: decoded.role }
+    : null;
+  if (token && user && (refreshToken || decoded!.exp * 1000 > Date.now())) {
+    store.dispatch(setCredentials({ user, token, refreshToken: refreshToken ?? undefined }));
   }
   store.dispatch(setBootstrapped());
 }

@@ -8,11 +8,20 @@ import { Provider, useSelector } from 'react-redux';
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import { store, bootstrapAuth } from '@/store/store';
 import type { RootState } from '@/store/store';
+import { socketManager } from '@/lib/socket-manager';
 
 SplashScreen.preventAutoHideAsync();
 
 function RootNavigator() {
   const { user, isBootstrapping } = useSelector((state: RootState) => state.auth);
+
+  useEffect(() => {
+    if (user) {
+      socketManager.connect();
+    } else {
+      socketManager.disconnect();
+    }
+  }, [user]);
 
   if (isBootstrapping) {
     return null;
