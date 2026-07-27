@@ -1,28 +1,25 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Animal } from '../animals/animal.entity';
-import { MarketItem } from '../marketplace/market-item.entity';
+import { Product } from '../products/product.entity';
+import { Livestock } from '../livestock/livestock.entity';
 import { Doctor } from '../doctors/doctor.entity';
-import { Alert } from '../alerts/alert.entity';
+import { Clinic } from '../clinics/clinic.entity';
 import { MeilisearchService } from '../meilisearch/meilisearch.service';
 
-/** One-time sync of existing rows into Meilisearch on boot, so pre-existing data is searchable
- * without a separate reindex command. Ongoing changes are kept in sync by each entity's own
- * service (see indexDocument/deleteDocument calls in animals/marketplace/doctors/alerts services). */
 @Injectable()
 export class SearchIndexBootstrap implements OnModuleInit {
   private readonly logger = new Logger(SearchIndexBootstrap.name);
 
   constructor(
-    @InjectRepository(Animal)
-    private readonly animalRepository: Repository<Animal>,
-    @InjectRepository(MarketItem)
-    private readonly marketItemRepository: Repository<MarketItem>,
+    @InjectRepository(Product)
+    private readonly productRepository: Repository<Product>,
+    @InjectRepository(Livestock)
+    private readonly livestockRepository: Repository<Livestock>,
     @InjectRepository(Doctor)
     private readonly doctorRepository: Repository<Doctor>,
-    @InjectRepository(Alert)
-    private readonly alertRepository: Repository<Alert>,
+    @InjectRepository(Clinic)
+    private readonly clinicRepository: Repository<Clinic>,
     private readonly meilisearchService: MeilisearchService,
   ) {}
 
@@ -31,28 +28,53 @@ export class SearchIndexBootstrap implements OnModuleInit {
       return;
     }
     try {
-      const [animals, marketItems, doctors, alerts] = await Promise.all([
-        this.animalRepository.find(),
-        this.marketItemRepository.find(),
+      const [products, livestock, doctors, clinics] = await Promise.all([
+        this.productRepository.find(),
+        this.livestockRepository.find(),
         this.doctorRepository.find(),
-        this.alertRepository.find({ where: { isActive: true } }),
+        this.clinicRepository.find(),
       ]);
       await Promise.all([
         this.meilisearchService.indexDocuments(
-          'animals',
-          animals.map((a) => ({ ...a })),
+          'products',
+          products.map((p) => ({
+            id: p.id,
+            name: p.name,
+            sku: p.sku,
+            price: p.price,
+            description: p.description,
+          })),
         ),
         this.meilisearchService.indexDocuments(
-          'marketplace',
-          marketItems.map((m) => ({ ...m })),
+          'livestock',
+          livestock.map((l) => ({
+            id: l.id,
+            species: l.species,
+            breed: l.breed,
+            price: l.price,
+            location: l.location,
+            isSold: l.isSold,
+          })),
         ),
         this.meilisearchService.indexDocuments(
           'doctors',
-          doctors.map((d) => ({ ...d })),
+          doctors.map((d) => ({
+            id: d.id,
+            name: d.name,
+            specialty: d.specialty,
+            bio: d.bio,
+            isVerified: d.isVerified,
+          })),
         ),
         this.meilisearchService.indexDocuments(
-          'alerts',
-          alerts.map((a) => ({ ...a })),
+          'clinics',
+          clinics.map((c) => ({
+            id: c.id,
+            name: c.name,
+            location: c.location,
+            description: c.description,
+            isVerified: c.isVerified,
+          })),
         ),
       ]);
       this.logger.log('Synced existing rows into Meilisearch indexes');

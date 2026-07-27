@@ -1,61 +1,81 @@
 import { Injectable } from '@nestjs/common';
-import { AnimalsService, Animal } from '../animals/animals.service';
-import {
-  MarketplaceService,
-  MarketItem,
-} from '../marketplace/marketplace.service';
-import { DoctorsService, Doctor } from '../doctors/doctors.service';
-import { AlertsService, Alert } from '../alerts/alerts.service';
-
-export interface SearchResults {
-  animals: Animal[];
-  marketplace: MarketItem[];
-  doctors: Doctor[];
-  alerts: Alert[];
-}
-
-export type SearchType = 'animals' | 'marketplace' | 'doctors' | 'alerts';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository, ILike } from 'typeorm';
+import { MeilisearchService } from '../meilisearch/meilisearch.service';
+import { Product } from '../products/product.entity';
+import { Livestock } from '../livestock/livestock.entity';
+import { Doctor } from '../doctors/doctor.entity';
+import { Clinic } from '../clinics/clinic.entity';
 
 @Injectable()
 export class SearchService {
   constructor(
-    private readonly animalsService: AnimalsService,
-    private readonly marketplaceService: MarketplaceService,
-    private readonly doctorsService: DoctorsService,
-    private readonly alertsService: AlertsService,
+    private readonly meilisearchService: MeilisearchService,
+    @InjectRepository(Product)
+    private readonly productRepository: Repository<Product>,
+    @InjectRepository(Livestock)
+    private readonly livestockRepository: Repository<Livestock>,
+    @InjectRepository(Doctor)
+    private readonly doctorRepository: Repository<Doctor>,
+    @InjectRepository(Clinic)
+    private readonly clinicRepository: Repository<Clinic>,
   ) {}
 
-  async search(
-    userId: number,
-    q: string,
-    type?: SearchType,
-    filters?: { category?: string; specialty?: string },
-  ): Promise<Partial<SearchResults>> {
-    if (!q) {
-      return { animals: [], marketplace: [], doctors: [], alerts: [] };
+  async globalSearch(query: string) {
+    if (!query) {
+      return { products: [], livestock: [], doctors: [], clinics: [] };
     }
 
-    const wantsAll = !type;
-    const [animals, marketplace, doctors, alerts] = await Promise.all([
-      wantsAll || type === 'animals'
-        ? this.animalsService.search(userId, q)
-        : Promise.resolve(undefined),
-      wantsAll || type === 'marketplace'
-        ? this.marketplaceService.search(q, filters?.category)
-        : Promise.resolve(undefined),
-      wantsAll || type === 'doctors'
-        ? this.doctorsService.search(q, filters?.specialty)
-        : Promise.resolve(undefined),
-      wantsAll || type === 'alerts'
-        ? this.alertsService.search(q)
-        : Promise.resolve(undefined),
+    if (this.meilisearchService.isEnabled) {
+      try {
+        const [products, livestock, doctors, clinics] = await Promise.all([
+          this.meilisearchService.search<any>('products', query, { limit: 10 }),
+          this.meilisearchService.search<any>('livestock', query, { limit: 10 }),
+          this.meilisearchService.search<any>('doctors', query, { limit: 10 }),
+          this.meilisearchService.search<any>('clinics', query, { limit: 10 }),
+        ]);
+
+        if (products !== null && livestock !== null && doctors !== null && clinics !== null) {
+          return { products, livestock, doctors, clinics };
+        }
+      } catch (err) {
+        console.warn('Meilisearch global query failed, falling back to database', err);
+      }
+    }
+
+    const [products, livestock, doctors, clinics] = await Promise.all([
+      this.productRepository.find({
+        where: [
+          { name: ILike(`%${query}%`) },
+          { description: ILike(`%${query}%`) },
+        ],
+        take: 10,
+      }),
+      this.livestockRepository.find({
+        where: [
+          { breed: ILike(`%${query}%`) },
+          { species: ILike(`%${query}%`) },
+        ],
+        take: 10,
+      }),
+      this.doctorRepository.find({
+        where: [
+          { name: ILike(`%${query}%`) },
+          { specialty: ILike(`%${query}%`) },
+          { bio: ILike(`%${query}%`) },
+        ],
+        take: 10,
+      }),
+      this.clinicRepository.find({
+        where: [
+          { name: ILike(`%${query}%`) },
+          { location: ILike(`%${query}%`) },
+          { description: ILike(`%${query}%`) },
+        ],
+        take: 10,
+      }),
     ]);
 
-    const results: Partial<SearchResults> = {};
-    if (animals !== undefined) results.animals = animals;
-    if (marketplace !== undefined) results.marketplace = marketplace;
-    if (doctors !== undefined) results.doctors = doctors;
-    if (alerts !== undefined) results.alerts = alerts;
-    return results;
+    return { products, livestock, doctors, clinics };
   }
 }

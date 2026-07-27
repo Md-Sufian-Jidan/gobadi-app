@@ -12,7 +12,6 @@ import { UsersModule } from './users/users.module';
 import { AnimalsModule } from './animals/animals.module';
 import { DoctorsModule } from './doctors/doctors.module';
 import { AppointmentsModule } from './appointments/appointments.module';
-import { MarketplaceModule } from './marketplace/marketplace.module';
 import { ChatModule } from './chat/chat.module';
 import { SeedModule } from './seed/seed.module';
 import { CloudinaryModule } from './cloudinary/cloudinary.module';
@@ -27,6 +26,20 @@ import { ReferralsModule } from './referrals/referrals.module';
 import { AdminModule } from './admin/admin.module';
 import { SearchModule } from './search/search.module';
 import { MeilisearchModule } from './meilisearch/meilisearch.module';
+
+import { ProductsModule } from './products/products.module';
+import { LivestockModule } from './livestock/livestock.module';
+import { AddressesModule } from './addresses/addresses.module';
+import { CartModule } from './cart/cart.module';
+import { WishlistModule } from './wishlist/wishlist.module';
+import { PaymentsModule } from './payments/payments.module';
+import { OrdersModule } from './orders/orders.module';
+import { DeliveryModule } from './delivery/delivery.module';
+import { ClinicsModule } from './clinics/clinics.module';
+import { ServicesModule } from './services/services.module';
+import { AiDiagnosisModule } from './ai-diagnosis/ai-diagnosis.module';
+import { ReviewsModule } from './reviews/reviews.module';
+import { NotificationsModule } from './notifications/notifications.module';
 
 @Module({
   imports: [
@@ -59,7 +72,6 @@ import { MeilisearchModule } from './meilisearch/meilisearch.module';
     AnimalsModule,
     DoctorsModule,
     AppointmentsModule,
-    MarketplaceModule,
     ChatModule,
     SeedModule,
     CloudinaryModule,
@@ -72,6 +84,19 @@ import { MeilisearchModule } from './meilisearch/meilisearch.module';
     ReferralsModule,
     AdminModule,
     SearchModule,
+    ProductsModule,
+    LivestockModule,
+    AddressesModule,
+    CartModule,
+    WishlistModule,
+    PaymentsModule,
+    OrdersModule,
+    DeliveryModule,
+    ClinicsModule,
+    ServicesModule,
+    AiDiagnosisModule,
+    ReviewsModule,
+    NotificationsModule,
   ],
   controllers: [AppController, HealthController],
   providers: [

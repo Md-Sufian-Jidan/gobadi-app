@@ -1,26 +1,21 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { AnimalsModule } from '../animals/animals.module';
-import { MarketplaceModule } from '../marketplace/marketplace.module';
-import { DoctorsModule } from '../doctors/doctors.module';
-import { AlertsModule } from '../alerts/alerts.module';
-import { Animal } from '../animals/animal.entity';
-import { MarketItem } from '../marketplace/market-item.entity';
-import { Doctor } from '../doctors/doctor.entity';
-import { Alert } from '../alerts/alert.entity';
-import { SearchController } from './search.controller';
 import { SearchService } from './search.service';
+import { SearchController } from './search.controller';
+import { Product } from '../products/product.entity';
+import { Livestock } from '../livestock/livestock.entity';
+import { Doctor } from '../doctors/doctor.entity';
+import { Clinic } from '../clinics/clinic.entity';
+import { MeilisearchModule } from '../meilisearch/meilisearch.module';
 import { SearchIndexBootstrap } from './search-index.bootstrap';
 
 @Module({
   imports: [
-    AnimalsModule,
-    MarketplaceModule,
-    DoctorsModule,
-    AlertsModule,
-    TypeOrmModule.forFeature([Animal, MarketItem, Doctor, Alert]),
+    TypeOrmModule.forFeature([Product, Livestock, Doctor, Clinic]),
+    MeilisearchModule,
   ],
-  controllers: [SearchController],
   providers: [SearchService, SearchIndexBootstrap],
+  controllers: [SearchController],
+  exports: [SearchService],
 })
 export class SearchModule {}
