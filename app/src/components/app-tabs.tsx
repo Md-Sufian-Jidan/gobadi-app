@@ -13,6 +13,9 @@ function CustomTabBar({ state, descriptors, navigation }: any) {
       <View style={styles.tabBarBackground}>
         {state.routes.map((route: any, index: number) => {
           const { options } = descriptors[route.key];
+          if (options.tabBarItemStyle?.display === 'none') {
+            return null;
+          }
           const isFocused = state.index === index;
 
           const onPress = () => {
@@ -132,6 +135,12 @@ export default function AppTabs() {
   const user = useSelector((state: RootState) => state.auth.user);
   const isDoctor = user?.role === 'doctor';
 
+  // Every file under (tabs)/ is auto-registered as a route by Expo Router's
+  // file-based routing regardless of which <Tabs.Screen> elements are
+  // rendered here — swapping the JSX children by role does NOT remove the
+  // other role's tabs from the bar, they just fall back to defaults and
+  // still show up. The only way to actually hide a registered route from
+  // the tab bar (while keeping the file navigable) is `options={{ href: null }}`.
   return (
     <Tabs
       screenOptions={{
@@ -139,22 +148,14 @@ export default function AppTabs() {
       }}
       tabBar={(props) => <CustomTabBar {...props} />}
     >
-      {isDoctor ? (
-        <>
-          <Tabs.Screen name="doctor-bookings" />
-          <Tabs.Screen name="doctor-availability" />
-          <Tabs.Screen name="doctor-messages" />
-          <Tabs.Screen name="profile" />
-        </>
-      ) : (
-        <>
-          <Tabs.Screen name="index" />
-          <Tabs.Screen name="animals" />
-          <Tabs.Screen name="doctors" />
-          <Tabs.Screen name="market" />
-          <Tabs.Screen name="profile" />
-        </>
-      )}
+      <Tabs.Screen name="index" options={{ href: isDoctor ? null : undefined }} />
+      <Tabs.Screen name="animals" options={{ href: isDoctor ? null : undefined }} />
+      <Tabs.Screen name="doctors" options={{ href: isDoctor ? null : undefined }} />
+      <Tabs.Screen name="market" options={{ href: isDoctor ? null : undefined }} />
+      <Tabs.Screen name="doctor-bookings" options={{ href: isDoctor ? undefined : null }} />
+      <Tabs.Screen name="doctor-availability" options={{ href: isDoctor ? undefined : null }} />
+      <Tabs.Screen name="doctor-messages" options={{ href: isDoctor ? undefined : null }} />
+      <Tabs.Screen name="profile" />
     </Tabs>
   );
 }

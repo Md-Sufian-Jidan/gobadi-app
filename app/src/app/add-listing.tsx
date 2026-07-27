@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { useCreateListingMutation } from '@/store/marketplaceApi';
+import { useCreateListingMutation } from '@/store/livestockApi';
 
 const CATEGORIES = ['Animals', 'Proteins', 'Dairy', 'Food', 'Equipments', 'Vaccines'];
 
@@ -29,7 +29,18 @@ export default function AddListingScreen() {
       return;
     }
     try {
-      await createListing({ name: trimmedName, price: parsedPrice, category }).unwrap();
+      await createListing({
+        species: trimmedName.toLowerCase().includes('goat') ? 'goat' : 'cow',
+        breed: trimmedName,
+        price: parsedPrice,
+        age: '12 Months',
+        weight: 120,
+        gender: 'male',
+        location: 'Dhaka',
+        farmName: 'My Farm',
+        healthStatus: 'Healthy',
+        status: 'published',
+      }).unwrap();
       router.replace('/(tabs)/market');
     } catch (err) {
       console.log('Error creating listing:', err);

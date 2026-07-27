@@ -10,6 +10,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useGetDoctorByIdQuery } from '@/store/doctorsApi';
+import { useGetServicesQuery } from '@/store/servicesApi';
 
 export default function DoctorDetailScreen() {
   const router = useRouter();
@@ -17,6 +18,10 @@ export default function DoctorDetailScreen() {
   const doctorId = String(id || '');
 
   const { data: doctorData } = useGetDoctorByIdQuery(doctorId, { skip: !doctorId });
+  const { data: services = [] } = useGetServicesQuery(
+    { providerType: 'doctor', providerId: doctorId ? parseInt(doctorId, 10) : undefined },
+    { skip: !doctorId },
+  );
 
   const doctor = useMemo(() => {
     if (!doctorData) {
@@ -119,6 +124,21 @@ export default function DoctorDetailScreen() {
             </View>
           ))}
         </View>
+
+        {/* Services offered */}
+        {services.length > 0 && (
+          <View style={[styles.specCard, { marginTop: 20 }]}>
+            <Text style={styles.specTitle}>Services</Text>
+            {services.map((service) => (
+              <View key={service.id} style={styles.availabilityCard}>
+                <View style={styles.availabilityMeta}>
+                  <Text style={styles.availabilityTitle}>{service.name}</Text>
+                  <Text style={styles.availabilityTime}>৳ {service.price} · {service.durationMinutes} min</Text>
+                </View>
+              </View>
+            ))}
+          </View>
+        )}
       </ScrollView>
 
       {/* Floating Book Slot Button */}

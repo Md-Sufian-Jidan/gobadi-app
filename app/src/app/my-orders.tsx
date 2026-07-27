@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { useGetCatalogQuery, useGetMyOrdersQuery } from '@/store/marketplaceApi';
+import { useGetMyOrdersQuery } from '@/store/ordersApi';
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString(undefined, {
@@ -20,18 +20,12 @@ function formatDate(iso: string): string {
 }
 
 function isPaidStatus(status: string): boolean {
-  return status.toLowerCase() === 'paid';
+  return status.toLowerCase() === 'paid' || status.toLowerCase() === 'successful';
 }
 
 export default function MyOrdersScreen() {
   const router = useRouter();
   const { data: orders, isLoading: ordersLoading } = useGetMyOrdersQuery();
-  const { data: catalog } = useGetCatalogQuery();
-
-  const catalogById = useMemo(
-    () => Object.fromEntries((catalog || []).map((item) => [String(item.id), item])),
-    [catalog],
-  );
 
   return (
     <SafeAreaView style={styles.container}>
@@ -75,10 +69,9 @@ export default function MyOrdersScreen() {
 
               <View style={styles.itemsList}>
                 {order.items.map((lineItem, idx) => {
-                  const catalogItem = catalogById[lineItem.itemId];
                   return (
                     <View key={idx} style={styles.itemRow}>
-                      <Text style={styles.itemName}>{catalogItem?.name || `Item #${lineItem.itemId}`}</Text>
+                      <Text style={styles.itemName}>{lineItem.name}</Text>
                       <Text style={styles.itemQty}>x{lineItem.quantity}</Text>
                     </View>
                   );

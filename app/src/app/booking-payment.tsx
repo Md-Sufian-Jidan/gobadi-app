@@ -6,10 +6,11 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 
 export default function BookingPaymentScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams();
 
   return (
     <SafeAreaView style={styles.container}>
@@ -37,7 +38,7 @@ export default function BookingPaymentScreen() {
         {/* bKash select block */}
         <TouchableOpacity
           style={styles.paymentMethodCard}
-          onPress={() => router.push('/booking-bkash-number')}
+          onPress={() => router.push({ pathname: '/booking-bkash-number', params })}
           activeOpacity={0.9}
         >
           <View style={styles.bkashRow}>
@@ -58,7 +59,7 @@ export default function BookingPaymentScreen() {
       <View style={styles.bottomBar}>
         <TouchableOpacity
           style={styles.payButton}
-          onPress={() => router.push('/booking-bkash-number')}
+          onPress={() => router.push({ pathname: '/booking-bkash-number', params })}
           activeOpacity={0.85}
         >
           <Text style={styles.payIcon}>🎟️</Text>
