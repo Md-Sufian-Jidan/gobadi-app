@@ -316,13 +316,18 @@ export class AuthService {
   async loginWithGoogle(
     idToken: string,
   ): Promise<{ token: string; user: Partial<User> }> {
-    const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+    const audience = [
+      process.env.GOOGLE_CLIENT_ID_WEB,
+      process.env.GOOGLE_CLIENT_ID_IOS,
+      process.env.GOOGLE_CLIENT_ID_ANDROID,
+    ].filter((id): id is string => Boolean(id));
+    const client = new OAuth2Client();
 
     const payload = await (async () => {
       try {
         const ticket = await client.verifyIdToken({
           idToken,
-          audience: process.env.GOOGLE_CLIENT_ID,
+          audience,
         });
         return ticket.getPayload();
       } catch {
@@ -346,6 +351,22 @@ export class AuthService {
   async loginWithFacebook(
     accessToken: string,
   ): Promise<{ token: string; user: Partial<User> }> {
+    const appId = process.env.FACEBOOK_APP_ID;
+    const appSecret = process.env.FACEBOOK_APP_SECRET;
+    const debugResponse = await fetch(
+      `https://graph.facebook.com/debug_token?input_token=${encodeURIComponent(accessToken)}&access_token=${encodeURIComponent(`${appId}|${appSecret}`)}`,
+    );
+    const debugBody = (await debugResponse.json().catch(() => null)) as {
+      data?: { is_valid?: boolean; app_id?: string };
+    } | null;
+    if (
+      !debugResponse.ok ||
+      !debugBody?.data?.is_valid ||
+      debugBody.data.app_id !== appId
+    ) {
+      throw new UnauthorizedException('Invalid Facebook token.');
+    }
+
     const response = await fetch(
       `https://graph.facebook.com/me?fields=id,name,email&access_token=${encodeURIComponent(accessToken)}`,
     );
