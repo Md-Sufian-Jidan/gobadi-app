@@ -5,13 +5,13 @@ import {
   Text,
   ScrollView,
   TouchableOpacity,
-  SafeAreaView,
   Image,
   Dimensions,
   Share,
   TextInput,
   Alert,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useGetAnimalsQuery } from '@/store/animalsApi';
 import { useGetTasksQuery, useToggleTaskMutation } from '@/store/tasksApi';
