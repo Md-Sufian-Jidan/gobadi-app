@@ -10,7 +10,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { useGetCatalogQuery, useGetMyListingsQuery } from '@/store/marketplaceApi';
+import { useGetProductsQuery } from '@/store/productsApi';
+import { useGetLivestockQuery, useGetMyListingsQuery } from '@/store/livestockApi';
 
 interface Category {
   id: string;
@@ -47,39 +48,59 @@ export default function MarketScreen() {
     { id: '6', name: 'Vaccines', icon: '💉' },
   ];
 
-  const { data: catalog = [] } = useGetCatalogQuery();
+  const { data: products } = useGetProductsQuery({}, { skip: activeCategory === 'Animals' || tradeType !== 'Buy' });
+  const { data: livestock } = useGetLivestockQuery({}, { skip: activeCategory !== 'Animals' || tradeType !== 'Buy' });
   const { data: myListings = [] } = useGetMyListingsQuery(undefined, { skip: tradeType !== 'Sell' });
 
-  const marketItems: MarketItemView[] = useMemo(
-    () =>
-      catalog.map((item) => ({
+  const catalogList = activeCategory === 'Animals' 
+    ? (Array.isArray(livestock) ? livestock : (livestock as any)?.data || []) 
+    : (Array.isArray(products) ? products : (products as any)?.data || []);
+
+  const marketItems: MarketItemView[] = useMemo(() => {
+    return catalogList.map((item: any) => {
+      const isLivestock = activeCategory === 'Animals';
+      return {
         id: item.id,
-        title: item.name,
+        title: item.name || `${item.breed || ''} ${item.species || ''}`,
         price: item.price.toLocaleString(),
         timeAgo: 'Just now',
-        species: item.category === 'Animals' ? 'Albenian' : 'Feed Pack',
-        age: item.category === 'Animals' ? '28 months' : 'N/A',
-        liveWeight: item.category === 'Animals' ? '725 Kg' : '50 Kg',
-        sellerName: 'Abdur Rahman',
-        location: 'Gabtoli, Dhaka',
-        image: item.image
-          ? { uri: item.image }
-          : item.name.toLowerCase().includes('goat')
+        species: isLivestock ? (item.species || 'Cattle') : 'Feed/Med',
+        age: isLivestock ? (item.age || 'N/A') : 'N/A',
+        liveWeight: isLivestock ? `${item.weight || 0} Kg` : 'N/A',
+        sellerName: isLivestock ? (item.farmName || 'Seller') : 'Gobadi Store',
+        location: item.location || 'Dhaka',
+        image: item.images && item.images[0]
+          ? { uri: item.images[0] }
+          : (item.name || '').toLowerCase().includes('goat') || (item.breed || '').toLowerCase().includes('goat')
             ? require('@/assets/images/kota_goat.png')
             : require('@/assets/images/albino_buffalo.png'),
-      })),
-    [catalog],
-  );
+      };
+    });
+  }, [catalogList, activeCategory]);
 
-  const filteredItems = marketItems.filter((item) => {
-    if (searchQuery && !item.title.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+  const filteredItems = useMemo(() => {
+    const items = tradeType === 'Sell'
+      ? myListings.map((item: any) => ({
+          id: item.id,
+          title: `${item.breed || ''} ${item.species || ''}`,
+          price: item.price.toLocaleString(),
+          timeAgo: 'Active',
+          species: item.species || 'Cattle',
+          age: item.age || 'N/A',
+          liveWeight: `${item.weight || 0} Kg`,
+          sellerName: 'Me',
+          location: item.location || 'My Farm',
+          image: item.images && item.images[0]
+            ? { uri: item.images[0] }
+            : require('@/assets/images/kota_goat.png'),
+        }))
+      : marketItems;
 
-    // Calf/Bull Filters simulation
-    if (activeFilter === 'Calf(3)' && item.title !== 'Kota Goat') return false;
-    if (activeFilter === 'Bull(2)' && item.title !== 'Albenian Buffalo') return false;
-
-    return true;
-  });
+    return items.filter((item) => {
+      if (searchQuery && !item.title.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+      return true;
+    });
+  }, [tradeType, myListings, marketItems, searchQuery]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -95,14 +116,24 @@ export default function MarketScreen() {
           </View>
         </View>
 
-        {/* My Cart Button */}
-        <TouchableOpacity
-          style={styles.cartButton}
-          onPress={() => router.push('/checkout')}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.cartText}>🛒 My Cart</Text>
-        </TouchableOpacity>
+        <View style={styles.headerActions}>
+          <TouchableOpacity
+            style={styles.wishlistButton}
+            onPress={() => router.push('/wishlist')}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.wishlistText}>♥</Text>
+          </TouchableOpacity>
+
+          {/* My Cart Button */}
+          <TouchableOpacity
+            style={styles.cartButton}
+            onPress={() => router.push('/cart')}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.cartText}>🛒 My Cart</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
@@ -173,20 +204,17 @@ export default function MarketScreen() {
             </View>
 
             <View style={styles.itemsList}>
-              {myListings.length === 0 ? (
-                <Text style={styles.emptyListingsText}>You haven't listed anything for sale yet.</Text>
+              {filteredItems.length === 0 ? (
+                <Text style={styles.emptyListingsText}>You haven&apos;t listed anything for sale yet.</Text>
               ) : (
-                myListings.map((item) => (
+                filteredItems.map((item) => (
                   <View key={item.id} style={styles.itemCard}>
                     <View style={styles.cardMain}>
-                      <Image
-                        source={item.image ? { uri: item.image } : require('@/assets/images/albino_buffalo.png')}
-                        style={styles.itemImage}
-                      />
+                      <Image source={item.image} style={styles.itemImage} />
                       <View style={styles.itemMeta}>
-                        <Text style={styles.itemTitle}>{item.name}</Text>
-                        <Text style={styles.itemPrice}>৳ {item.price.toLocaleString()}</Text>
-                        <Text style={styles.specValue}>{item.category}</Text>
+                        <Text style={styles.itemTitle}>{item.title}</Text>
+                        <Text style={styles.itemPrice}>৳ {item.price}</Text>
+                        <Text style={styles.specValue}>{item.species}</Text>
                       </View>
                     </View>
                   </View>
@@ -301,7 +329,7 @@ export default function MarketScreen() {
                   <View style={styles.cardActionsRow}>
                     <TouchableOpacity
                       style={styles.bookBtn}
-                      onPress={() => router.push({ pathname: '/checkout', params: { id: item.id } })}
+                      onPress={() => router.push({ pathname: '/book-animal', params: { id: item.id } })}
                       activeOpacity={0.85}
                     >
                       <Text style={styles.bookBtnText}>🏷️ Book Animal</Text>
@@ -363,6 +391,25 @@ const styles = StyleSheet.create({
   },
   dropdownArrow: {
     fontSize: 8,
+    color: '#BD632F',
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  wishlistButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E6E1DC',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  wishlistText: {
+    fontSize: 16,
     color: '#BD632F',
   },
   cartButton: {

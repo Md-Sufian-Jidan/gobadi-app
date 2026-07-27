@@ -10,7 +10,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { useGetCatalogItemQuery } from '@/store/marketplaceApi';
+import { useGetLivestockItemQuery } from '@/store/livestockApi';
+import { useGetReviewsQuery, useVoteHelpfulMutation } from '@/store/reviewsApi';
 
 const { width } = Dimensions.get('window');
 
@@ -19,17 +20,25 @@ export default function AnimalDetailsScreen() {
   const params = useLocalSearchParams();
   const id = String(params.id || '');
 
-  const { data: item } = useGetCatalogItemQuery(id, { skip: !id });
+  const { data: item } = useGetLivestockItemQuery(parseInt(id, 10), { skip: !id });
+  const { data: reviews = [] } = useGetReviewsQuery(
+    { targetType: 'livestock', targetId: id },
+    { skip: !id },
+  );
+  const [voteHelpful] = useVoteHelpfulMutation();
+  const avgRating = reviews.length
+    ? (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1)
+    : null;
 
-  const animalImage = item?.image
-    ? { uri: item.image }
-    : item?.name?.toLowerCase().includes('goat')
+  const animalImage = item?.images?.[0]
+    ? { uri: item.images[0] }
+    : (item?.breed || '').toLowerCase().includes('goat')
       ? require('@/assets/images/kota_goat.png')
       : require('@/assets/images/albino_buffalo.png');
-  const animalName = item?.name || 'Loading...';
+  const animalName = item ? `${item.breed} ${item.species}` : 'Loading...';
   const animalPrice = item?.price?.toLocaleString() || '—';
 
-  const basicInfo = item ? [{ label: 'Category', value: item.category }] : [];
+  const basicInfo = item ? [{ label: 'Category', value: 'Livestock' }] : [];
 
   return (
     <SafeAreaView style={styles.container}>
@@ -98,6 +107,31 @@ export default function AnimalDetailsScreen() {
               </View>
             ))}
           </View>
+
+          {/* Reviews */}
+          <View style={styles.divider} />
+          <View style={styles.sectionHeaderRow}>
+            <Text style={styles.sectionTitle}>Reviews {avgRating ? `(${avgRating} ★, ${reviews.length})` : ''}</Text>
+          </View>
+
+          {reviews.length === 0 ? (
+            <Text style={styles.gridLabel}>No reviews yet.</Text>
+          ) : (
+            <View style={{ gap: 12 }}>
+              {reviews.map((review) => (
+                <View key={review.id} style={styles.gridCard}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
+                    <Text style={styles.gridValue}>{review.user?.name || 'Anonymous'}</Text>
+                    <Text style={styles.gridLabel}>{'★'.repeat(review.rating)}</Text>
+                  </View>
+                  <Text style={[styles.gridLabel, { marginBottom: 8 }]}>{review.text}</Text>
+                  <TouchableOpacity onPress={() => voteHelpful(review.id)} activeOpacity={0.7}>
+                    <Text style={styles.messageBtnText}>👍 Helpful ({review.helpfulCount})</Text>
+                  </TouchableOpacity>
+                </View>
+              ))}
+            </View>
+          )}
         </View>
       </ScrollView>
 
@@ -105,7 +139,7 @@ export default function AnimalDetailsScreen() {
       <View style={styles.bottomBar}>
         <TouchableOpacity
           style={styles.bookBtn}
-          onPress={() => router.push({ pathname: '/checkout', params: { id } })}
+          onPress={() => router.push({ pathname: '/book-animal', params: { id } })}
           activeOpacity={0.85}
         >
           <Text style={styles.bookBtnText}>🏷️ Book Animal</Text>

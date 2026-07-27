@@ -10,37 +10,73 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 
-import { useGetCatalogItemQuery, useCheckoutMutation, useVerifyPaymentMutation } from '@/store/marketplaceApi';
-
-const DELIVERY_CHARGE = 1500;
+import { useGetLivestockItemQuery } from '@/store/livestockApi';
+import { useGetCartQuery, useAddCartItemMutation, useClearCartMutation } from '@/store/cartApi';
+import { useCreateOrderMutation } from '@/store/ordersApi';
+import { useCreatePaymentIntentMutation, useSimulateSuccessMutation } from '@/store/paymentsApi';
 
 export default function CheckoutScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const itemId = String(params.id || '');
+  const isDirectCheckout = !!itemId;
 
-  const { data: item } = useGetCatalogItemQuery(itemId, { skip: !itemId });
-  const [checkout] = useCheckoutMutation();
-  const [verifyPayment] = useVerifyPaymentMutation();
+  const { data: livestockItem } = useGetLivestockItemQuery(parseInt(itemId, 10), { skip: !isDirectCheckout });
+  const { data: cartData } = useGetCartQuery(undefined, { skip: isDirectCheckout });
 
-  const totalPrice = (item?.price || 0) + DELIVERY_CHARGE;
+  const [createOrder] = useCreateOrderMutation();
+  const [createPaymentIntent] = useCreatePaymentIntentMutation();
+  const [simulateSuccess] = useSimulateSuccessMutation();
+  const [addCartItem] = useAddCartItemMutation();
+  const [clearCart] = useClearCartMutation();
+
+  const itemName = isDirectCheckout 
+    ? (livestockItem ? `${livestockItem.breed} ${livestockItem.species}` : 'Loading...')
+    : `Cart Checkout (${cartData?.items?.length || 0} items)`;
+
+  const categoryName = isDirectCheckout ? 'Livestock' : 'Various';
+
+  const subtotal = isDirectCheckout ? (livestockItem?.price || 0) : (cartData?.subtotal || 0);
+  const tax = isDirectCheckout ? Math.round(subtotal * 0.05) : (cartData?.tax || 0);
+  const shipping = isDirectCheckout ? 1500 : (cartData?.shipping || 0);
+  const totalPrice = subtotal + tax + shipping;
+
+  const imageUri = isDirectCheckout && livestockItem?.images?.[0]
+    ? { uri: livestockItem.images[0] }
+    : require('@/assets/images/albino_buffalo.png');
 
   const handlePlaceOrder = async () => {
     try {
-      const order = await checkout({
-        items: [{ itemId, quantity: 1 }],
-        deliveryAddress: 'Road# 9, house# 5, Lane#3, Mirpur 11/a, Dhaka-1216.',
+      if (isDirectCheckout && livestockItem) {
+        await clearCart().unwrap();
+        await addCartItem({ livestockId: livestockItem.id, quantity: 1 }).unwrap();
+      }
+
+      const order = await createOrder({
+        deliveryAddress: {
+          label: 'Home',
+          contactName: 'Abdul Kader',
+          phone: '+8801XXXXXXXXX',
+          division: 'Dhaka',
+          district: 'Dhaka',
+          upazila: 'Mirpur',
+          postalCode: '1216',
+          addressLine: 'Road# 9, house# 5, Lane#3, Mirpur 11/a',
+        },
+        deliveryMethod: 'standard',
+        deliveryNotes: 'Please call before delivery',
       }).unwrap();
-      // Simulated bKash payment gateway - no real payment provider is integrated,
-      // so we confirm payment immediately with a synthesized transaction reference.
-      await verifyPayment({
+
+      const intent = await createPaymentIntent({
         orderId: order.id,
-        transactionId: `TXN-${Date.now()}`,
+        provider: 'simulate',
       }).unwrap();
+
+      await simulateSuccess(intent.transactionId).unwrap();
+      router.push({ pathname: '/order-success', params: { orderId: order.id } });
     } catch (err) {
       console.log('Error placing order:', err);
     }
-    router.push('/order-success');
   };
 
   return (
@@ -68,17 +104,17 @@ export default function CheckoutScreen() {
         
         <View style={styles.summaryCard}>
           <Image
-            source={item?.image ? { uri: item.image } : require('@/assets/images/albino_buffalo.png')}
+            source={imageUri}
             style={styles.animalImage}
           />
           <View style={styles.summaryDetails}>
             <View style={styles.detailRow}>
               <Text style={styles.detailLabel}>Item:</Text>
-              <Text style={styles.detailValue}>{item?.name || 'Loading...'}</Text>
+              <Text style={styles.detailValue}>{itemName}</Text>
             </View>
             <View style={styles.detailRow}>
               <Text style={styles.detailLabel}>Category:</Text>
-              <Text style={styles.detailValue}>{item?.category || '—'}</Text>
+              <Text style={styles.detailValue}>{categoryName}</Text>
             </View>
           </View>
         </View>
@@ -107,11 +143,15 @@ export default function CheckoutScreen() {
         <View style={styles.pricingCard}>
           <View style={styles.priceRow}>
             <Text style={styles.priceLabel}>Item Price</Text>
-            <Text style={styles.priceVal}>৳ {(item?.price || 0).toLocaleString()}</Text>
+            <Text style={styles.priceVal}>৳ {subtotal.toLocaleString()}</Text>
+          </View>
+          <View style={styles.priceRow}>
+            <Text style={styles.priceLabel}>VAT (5%)</Text>
+            <Text style={styles.priceVal}>৳ {tax.toLocaleString()}</Text>
           </View>
           <View style={styles.priceRow}>
             <Text style={styles.priceLabel}>Delivery Charge</Text>
-            <Text style={styles.priceVal}>৳ {DELIVERY_CHARGE.toLocaleString()}</Text>
+            <Text style={styles.priceVal}>৳ {shipping.toLocaleString()}</Text>
           </View>
           <View style={styles.divider} />
           <View style={styles.priceRow}>

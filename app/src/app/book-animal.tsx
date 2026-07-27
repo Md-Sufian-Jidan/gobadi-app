@@ -8,7 +8,9 @@ import {
   Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
+
+import { useGetLivestockItemQuery, useReserveListingMutation } from '@/store/livestockApi';
 
 interface BookingOption {
   id: string;
@@ -19,6 +21,10 @@ interface BookingOption {
 
 export default function BookAnimalScreen() {
   const router = useRouter();
+  const { id } = useLocalSearchParams<{ id?: string }>();
+  const livestockId = id ? parseInt(id, 10) : undefined;
+  const { data: animal } = useGetLivestockItemQuery(livestockId!, { skip: !livestockId });
+  const [reserveListing, { isLoading: isReserving }] = useReserveListingMutation();
   const [selectedOption, setSelectedOption] = useState('1');
 
   const options: BookingOption[] = [
@@ -73,29 +79,25 @@ export default function BookAnimalScreen() {
         
         <View style={styles.animalCard}>
           <Image
-            source={require('@/assets/images/albino_buffalo.png')}
+            source={animal?.images?.[0] ? { uri: animal.images[0] } : require('@/assets/images/albino_buffalo.png')}
             style={styles.animalImage}
           />
           <View style={styles.animalMeta}>
             <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Cow:</Text>
-              <Text style={styles.detailValue}>Albenian Buffalo</Text>
+              <Text style={styles.detailLabel}>Species:</Text>
+              <Text style={styles.detailValue}>{animal?.species ?? 'Loading...'}</Text>
             </View>
             <View style={styles.detailRow}>
               <Text style={styles.detailLabel}>Live Weight:</Text>
-              <Text style={styles.detailValue}>725 Kg</Text>
+              <Text style={styles.detailValue}>{animal ? `${animal.weight} Kg` : '—'}</Text>
             </View>
             <View style={styles.detailRow}>
               <Text style={styles.detailLabel}>Age:</Text>
-              <Text style={styles.detailValue}>28 Months</Text>
+              <Text style={styles.detailValue}>{animal?.age ?? '—'}</Text>
             </View>
             <View style={styles.detailRow}>
               <Text style={styles.detailLabel}>Breed:</Text>
-              <Text style={styles.detailValue}>Albenian</Text>
-            </View>
-            <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Color:</Text>
-              <Text style={styles.detailValue}>Pinkish White</Text>
+              <Text style={styles.detailValue}>{animal?.breed ?? '—'}</Text>
             </View>
           </View>
         </View>
@@ -131,8 +133,18 @@ export default function BookAnimalScreen() {
 
         {/* Proceed button */}
         <TouchableOpacity
-          style={styles.proceedButton}
-          onPress={() => router.push('/booking-payment')}
+          style={[styles.proceedButton, (!livestockId || isReserving) && { opacity: 0.6 }]}
+          disabled={!livestockId || isReserving}
+          onPress={async () => {
+            if (!livestockId) return;
+            try {
+              await reserveListing({ id: livestockId, isReserved: true }).unwrap();
+              const option = options.find((o) => o.id === selectedOption)!;
+              router.push({ pathname: '/booking-payment', params: { id: String(livestockId), cost: option.cost } });
+            } catch (err) {
+              console.log('Error reserving listing:', err);
+            }
+          }}
           activeOpacity={0.85}
         >
           <Text style={styles.proceedIcon}>✓</Text>

@@ -8,10 +8,15 @@ import {
   Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
+
+import { useGetOrderQuery } from '@/store/ordersApi';
 
 export default function AnimalBillingDetailsScreen() {
   const router = useRouter();
+  const { orderId } = useLocalSearchParams<{ orderId?: string }>();
+  const { data: order } = useGetOrderQuery(orderId ?? '', { skip: !orderId });
+  const item = order?.items?.[0];
 
   const barcodePattern = [
     2, 1, 4, 2, 1, 3, 1, 2, 4, 1, 2, 3, 1, 4, 2, 1, 2, 3, 1, 4, 
@@ -41,24 +46,20 @@ export default function AnimalBillingDetailsScreen() {
             />
             <View style={styles.doctorDetails}>
               <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>Cow:</Text>
-                <Text style={styles.detailValue}>Albenian Buffalo</Text>
+                <Text style={styles.detailLabel}>Item:</Text>
+                <Text style={styles.detailValue}>{item?.name ?? 'Loading...'}</Text>
               </View>
               <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>Live Weight:</Text>
-                <Text style={styles.detailValue}>725 Kg</Text>
+                <Text style={styles.detailLabel}>Quantity:</Text>
+                <Text style={styles.detailValue}>{item?.quantity ?? '—'}</Text>
               </View>
               <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>Age:</Text>
-                <Text style={styles.detailValue}>28 Months</Text>
+                <Text style={styles.detailLabel}>Order ID:</Text>
+                <Text style={styles.detailValue}>{order?.id ?? '—'}</Text>
               </View>
               <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>Breed:</Text>
-                <Text style={styles.detailValue}>Albenian</Text>
-              </View>
-              <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>Color:</Text>
-                <Text style={styles.detailValue}>Pinkish White</Text>
+                <Text style={styles.detailLabel}>Status:</Text>
+                <Text style={styles.detailValue}>{order?.status ?? '—'}</Text>
               </View>
             </View>
           </View>
@@ -70,36 +71,40 @@ export default function AnimalBillingDetailsScreen() {
               <Text style={styles.addressType}>Delivery Address</Text>
             </View>
             <Text style={styles.addressText}>
-              Road# 9, house# 5, Lane#3, Mirpur 11/a, Dhaka-1216.
+              {order?.deliveryAddress
+                ? `${order.deliveryAddress.addressLine}, ${order.deliveryAddress.upazila}, ${order.deliveryAddress.district}-${order.deliveryAddress.postalCode}.`
+                : 'Loading...'}
             </Text>
           </View>
 
           {/* Pricing Details Section */}
           <View style={styles.slotDetailRow}>
-            <Text style={styles.slotLabel}>Animal Price</Text>
-            <Text style={styles.feeValue}>৳ 3,20,000</Text>
+            <Text style={styles.slotLabel}>Subtotal</Text>
+            <Text style={styles.feeValue}>৳ {order ? (order.netAmount - order.tax - order.shippingFee).toLocaleString() : '—'}</Text>
+          </View>
+
+          <View style={styles.slotDetailRow}>
+            <Text style={styles.slotLabel}>Tax</Text>
+            <Text style={styles.feeValue}>৳ {order?.tax.toLocaleString() ?? '—'}</Text>
           </View>
 
           <View style={styles.slotDetailRow}>
             <Text style={styles.slotLabel}>Delivery Charge</Text>
-            <Text style={styles.feeValue}>৳ 1,500</Text>
+            <Text style={styles.feeValue}>৳ {order?.shippingFee.toLocaleString() ?? '—'}</Text>
           </View>
 
-          <View style={styles.slotDetailRow}>
-            <Text style={styles.slotLabel}>Total Price</Text>
-            <Text style={styles.feeValue}>৳ 3,21,500</Text>
-          </View>
-
-          <View style={styles.slotDetailRow}>
-            <Text style={styles.slotLabel}>Booking Money</Text>
-            <Text style={[styles.feeValue, { color: '#E53935' }]}>- ৳ 5,000</Text>
-          </View>
+          {!!order?.discountAmount && (
+            <View style={styles.slotDetailRow}>
+              <Text style={styles.slotLabel}>Discount</Text>
+              <Text style={[styles.feeValue, { color: '#E53935' }]}>- ৳ {order.discountAmount.toLocaleString()}</Text>
+            </View>
+          )}
 
           <View style={styles.divider} />
 
           <View style={styles.slotDetailRow}>
             <Text style={styles.totalLabel}>Total Payment</Text>
-            <Text style={styles.totalValue}>৳ 3,16,500</Text>
+            <Text style={styles.totalValue}>৳ {order?.netAmount.toLocaleString() ?? '—'}</Text>
           </View>
 
           {/* Custom flexbox barcode */}

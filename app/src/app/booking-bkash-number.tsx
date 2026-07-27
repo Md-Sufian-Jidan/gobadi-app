@@ -5,14 +5,34 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  Image,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
+
+import { useCreatePaymentIntentMutation, useSimulateSuccessMutation } from '@/store/paymentsApi';
 
 export default function BookingBkashNumberScreen() {
   const router = useRouter();
+  const { id } = useLocalSearchParams<{ id?: string }>();
   const [phoneNumber, setPhoneNumber] = useState('');
+  const [createPaymentIntent, { isLoading: isCreating }] = useCreatePaymentIntentMutation();
+  const [simulateSuccess, { isLoading: isConfirming }] = useSimulateSuccessMutation();
+  const isPaying = isCreating || isConfirming;
+
+  const handlePay = async () => {
+    if (!phoneNumber.trim()) return;
+    try {
+      const intent = await createPaymentIntent({
+        bookingId: id ? parseInt(id, 10) : undefined,
+        provider: 'bkash',
+      }).unwrap();
+      await simulateSuccess(intent.transactionId).unwrap();
+      router.replace('/order-success');
+    } catch (err) {
+      console.log('Error confirming booking payment:', err);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -63,12 +83,19 @@ export default function BookingBkashNumberScreen() {
       {/* Bottom Button */}
       <View style={styles.bottomBar}>
         <TouchableOpacity
-          style={styles.payButton}
-          onPress={() => router.replace('/cart')}
+          style={[styles.payButton, (!phoneNumber.trim() || isPaying) && { opacity: 0.6 }]}
+          disabled={!phoneNumber.trim() || isPaying}
+          onPress={handlePay}
           activeOpacity={0.85}
         >
-          <Text style={styles.payIcon}>🎟️</Text>
-          <Text style={styles.payText}>Pay Now</Text>
+          {isPaying ? (
+            <ActivityIndicator color="#FFFFFF" />
+          ) : (
+            <>
+              <Text style={styles.payIcon}>🎟️</Text>
+              <Text style={styles.payText}>Pay Now</Text>
+            </>
+          )}
         </TouchableOpacity>
       </View>
     </SafeAreaView>

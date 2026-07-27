@@ -1,317 +1,133 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   StyleSheet,
   View,
   Text,
-  TextInput,
   TouchableOpacity,
   ScrollView,
   Image,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 
+import {
+  useGetCartQuery,
+  useUpdateCartItemMutation,
+  useRemoveCartItemMutation,
+} from '@/store/cartApi';
+
 export default function CartScreen() {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<'Booked' | 'Placed'>('Booked');
-  const [activeCategory, setActiveCategory] = useState('Animals');
-  const [activeFilter, setActiveFilter] = useState('All');
-  const [searchQuery, setSearchQuery] = useState('');
+  const { data: cart, isLoading, isFetching } = useGetCartQuery();
+  const [updateCartItem] = useUpdateCartItemMutation();
+  const [removeCartItem] = useRemoveCartItemMutation();
 
-  const categories = [
-    { id: '1', name: 'Animals', icon: '🐂' },
-    { id: '2', name: 'Proteins', icon: '🥩' },
-    { id: '3', name: 'Dairy', icon: '🧀' },
-    { id: '4', name: 'Food', icon: '🌾' },
-    { id: '5', name: 'Equipments', icon: '🪓' },
-  ];
+  const items = cart?.items ?? [];
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.circleButton}
-          onPress={() => router.back()}
-          activeOpacity={0.8}
-        >
+        <TouchableOpacity style={styles.circleButton} onPress={() => router.back()} activeOpacity={0.8}>
           <Text style={styles.buttonText}>←</Text>
         </TouchableOpacity>
-
         <Text style={styles.headerTitle}>My Cart</Text>
-
-        <TouchableOpacity style={styles.circleButton} activeOpacity={0.8}>
-          <Text style={styles.buttonText}>🔔</Text>
-        </TouchableOpacity>
+        <View style={styles.circleButton} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
-        {/* Delivery Details Section */}
-        <View style={styles.sectionHeaderRow}>
-          <Text style={styles.sectionTitle}>Delivery Details</Text>
-          <TouchableOpacity style={styles.changeAddressBtn} activeOpacity={0.7}>
-            <Text style={styles.changeAddressText}>Change Address</Text>
+      {isLoading ? (
+        <ActivityIndicator style={{ marginTop: 40 }} color="#BD632F" />
+      ) : items.length === 0 ? (
+        <View style={styles.emptyState}>
+          <Text style={styles.emptyText}>Your cart is empty.</Text>
+          <TouchableOpacity style={styles.browseBtn} onPress={() => router.push('/(tabs)/market')} activeOpacity={0.85}>
+            <Text style={styles.browseBtnText}>Browse Marketplace</Text>
           </TouchableOpacity>
         </View>
+      ) : (
+        <>
+          <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
+            <View style={styles.listContainer}>
+              {items.map((item) => (
+                <View key={item.id} style={styles.itemCard}>
+                  <Image
+                    source={item.image ? { uri: item.image } : require('@/assets/images/kota_goat.png')}
+                    style={styles.itemImage}
+                  />
+                  <View style={styles.itemDetails}>
+                    <Text style={styles.itemName} numberOfLines={1}>{item.name}</Text>
+                    <Text style={styles.itemPrice}>৳ {(item.discountPrice || item.unitPrice).toLocaleString()}</Text>
+                    {!item.isAvailable && (
+                      <Text style={styles.warningText}>{item.warning || 'Unavailable'}</Text>
+                    )}
 
-        <View style={styles.addressCard}>
-          <View style={styles.addressHeader}>
-            <Text style={styles.addressPin}>📍</Text>
-            <Text style={styles.addressType}>Home</Text>
+                    <View style={styles.qtyRow}>
+                      <TouchableOpacity
+                        style={styles.qtyBtn}
+                        disabled={item.quantity <= 1}
+                        onPress={() => updateCartItem({ id: item.id, quantity: item.quantity - 1 })}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={styles.qtyBtnText}>−</Text>
+                      </TouchableOpacity>
+                      <Text style={styles.qtyValue}>{item.quantity}</Text>
+                      <TouchableOpacity
+                        style={styles.qtyBtn}
+                        onPress={() => updateCartItem({ id: item.id, quantity: item.quantity + 1 })}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={styles.qtyBtnText}>+</Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        style={styles.removeBtn}
+                        onPress={() => removeCartItem(item.id)}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={styles.removeBtnText}>Remove</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                </View>
+              ))}
+            </View>
+          </ScrollView>
+
+          <View style={styles.summaryContainer}>
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>Subtotal</Text>
+              <Text style={styles.summaryValue}>৳ {cart!.subtotal.toLocaleString()}</Text>
+            </View>
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>Tax</Text>
+              <Text style={styles.summaryValue}>৳ {cart!.tax.toLocaleString()}</Text>
+            </View>
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>Shipping</Text>
+              <Text style={styles.summaryValue}>৳ {cart!.shipping.toLocaleString()}</Text>
+            </View>
+            <View style={[styles.summaryRow, styles.totalRow]}>
+              <Text style={styles.totalLabel}>Total</Text>
+              <Text style={styles.totalValue}>৳ {cart!.total.toLocaleString()}</Text>
+            </View>
+
+            <TouchableOpacity
+              style={[styles.checkoutBtn, isFetching && styles.checkoutBtnDisabled]}
+              disabled={isFetching}
+              onPress={() => router.push('/checkout')}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.checkoutBtnText}>Proceed to Checkout</Text>
+            </TouchableOpacity>
           </View>
-          <Text style={styles.addressText}>
-            Road# 9, house# 5, Lane#3, Mirpur 11/a, Dhaka-1216.
-          </Text>
-        </View>
-
-        {/* Search Order input */}
-        <View style={styles.searchBar}>
-          <Text style={styles.searchIcon}>🔍</Text>
-          <TextInput
-            style={styles.textInput}
-            placeholder="Search Order"
-            placeholderTextColor="#A39E99"
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-          />
-        </View>
-
-        {/* Booked Order vs Placed Order tabs */}
-        <View style={styles.tabContainer}>
-          <TouchableOpacity
-            style={[styles.tabButton, activeTab === 'Booked' && styles.tabButtonActive]}
-            onPress={() => setActiveTab('Booked')}
-            activeOpacity={0.8}
-          >
-            <Text style={[styles.tabText, activeTab === 'Booked' && styles.tabTextActive]}>
-              Booked Order
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.tabButton, activeTab === 'Placed' && styles.tabButtonActive]}
-            onPress={() => setActiveTab('Placed')}
-            activeOpacity={0.8}
-          >
-            <Text style={[styles.tabText, activeTab === 'Placed' && styles.tabTextActive]}>
-              Placed Order
-            </Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Category Icons Row */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.categoriesRow}
-        >
-          {categories.map((cat) => {
-            const isActive = activeCategory === cat.name;
-            return (
-              <TouchableOpacity
-                key={cat.id}
-                style={styles.categoryItem}
-                onPress={() => setActiveCategory(cat.name)}
-                activeOpacity={0.8}
-              >
-                <View style={[styles.categoryCircle, isActive && styles.categoryCircleActive]}>
-                  <Text style={styles.categoryIcon}>{cat.icon}</Text>
-                </View>
-                <Text style={[styles.categoryLabel, isActive && styles.categoryLabelActive]}>
-                  {cat.name}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
-
-        {/* Filter chips row */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.filtersRow}
-        >
-          {['All (12)', 'Calf(3)', 'Bull (2)', 'Cow(4)'].map((filterVal) => {
-            const isSelected = activeFilter === filterVal || (filterVal.startsWith('All') && activeFilter === 'All');
-            return (
-              <TouchableOpacity
-                key={filterVal}
-                style={[styles.filterChip, isSelected && styles.filterChipActive]}
-                onPress={() => setActiveFilter(filterVal.startsWith('All') ? 'All' : filterVal)}
-                activeOpacity={0.7}
-              >
-                <Text style={[styles.filterChipText, isSelected && styles.filterChipTextActive]}>
-                  {filterVal}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
-
-        {/* Card List container */}
-        <View style={styles.listContainer}>
-          {activeTab === 'Booked' ? (
-            /* Booked Order Card */
-            <View style={styles.orderCard}>
-              <View style={styles.cardHeader}>
-                <Image source={require('@/assets/images/kota_goat.png')} style={styles.cardImage} />
-                <View style={styles.cardDetails}>
-                  <View style={styles.titleRow}>
-                    <Text style={styles.cardTitle}>Kota Goat</Text>
-                    <View style={styles.bookedBadge}>
-                      <Text style={styles.bookedBadgeText}>🏷️ Booked</Text>
-                    </View>
-                    <TouchableOpacity style={styles.shareBtn} activeOpacity={0.7}>
-                      <Text style={styles.shareIcon}>📤</Text>
-                    </TouchableOpacity>
-                  </View>
-
-                  <Text style={styles.cardPrice}>৳ 16,000</Text>
-
-                  <View style={styles.specsRow}>
-                    <View style={styles.specCell}>
-                      <Text style={styles.specLabel}>Species</Text>
-                      <Text style={styles.specValue}>Bangladeshi</Text>
-                    </View>
-                    <View style={styles.specCell}>
-                      <Text style={styles.specLabel}>Age</Text>
-                      <Text style={styles.specValue}>13 months</Text>
-                    </View>
-                    <View style={styles.specCell}>
-                      <Text style={styles.specLabel}>Weight</Text>
-                      <Text style={styles.specValue}>32 Kg</Text>
-                    </View>
-                  </View>
-                </View>
-              </View>
-
-              {/* Booking Info row */}
-              <View style={styles.bookingInfoRow}>
-                <View style={styles.sellerCol}>
-                  <View style={styles.sellerRow}>
-                    <View style={styles.sellerAvatar}>
-                      <Text style={styles.avatarEmoji}>👤</Text>
-                    </View>
-                    <View>
-                      <Text style={styles.sellerName}>Abdur Rahman</Text>
-                      <Text style={styles.sellerLoc}>📍 Gabtoli, Dhaka</Text>
-                    </View>
-                  </View>
-                </View>
-
-                <View style={styles.datesCol}>
-                  <Text style={styles.dateLabel}>Booked on</Text>
-                  <Text style={styles.dateValue}>13th May</Text>
-                </View>
-                
-                <View style={styles.amountCol}>
-                  <Text style={styles.amountLabel}>Paid Amount</Text>
-                  <Text style={styles.amountValue}>৳ 5000</Text>
-                </View>
-              </View>
-
-              {/* Warning/Remaining time text */}
-              <Text style={styles.timeWarningText}>
-                You booked for 10 days. Booking remains:{' '}
-                <Text style={styles.timeRemainingHighlight}>8d : 20h : 30m</Text>
-              </Text>
-
-              {/* Action Button */}
-              <TouchableOpacity
-                style={styles.actionButton}
-                onPress={() => router.push('/checkout')}
-                activeOpacity={0.85}
-              >
-                <Text style={styles.actionBtnIcon}>✓</Text>
-                <Text style={styles.actionBtnText}>Place Order</Text>
-              </TouchableOpacity>
-            </View>
-          ) : (
-            /* Placed Order Card */
-            <View style={styles.orderCard}>
-              <View style={styles.cardHeader}>
-                <Image source={require('@/assets/images/kota_goat.png')} style={styles.cardImage} />
-                <View style={styles.cardDetails}>
-                  <View style={styles.titleRow}>
-                    <Text style={styles.cardTitle}>Kota Goat</Text>
-                    <View style={styles.orderedBadge}>
-                      <Text style={styles.orderedBadgeText}>✓ Ordered</Text>
-                    </View>
-                    <TouchableOpacity style={styles.shareBtn} activeOpacity={0.7}>
-                      <Text style={styles.shareIcon}>📤</Text>
-                    </TouchableOpacity>
-                  </View>
-
-                  <Text style={styles.cardPrice}>৳ 16,000</Text>
-
-                  <View style={styles.specsRow}>
-                    <View style={styles.specCell}>
-                      <Text style={styles.specLabel}>Species</Text>
-                      <Text style={styles.specValue}>Bangladeshi</Text>
-                    </View>
-                    <View style={styles.specCell}>
-                      <Text style={styles.specLabel}>Age</Text>
-                      <Text style={styles.specValue}>13 months</Text>
-                    </View>
-                    <View style={styles.specCell}>
-                      <Text style={styles.specLabel}>Weight</Text>
-                      <Text style={styles.specValue}>32 Kg</Text>
-                    </View>
-                  </View>
-                </View>
-              </View>
-
-              {/* Booking Info row */}
-              <View style={styles.bookingInfoRow}>
-                <View style={styles.sellerCol}>
-                  <View style={styles.sellerRow}>
-                    <View style={styles.sellerAvatar}>
-                      <Text style={styles.avatarEmoji}>👤</Text>
-                    </View>
-                    <View>
-                      <Text style={styles.sellerName}>Abdur Rahman</Text>
-                      <Text style={styles.sellerLoc}>📍 Gabtoli, Dhaka</Text>
-                    </View>
-                  </View>
-                </View>
-
-                <View style={[styles.datesCol, { flex: 1.5, alignItems: 'flex-end' }]}>
-                  <Text style={styles.dateLabel}>Ordered on</Text>
-                  <Text style={styles.dateValue}>13th May</Text>
-                </View>
-              </View>
-
-              {/* Delivery ETA text */}
-              <Text style={styles.timeWarningText}>
-                Your delivery is on the way. Estimated Time:{' '}
-                <Text style={styles.timeRemainingHighlight}>4h : 30m</Text>
-              </Text>
-
-              {/* Action Button */}
-              <TouchableOpacity
-                style={styles.actionButton}
-                onPress={() => router.push('/animal-billing-details')}
-                activeOpacity={0.85}
-              >
-                <Text style={styles.actionBtnIcon}>📄</Text>
-                <Text style={styles.actionBtnText}>Detail Bill</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-        </View>
-      </ScrollView>
+        </>
+      )}
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#FAF9F6',
-  },
-  scrollContainer: {
-    paddingHorizontal: 24,
-    paddingBottom: 40,
-  },
+  container: { flex: 1, backgroundColor: '#FAF9F6' },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -328,355 +144,66 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  buttonText: {
-    color: '#FFFFFF',
-    fontSize: 18,
-    fontWeight: '700',
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#1A1817',
-  },
-  sectionHeaderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  sectionTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#1A1817',
-  },
-  changeAddressBtn: {
+  buttonText: { color: '#FFFFFF', fontSize: 18, fontWeight: '700' },
+  headerTitle: { fontSize: 20, fontWeight: '700', color: '#1A1817' },
+  emptyState: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24 },
+  emptyText: { fontSize: 15, color: '#7C7672', marginBottom: 16 },
+  browseBtn: {
     backgroundColor: '#BD632F',
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 24,
   },
-  changeAddressText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
-  addressCard: {
+  browseBtnText: { color: '#FFFFFF', fontSize: 14, fontWeight: '700' },
+  scrollContainer: { paddingHorizontal: 24, paddingBottom: 16 },
+  listContainer: { gap: 16 },
+  itemCard: {
+    flexDirection: 'row',
     backgroundColor: '#FFFFFF',
     borderRadius: 20,
     borderWidth: 1,
     borderColor: '#E6E1DC',
-    padding: 16,
-    marginBottom: 20,
+    padding: 12,
   },
-  addressHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  addressPin: {
-    fontSize: 14,
-    marginRight: 6,
-  },
-  addressType: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#1A1817',
-  },
-  addressText: {
-    fontSize: 12,
-    color: '#7C7672',
-    lineHeight: 18,
-  },
-  searchBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E6E1DC',
+  itemImage: { width: 72, height: 72, borderRadius: 14, marginRight: 12 },
+  itemDetails: { flex: 1 },
+  itemName: { fontSize: 14, fontWeight: '700', color: '#1A1817', marginBottom: 4 },
+  itemPrice: { fontSize: 14, fontWeight: '800', color: '#BD632F', marginBottom: 4 },
+  warningText: { fontSize: 11, color: '#E53935', marginBottom: 4 },
+  qtyRow: { flexDirection: 'row', alignItems: 'center', marginTop: 4 },
+  qtyBtn: {
+    width: 28,
+    height: 28,
     borderRadius: 14,
-    height: 52,
-    paddingHorizontal: 16,
-    marginBottom: 20,
-  },
-  searchIcon: {
-    fontSize: 16,
-    marginRight: 10,
-    color: '#9C9690',
-  },
-  textInput: {
-    flex: 1,
-    height: '100%',
-    fontSize: 14,
-    color: '#1A1817',
-  },
-  tabContainer: {
-    flexDirection: 'row',
-    borderBottomWidth: 2,
-    borderBottomColor: '#E6E1DC',
-    marginBottom: 16,
-  },
-  tabButton: {
-    flex: 1,
-    alignItems: 'center',
-    paddingVertical: 12,
-  },
-  tabButtonActive: {
-    borderBottomWidth: 2,
-    borderBottomColor: '#BD632F',
-    marginBottom: -2,
-  },
-  tabText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#9C9690',
-  },
-  tabTextActive: {
-    color: '#BD632F',
-    fontWeight: '700',
-  },
-  categoriesRow: {
-    gap: 16,
-    paddingBottom: 20,
-  },
-  categoryItem: {
-    alignItems: 'center',
-  },
-  categoryCircle: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E6E1DC',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  categoryCircleActive: {
-    borderColor: '#BD632F',
-    borderWidth: 1.5,
-  },
-  categoryIcon: {
-    fontSize: 24,
-  },
-  categoryLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#9C9690',
-  },
-  categoryLabelActive: {
-    color: '#BD632F',
-    fontWeight: '700',
-  },
-  filtersRow: {
-    gap: 8,
-    paddingBottom: 20,
-  },
-  filterChip: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E6E1DC',
-  },
-  filterChipActive: {
-    backgroundColor: '#BD632F',
-    borderColor: '#BD632F',
-  },
-  filterChipText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#7C7672',
-  },
-  filterChipTextActive: {
-    color: '#FFFFFF',
-  },
-  listContainer: {
-    gap: 20,
-  },
-  orderCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 24,
-    borderWidth: 1,
-    borderColor: '#E6E1DC',
-    padding: 16,
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    marginBottom: 16,
-  },
-  cardImage: {
-    width: 90,
-    height: 90,
-    borderRadius: 20,
-    marginRight: 14,
-  },
-  cardDetails: {
-    flex: 1,
-  },
-  titleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  cardTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#1A1817',
-    flex: 1,
-  },
-  bookedBadge: {
     backgroundColor: '#FFF8F4',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 8,
-    marginRight: 6,
-  },
-  bookedBadgeText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#BD632F',
-  },
-  orderedBadge: {
-    backgroundColor: '#EEFBEF',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 8,
-    marginRight: 6,
-  },
-  orderedBadgeText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#2E7D32',
-  },
-  shareBtn: {
-    padding: 2,
-  },
-  shareIcon: {
-    fontSize: 13,
-    color: '#BD632F',
-  },
-  cardPrice: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: '#BD632F',
-    marginBottom: 8,
-  },
-  specsRow: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  specCell: {
-    flex: 1,
-  },
-  specLabel: {
-    fontSize: 9,
-    color: '#9C9690',
-    fontWeight: '500',
-    marginBottom: 2,
-  },
-  specValue: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#1A1817',
-  },
-  bookingInfoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    borderTopWidth: 1.5,
-    borderTopColor: '#FAF9F6',
-    borderBottomWidth: 1.5,
-    borderBottomColor: '#FAF9F6',
-    paddingVertical: 12,
-    marginBottom: 12,
-  },
-  sellerCol: {
-    flex: 1.5,
-  },
-  sellerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  sellerAvatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#E9E5DF',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 8,
   },
-  avatarEmoji: {
-    fontSize: 14,
+  qtyBtnText: { fontSize: 16, fontWeight: '700', color: '#BD632F' },
+  qtyValue: { fontSize: 14, fontWeight: '700', color: '#1A1817', marginHorizontal: 12, minWidth: 16, textAlign: 'center' },
+  removeBtn: { marginLeft: 'auto' },
+  removeBtnText: { fontSize: 12, fontWeight: '600', color: '#9C9690' },
+  summaryContainer: {
+    paddingHorizontal: 24,
+    paddingTop: 16,
+    paddingBottom: 24,
+    borderTopWidth: 1,
+    borderTopColor: '#E6E1DC',
+    backgroundColor: '#FFFFFF',
   },
-  sellerName: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#1A1817',
-  },
-  sellerLoc: {
-    fontSize: 10,
-    color: '#9C9690',
-    marginTop: 1,
-  },
-  datesCol: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  dateLabel: {
-    fontSize: 10,
-    color: '#9C9690',
-    fontWeight: '500',
-    marginBottom: 2,
-  },
-  dateValue: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#1A1817',
-  },
-  amountCol: {
-    flex: 1.2,
-    alignItems: 'flex-end',
-  },
-  amountLabel: {
-    fontSize: 10,
-    color: '#9C9690',
-    fontWeight: '500',
-    marginBottom: 2,
-  },
-  amountValue: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#2E7D32',
-  },
-  timeWarningText: {
-    fontSize: 11,
-    color: '#7C7672',
-    textAlign: 'center',
-    marginBottom: 16,
-  },
-  timeRemainingHighlight: {
-    color: '#E53935',
-    fontWeight: '700',
-  },
-  actionButton: {
-    flexDirection: 'row',
+  summaryRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
+  summaryLabel: { fontSize: 13, color: '#7C7672' },
+  summaryValue: { fontSize: 13, fontWeight: '600', color: '#1A1817' },
+  totalRow: { marginTop: 4, marginBottom: 16 },
+  totalLabel: { fontSize: 16, fontWeight: '700', color: '#1A1817' },
+  totalValue: { fontSize: 16, fontWeight: '800', color: '#BD632F' },
+  checkoutBtn: {
     backgroundColor: '#BD632F',
-    height: 48,
-    borderRadius: 24,
+    height: 52,
+    borderRadius: 26,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  actionBtnIcon: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    marginRight: 6,
-  },
-  actionBtnText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '700',
-  },
+  checkoutBtnDisabled: { opacity: 0.6 },
+  checkoutBtnText: { color: '#FFFFFF', fontSize: 15, fontWeight: '700' },
 });

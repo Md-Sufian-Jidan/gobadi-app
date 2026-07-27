@@ -9,52 +9,37 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 
-interface Doctor {
-  id: string;
-  name: string;
-  specialty: string;
-  location: string;
-  rating: number;
-  reviews: number;
-  image: any;
-}
+import { useGetDoctorByIdQuery } from '@/store/doctorsApi';
 
 export default function ConfirmPayScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
+  const doctorId = String(params.id || '');
 
-  const doctors: Record<string, Doctor> = {
-    '1': {
-      id: '1',
-      name: 'Dr. David Patel',
-      specialty: 'Veterinary Surgery',
-      location: 'Cardiology Center, USA',
-      rating: 5,
-      reviews: 1872,
-      image: require('@/assets/images/doctor.png'),
-    },
-    '2': {
-      id: '2',
-      name: 'Dr. Jessica Turner',
-      specialty: 'Veterinary Medicine',
-      location: "Women's Clinic, Seattle, USA",
-      rating: 4.9,
-      reviews: 127,
-      image: require('@/assets/images/jessica_doctor.png'),
-    },
-    '3': {
-      id: '3',
-      name: 'Dr. Michael Johnson',
-      specialty: 'Avian & Exotic Medicine',
-      location: 'Maple Associates, NY, USA',
-      rating: 4.7,
-      reviews: 5223,
-      image: require('@/assets/images/michael_doctor.png'),
-    },
-  };
+  const { data: doctorData } = useGetDoctorByIdQuery(doctorId, { skip: !doctorId });
 
-  const doctor = doctors[String(params.id)] || doctors['1'];
-  
+  const doctor = doctorData
+    ? {
+        id: String(doctorData.id),
+        name: doctorData.name,
+        specialty: doctorData.specialty,
+        location: 'Uttar Badda, Dhaka',
+        rating: doctorData.rating || 4.8,
+        reviews: 124,
+        image: doctorData.avatar === 'jessica_doctor.png'
+          ? require('@/assets/images/jessica_doctor.png')
+          : require('@/assets/images/doctor.png'),
+      }
+    : {
+        id: doctorId || '1',
+        name: 'Loading...',
+        specialty: '',
+        location: '',
+        rating: 0,
+        reviews: 0,
+        image: require('@/assets/images/doctor.png'),
+      };
+
   // Format Date value nicely
   const selectedDay = params.day ? String(params.day) : '28';
   const selectedMonthYear = 'December 2026';
@@ -127,7 +112,7 @@ export default function ConfirmPayScreen() {
           <Text style={styles.sectionHeader}>Fees Details</Text>
 
           <View style={styles.slotDetailRow}>
-            <Text style={styles.slotLabel}>Doctor's Fee</Text>
+            <Text style={styles.slotLabel}>Doctor&apos;s Fee</Text>
             <Text style={styles.feeValue}>৳ 100</Text>
           </View>
 

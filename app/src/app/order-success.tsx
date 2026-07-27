@@ -6,10 +6,11 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 
 export default function OrderSuccessScreen() {
   const router = useRouter();
+  const { orderId } = useLocalSearchParams<{ orderId?: string }>();
 
   return (
     <SafeAreaView style={styles.container}>
@@ -41,7 +42,7 @@ export default function OrderSuccessScreen() {
       <View style={styles.bottomBar}>
         <TouchableOpacity
           style={styles.detailButton}
-          onPress={() => router.push('/animal-billing-details')}
+          onPress={() => router.push({ pathname: '/animal-billing-details', params: { orderId } })}
           activeOpacity={0.85}
         >
           <Text style={styles.detailButtonIcon}>📄</Text>
