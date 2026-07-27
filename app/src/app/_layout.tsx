@@ -65,6 +65,8 @@ function RootNavigator() {
       <Stack.Screen name="order-success" />
       <Stack.Screen name="animal-billing-details" />
       <Stack.Screen name="cart" />
+      <Stack.Screen name="wishlist" />
+      <Stack.Screen name="notifications" />
       <Stack.Screen name="book-animal" />
       <Stack.Screen name="booking-payment" />
       <Stack.Screen name="booking-bkash-number" />
