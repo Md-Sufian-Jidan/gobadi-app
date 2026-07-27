@@ -6,8 +6,11 @@ import { Queue } from 'bullmq';
 import { Alert } from './alert.entity';
 import { AlertActionLog } from './alert-action-log.entity';
 import { CreateAlertDto } from './dto/create-alert.dto';
-import { AlertActionType } from './alert.entity';
+import { AlertActionType, AlertSeverity } from './alert.entity';
+import { MeilisearchService } from '../meilisearch/meilisearch.service';
 export { Alert } from './alert.entity';
+
+const ALERTS_INDEX = 'alerts';
 
 @Injectable()
 export class AlertsService {
@@ -18,11 +21,12 @@ export class AlertsService {
     private readonly alertActionLogRepository: Repository<AlertActionLog>,
     @InjectQueue('alerts-queue')
     private readonly alertsQueue: Queue,
+    private readonly meilisearchService: MeilisearchService,
   ) {}
 
-  async getActiveAlerts(): Promise<Alert[]> {
+  async getActiveAlerts(severity?: AlertSeverity): Promise<Alert[]> {
     return this.alertRepository.find({
-      where: { isActive: true },
+      where: severity ? { isActive: true, severity } : { isActive: true },
       order: { createdAt: 'DESC' },
     });
   }
@@ -30,6 +34,13 @@ export class AlertsService {
   async search(q: string): Promise<Alert[]> {
     if (!q) {
       return [];
+    }
+    const hits = await this.meilisearchService.search<Alert>(ALERTS_INDEX, q, {
+      limit: 10,
+      filter: 'isActive = true',
+    });
+    if (hits !== null) {
+      return hits;
     }
     return this.alertRepository.find({
       where: [
@@ -80,6 +91,7 @@ export class AlertsService {
   async createAlert(dto: CreateAlertDto): Promise<Alert> {
     const alert = this.alertRepository.create({ ...dto, isActive: true });
     const saved = await this.alertRepository.save(alert);
+    await this.meilisearchService.indexDocument(ALERTS_INDEX, { ...saved });
 
     try {
       await this.alertsQueue.add('broadcast-alert', { alert: saved });
@@ -97,5 +109,6 @@ export class AlertsService {
     }
     alert.isActive = false;
     await this.alertRepository.save(alert);
+    await this.meilisearchService.deleteDocument(ALERTS_INDEX, id);
   }
 }

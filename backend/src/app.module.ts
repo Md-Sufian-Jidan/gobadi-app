@@ -26,6 +26,7 @@ import { AlertsModule } from './alerts/alerts.module';
 import { ReferralsModule } from './referrals/referrals.module';
 import { AdminModule } from './admin/admin.module';
 import { SearchModule } from './search/search.module';
+import { MeilisearchModule } from './meilisearch/meilisearch.module';
 
 @Module({
   imports: [
@@ -52,6 +53,7 @@ import { SearchModule } from './search/search.module';
       },
     ]),
     RedisModule,
+    MeilisearchModule,
     AuthModule,
     UsersModule,
     AnimalsModule,

@@ -1,13 +1,15 @@
-import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
+import { Controller, Get, Param, Post, Body, Query, UseGuards } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiOperation,
   ApiParam,
+  ApiQuery,
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
 import { AlertsService, Alert } from './alerts.service';
 import { AlertActionDto } from './dto/alert-action.dto';
+import { AlertSeverity } from './alert.entity';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { JwtPayload } from '../auth/jwt-payload.interface';
@@ -21,9 +23,10 @@ export class AlertsController {
 
   @Get()
   @ApiOperation({ summary: 'List active regional crop/disease risk alerts' })
+  @ApiQuery({ name: 'severity', required: false, enum: AlertSeverity })
   @ApiResponse({ status: 200, description: 'List of active alerts' })
-  async getAlerts(): Promise<Alert[]> {
-    return this.alertsService.getActiveAlerts();
+  async getAlerts(@Query('severity') severity?: AlertSeverity): Promise<Alert[]> {
+    return this.alertsService.getActiveAlerts(severity);
   }
 
   @Post(':id/action')
