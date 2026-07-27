@@ -9,6 +9,7 @@ import {
 export enum UserRole {
   USER = 'user',
   DOCTOR = 'doctor',
+  CLINIC = 'clinic',
   ADMIN = 'admin',
 }
 
@@ -21,7 +22,7 @@ export class User {
   @Column({ nullable: true })
   phone?: string;
 
-  @Column({ type: 'enum', enum: UserRole, default: UserRole.PATIENT })
+  @Column({ type: 'enum', enum: UserRole, default: UserRole.USER })
   role: UserRole;
 
   @Column({ nullable: true })

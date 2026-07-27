@@ -32,7 +32,7 @@ export class UsersService {
 
   async findOrCreateByPhone(
     phone: string,
-    defaultRole: UserRole = UserRole.PATIENT,
+    defaultRole: UserRole = UserRole.USER,
   ): Promise<User> {
     const existing = await this.userRepository.findOneBy({ phone });
     if (existing) {
@@ -120,7 +120,7 @@ export class UsersService {
       name: input.name,
       email: input.email,
       phone: `${input.provider}:${input.providerId}`,
-      role: UserRole.PATIENT,
+      role: UserRole.USER,
       verified: true,
       [idColumn]: input.providerId,
     } as Partial<User>);
