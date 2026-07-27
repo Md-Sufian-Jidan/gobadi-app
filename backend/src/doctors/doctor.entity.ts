@@ -5,8 +5,10 @@ import {
   Index,
   ManyToOne,
   JoinColumn,
+  ManyToMany,
 } from 'typeorm';
 import { User } from '../users/user.entity';
+import { Clinic } from '../clinics/clinic.entity';
 
 @Entity('doctors')
 export class Doctor {
@@ -39,4 +41,19 @@ export class Doctor {
 
   @Column('text')
   bio: string;
+
+  @Column('text', { array: true, default: '{}' })
+  qualifications: string[];
+
+  @Column({ nullable: true })
+  licenseNumber?: string;
+
+  @Column('float', { default: 500 })
+  consultationFee: number;
+
+  @Column({ default: false })
+  isVerified: boolean;
+
+  @ManyToMany(() => Clinic, (clinic) => clinic.doctors)
+  clinics: Clinic[];
 }

@@ -11,6 +11,7 @@ import { Appointment, AppointmentStatus } from './appointment.entity';
 import { DoctorsService, Doctor } from '../doctors/doctors.service';
 import { UserRole } from '../users/user.entity';
 import { UsersService } from '../users/users.service';
+import { Service } from '../services/service.entity';
 import {
   addMinutes,
   parseSlotDateTime,
@@ -39,9 +40,11 @@ export class AppointmentsService {
     patientId: number,
     date: string,
     time: string,
+    clinicId?: number,
+    serviceId?: number,
   ): Promise<Appointment> {
     const startAt = parseSlotDateTime(date, time);
-    return this.assertNoConflictAndBook(doctorId, patientId, startAt);
+    return this.assertNoConflictAndBook(doctorId, patientId, startAt, { clinicId, serviceId });
   }
 
   async listAvailableSlots(
@@ -107,7 +110,7 @@ export class AppointmentsService {
     status?: AppointmentStatus,
   ): Promise<AppointmentWithPatient[]> {
     const where: any = {};
-    if (role === UserRole.PATIENT) {
+    if (role === UserRole.USER || (role as string) === 'patient') {
       where.patientId = userId;
     } else {
       const doctor = await this.doctorsService.getDoctorByUserId(userId);
@@ -233,7 +236,7 @@ export class AppointmentsService {
     if (!appointment) {
       throw new NotFoundException('Appointment not found');
     }
-    if (requesterRole === UserRole.PATIENT) {
+    if (requesterRole === UserRole.USER || (requesterRole as string) === 'patient') {
       if (appointment.patientId !== requesterId) {
         throw new ForbiddenException(
           'You may only manage your own appointments',
@@ -265,7 +268,7 @@ export class AppointmentsService {
     doctorId: number,
     patientId: number,
     startAt: Date,
-    opts?: { excludeAppointmentId?: number },
+    opts?: { excludeAppointmentId?: number; clinicId?: number; serviceId?: number },
   ): Promise<Appointment> {
     return this.dataSource.transaction(async (manager) => {
       // Lock the doctor row to serialize all concurrent booking attempts for this doctor.
@@ -307,6 +310,19 @@ export class AppointmentsService {
         throw new ConflictException('This time slot is no longer available');
       }
 
+      let price = 0;
+      if (opts?.serviceId) {
+        const service = await manager.getRepository(Service).findOneBy({ id: opts.serviceId });
+        if (service) {
+          price = service.price;
+        }
+      } else {
+        const doctor = await manager.getRepository(Doctor).findOneBy({ id: doctorId });
+        if (doctor) {
+          price = doctor.consultationFee;
+        }
+      }
+
       try {
         const created = manager.getRepository(Appointment).create({
           doctorId,
@@ -315,6 +331,10 @@ export class AppointmentsService {
           endAt,
           durationMinutes: window.slotDurationMinutes,
           status: AppointmentStatus.CONFIRMED,
+          clinicId: opts?.clinicId || null,
+          serviceId: opts?.serviceId || null,
+          price,
+          paymentStatus: 'pending',
         });
         return await manager.getRepository(Appointment).save(created);
       } catch (e: any) {

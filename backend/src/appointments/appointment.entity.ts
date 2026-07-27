@@ -29,6 +29,14 @@ export class Appointment {
   doctorId: number;
 
   @Index()
+  @Column('int', { nullable: true })
+  clinicId?: number | null;
+
+  @Index()
+  @Column('int', { nullable: true })
+  serviceId?: number | null;
+
+  @Index()
   @Column()
   patientId: number;
 
@@ -40,6 +48,24 @@ export class Appointment {
 
   @Column('int')
   durationMinutes: number;
+
+  @Column('float', { default: 0 })
+  price: number;
+
+  @Column({ default: 'pending' })
+  paymentStatus: string; // pending, paid, failed, refunded
+
+  @Column({ nullable: true })
+  paymentTransactionId?: string;
+
+  @Column('text', { nullable: true })
+  prescription?: string; // prescription notes or file URL
+
+  @Column('text', { nullable: true })
+  notes?: string;
+
+  @Column('int', { nullable: true })
+  followUpId?: number | null;
 
   @Column({
     type: 'enum',
