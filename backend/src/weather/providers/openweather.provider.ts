@@ -25,7 +25,9 @@ export class OpenWeatherProvider implements IWeatherProvider {
     try {
       const response = await fetch(url, { signal: controller.signal });
       if (!response.ok) {
-        throw new Error(`OpenWeather request failed with status ${response.status}`);
+        throw new Error(
+          `OpenWeather request failed with status ${response.status}`,
+        );
       }
       const data = await response.json();
       return this.mapResponse(data, district);
@@ -51,7 +53,10 @@ export class OpenWeatherProvider implements IWeatherProvider {
     };
   }
 
-  private formatTime(unixSeconds: number, timezoneOffsetSeconds: number): string {
+  private formatTime(
+    unixSeconds: number,
+    timezoneOffsetSeconds: number,
+  ): string {
     if (!unixSeconds) {
       return '';
     }

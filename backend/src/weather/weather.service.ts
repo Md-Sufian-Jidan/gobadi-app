@@ -15,7 +15,8 @@ export class WeatherService {
   private readonly breaker = new CircuitBreaker();
 
   constructor(
-    @Inject(WEATHER_PROVIDER) private readonly primaryProvider: IWeatherProvider,
+    @Inject(WEATHER_PROVIDER)
+    private readonly primaryProvider: IWeatherProvider,
     private readonly fallbackProvider: MockWeatherProvider,
     private readonly redisService: RedisService,
   ) {}
@@ -39,12 +40,26 @@ export class WeatherService {
     }
 
     const weather = await this.breaker.execute(
-      () => this.primaryProvider.fetchWeatherData(resolvedLat, resolvedLong, district),
-      () => this.fallbackProvider.fetchWeatherData(resolvedLat, resolvedLong, district),
+      () =>
+        this.primaryProvider.fetchWeatherData(
+          resolvedLat,
+          resolvedLong,
+          district,
+        ),
+      () =>
+        this.fallbackProvider.fetchWeatherData(
+          resolvedLat,
+          resolvedLong,
+          district,
+        ),
     );
 
     try {
-      await this.redisService.set(cacheKey, JSON.stringify(weather), CACHE_TTL_SECONDS);
+      await this.redisService.set(
+        cacheKey,
+        JSON.stringify(weather),
+        CACHE_TTL_SECONDS,
+      );
     } catch (err) {
       console.warn('Failed to write weather cache to Redis', err);
     }

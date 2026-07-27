@@ -20,7 +20,10 @@ export class CircuitBreaker {
   private consecutiveFailures = 0;
   private openedAt = 0;
 
-  async execute<T>(primary: () => Promise<T>, fallback: () => Promise<T>): Promise<T> {
+  async execute<T>(
+    primary: () => Promise<T>,
+    fallback: () => Promise<T>,
+  ): Promise<T> {
     if (this.state === BreakerState.OPEN) {
       if (Date.now() - this.openedAt < COOLDOWN_MS) {
         return fallback();
@@ -63,7 +66,10 @@ export class CircuitBreaker {
 
   private onFailure(err: unknown): void {
     this.consecutiveFailures += 1;
-    this.logger.warn(`Primary provider call failed (${this.consecutiveFailures}/${FAILURE_THRESHOLD})`, err as Error);
+    this.logger.warn(
+      `Primary provider call failed (${this.consecutiveFailures}/${FAILURE_THRESHOLD})`,
+      err as Error,
+    );
     if (this.consecutiveFailures >= FAILURE_THRESHOLD) {
       this.state = BreakerState.OPEN;
       this.openedAt = Date.now();
