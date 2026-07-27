@@ -7,8 +7,12 @@ import { MarketItem } from './market-item.entity';
 import { Order } from './order.entity';
 import { RedisService } from '../redis/redis.service';
 import { PaginatedResult } from '../common/paginated-result.interface';
+import { UsersService } from '../users/users.service';
+import { MeilisearchService } from '../meilisearch/meilisearch.service';
 export { MarketItem } from './market-item.entity';
 export { Order } from './order.entity';
+
+const MARKETPLACE_INDEX = 'marketplace';
 
 @Injectable()
 export class MarketplaceService {
@@ -22,11 +26,14 @@ export class MarketplaceService {
     @InjectQueue('mail-queue')
     private readonly mailQueue: Queue,
     private readonly redisService: RedisService,
+    private readonly usersService: UsersService,
+    private readonly meilisearchService: MeilisearchService,
   ) {}
 
   async getCatalog(
     page?: number,
     limit?: number,
+    category?: string,
   ): Promise<MarketItem[] | PaginatedResult<MarketItem>> {
     let catalog: MarketItem[] | null;
     try {
@@ -53,6 +60,12 @@ export class MarketplaceService {
       }
     }
 
+    if (category) {
+      catalog = catalog.filter(
+        (item) => item.category.toLowerCase() === category.toLowerCase(),
+      );
+    }
+
     if (!page && !limit) {
       return catalog;
     }
@@ -67,12 +80,23 @@ export class MarketplaceService {
     };
   }
 
-  async search(q: string): Promise<MarketItem[]> {
+  async search(q: string, category?: string): Promise<MarketItem[]> {
     if (!q) {
       return [];
     }
+    const hits = await this.meilisearchService.search<MarketItem>(
+      MARKETPLACE_INDEX,
+      q,
+      { limit: 10, filter: category ? `category = "${category}"` : undefined },
+    );
+    if (hits !== null) {
+      return hits;
+    }
     return this.marketItemRepository.find({
-      where: [{ name: ILike(`%${q}%`) }, { category: ILike(`%${q}%`) }],
+      where: [
+        { name: ILike(`%${q}%`), ...(category ? { category } : {}) },
+        { category: ILike(`%${q}%`) },
+      ],
       take: 10,
     });
   }
@@ -87,10 +111,37 @@ export class MarketplaceService {
     return item;
   }
 
-  async checkoutOrder(data: {
-    items: Array<{ itemId: string; quantity: number }>;
-    deliveryAddress: string;
-  }): Promise<Order> {
+  async getMyListings(sellerId: number): Promise<MarketItem[]> {
+    return this.marketItemRepository.find({
+      where: { sellerId },
+      order: { id: 'DESC' },
+    });
+  }
+
+  async createListing(
+    sellerId: number,
+    data: { name: string; price: number; category: string; image?: string },
+  ): Promise<MarketItem> {
+    const newItem = this.marketItemRepository.create({ ...data, sellerId });
+    const saved = await this.marketItemRepository.save(newItem);
+
+    try {
+      await this.redisService.del('cache:marketplace:catalog');
+    } catch (err) {
+      console.warn('Failed to invalidate marketplace catalog cache', err);
+    }
+    await this.meilisearchService.indexDocument(MARKETPLACE_INDEX, { ...saved });
+
+    return saved;
+  }
+
+  async checkoutOrder(
+    userId: number,
+    data: {
+      items: Array<{ itemId: string; quantity: number }>;
+      deliveryAddress: string;
+    },
+  ): Promise<Order> {
     if (!data.items || data.items.length === 0) {
       throw new BadRequestException('No items in order');
     }
@@ -111,6 +162,7 @@ export class MarketplaceService {
     const orderId = `GBD-${Math.floor(100000 + Math.random() * 900000)}`;
     const newOrder = this.orderRepository.create({
       id: orderId,
+      userId,
       items: data.items,
       totalPrice,
       deliveryAddress: data.deliveryAddress,
@@ -152,17 +204,29 @@ export class MarketplaceService {
 
     // Queue payment confirmation email asynchronously via BullMQ
     try {
-      await this.mailQueue.add('send-payment-confirmation', {
-        email: 'user@gobadi.com',
-        orderId: savedOrder.id,
-        totalPrice: savedOrder.totalPrice,
-        transactionId,
-      });
+      const buyer = order.userId
+        ? await this.usersService.findById(order.userId)
+        : null;
+      if (buyer?.email) {
+        await this.mailQueue.add('send-payment-confirmation', {
+          email: buyer.email,
+          orderId: savedOrder.id,
+          totalPrice: savedOrder.totalPrice,
+          transactionId,
+        });
+      }
     } catch (err) {
       console.warn('Failed to queue payment confirmation email job', err);
     }
 
     return savedOrder;
+  }
+
+  async getMyOrders(userId: number): Promise<Order[]> {
+    return this.orderRepository.find({
+      where: { userId },
+      order: { createdAt: 'DESC' },
+    });
   }
 
   async getOrders(

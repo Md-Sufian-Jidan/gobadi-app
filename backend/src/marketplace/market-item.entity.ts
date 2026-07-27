@@ -5,6 +5,10 @@ export class MarketItem {
   @PrimaryGeneratedColumn()
   id: number;
 
+  @Index()
+  @Column('int', { nullable: true })
+  sellerId?: number | null;
+
   @Column()
   name: string;
 
@@ -15,6 +19,6 @@ export class MarketItem {
   @Column()
   category: string;
 
-  @Column()
-  image: string;
+  @Column({ nullable: true })
+  image?: string;
 }
