@@ -34,6 +34,8 @@ function RootNavigator() {
       </Stack.Protected>
 
       <Stack.Screen name="animal-details" />
+      <Stack.Screen name="my-animal-detail" />
+      <Stack.Screen name="search" />
       <Stack.Screen name="add-animal" />
       <Stack.Screen name="ai-scan" />
       <Stack.Screen name="ai-hold" />
@@ -58,6 +60,9 @@ function RootNavigator() {
       <Stack.Screen name="booking-bkash-number" />
       <Stack.Screen name="edit-profile" />
       <Stack.Screen name="my-task" />
+      <Stack.Screen name="my-orders" />
+      <Stack.Screen name="medical-records" />
+      <Stack.Screen name="add-listing" />
     </Stack>
   );
 }
