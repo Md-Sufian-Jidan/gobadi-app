@@ -7,10 +7,15 @@ import {
   Patch,
   Post,
   Query,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import {
   ApiBearerAuth,
+  ApiBody,
+  ApiConsumes,
   ApiOperation,
   ApiQuery,
   ApiResponse,
@@ -20,11 +25,15 @@ import { ChatService, ChatMessageClientView } from './chat.service';
 import { ConversationService } from './conversation.service';
 import { ChatGateway } from './chat.gateway';
 import { SendMessageDto } from './dto/send-message.dto';
+import { SendAttachmentMessageDto } from './dto/send-attachment-message.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { UserRole } from '../users/user.entity';
 import type { JwtPayload } from '../auth/jwt-payload.interface';
 import { Conversation } from './conversation.entity';
+import { CloudinaryService } from '../cloudinary/cloudinary.service';
+
+const IMAGE_MIME_PREFIX = 'image/';
 
 @ApiTags('chat')
 @Controller('chat')
@@ -33,6 +42,7 @@ export class ChatController {
     private readonly chatService: ChatService,
     private readonly conversationService: ConversationService,
     private readonly chatGateway: ChatGateway,
+    private readonly cloudinaryService: CloudinaryService,
   ) {}
 
   @Get('conversations')
@@ -85,6 +95,62 @@ export class ChatController {
     this.chatGateway.notifyConversation(
       conversationId,
       'messageReceived',
+      saved,
+    );
+    await this.chatGateway.notifyConversationParticipants(
+      conversationId,
+      saved,
+    );
+    return saved;
+  }
+
+  @Post('message/attachment')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @UseInterceptors(FileInterceptor('file'))
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({ type: SendAttachmentMessageDto })
+  @ApiOperation({
+    summary: 'Send a chat message with an image/document attachment',
+  })
+  @ApiResponse({ status: 201, description: 'Message created' })
+  async sendAttachmentMessage(
+    @CurrentUser() user: JwtPayload,
+    @UploadedFile() file: Express.Multer.File,
+    @Body() body: SendAttachmentMessageDto,
+  ): Promise<ChatMessageClientView> {
+    if (!file) {
+      throw new BadRequestException('A file is required');
+    }
+    const conversationId = await this.resolveConversationId(
+      user,
+      body.conversationId?.toString(),
+    );
+
+    const isImage = file.mimetype.startsWith(IMAGE_MIME_PREFIX);
+    const uploadResult = await this.cloudinaryService.uploadFile(file.buffer, {
+      folder: 'gobadi/chat',
+      resourceType: isImage ? 'image' : 'raw',
+    });
+
+    const saved = await this.chatService.sendMessage(
+      user.sub,
+      user.role,
+      conversationId,
+      body.caption ?? '',
+      {
+        url: uploadResult.url,
+        type: isImage ? 'image' : 'document',
+        mimeType: file.mimetype,
+      },
+    );
+    this.chatGateway.notifyConversation(
+      conversationId,
+      'messageReceived',
+      saved,
+    );
+    await this.chatGateway.notifyConversationParticipants(
+      conversationId,
       saved,
     );
     return saved;

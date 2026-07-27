@@ -116,7 +116,29 @@ export class ChatGateway
       data.text,
     );
     this.notifyConversation(data.conversationId, 'messageReceived', savedMsg);
+    await this.notifyConversationParticipants(data.conversationId, savedMsg);
     return savedMsg;
+  }
+
+  /**
+   * Notifies both participants' user-rooms so conversation-list screens can
+   * reorder/update without having to join every conversation's room.
+   */
+  async notifyConversationParticipants(
+    conversationId: number,
+    payload: any,
+  ): Promise<void> {
+    const conversation =
+      await this.conversationService.findById(conversationId);
+    if (!conversation) return;
+    this.notifyUser(conversation.patientId, 'conversationUpdated', payload);
+    if (conversation.doctorUserId) {
+      this.notifyUser(
+        conversation.doctorUserId,
+        'conversationUpdated',
+        payload,
+      );
+    }
   }
 
   @SubscribeMessage('typing')

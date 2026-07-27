@@ -43,4 +43,13 @@ export class ChatMessage {
 
   @Column('timestamptz', { nullable: true })
   readAt?: Date | null;
+
+  @Column('varchar', { nullable: true })
+  attachmentUrl?: string | null;
+
+  @Column({ type: 'enum', enum: ['image', 'document'], nullable: true })
+  attachmentType?: 'image' | 'document' | null;
+
+  @Column('varchar', { nullable: true })
+  attachmentMimeType?: string | null;
 }
