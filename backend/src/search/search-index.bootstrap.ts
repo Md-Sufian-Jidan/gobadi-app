@@ -15,11 +15,14 @@ export class SearchIndexBootstrap implements OnModuleInit {
   private readonly logger = new Logger(SearchIndexBootstrap.name);
 
   constructor(
-    @InjectRepository(Animal) private readonly animalRepository: Repository<Animal>,
+    @InjectRepository(Animal)
+    private readonly animalRepository: Repository<Animal>,
     @InjectRepository(MarketItem)
     private readonly marketItemRepository: Repository<MarketItem>,
-    @InjectRepository(Doctor) private readonly doctorRepository: Repository<Doctor>,
-    @InjectRepository(Alert) private readonly alertRepository: Repository<Alert>,
+    @InjectRepository(Doctor)
+    private readonly doctorRepository: Repository<Doctor>,
+    @InjectRepository(Alert)
+    private readonly alertRepository: Repository<Alert>,
     private readonly meilisearchService: MeilisearchService,
   ) {}
 
@@ -35,13 +38,22 @@ export class SearchIndexBootstrap implements OnModuleInit {
         this.alertRepository.find({ where: { isActive: true } }),
       ]);
       await Promise.all([
-        this.meilisearchService.indexDocuments('animals', animals.map((a) => ({ ...a }))),
+        this.meilisearchService.indexDocuments(
+          'animals',
+          animals.map((a) => ({ ...a })),
+        ),
         this.meilisearchService.indexDocuments(
           'marketplace',
           marketItems.map((m) => ({ ...m })),
         ),
-        this.meilisearchService.indexDocuments('doctors', doctors.map((d) => ({ ...d }))),
-        this.meilisearchService.indexDocuments('alerts', alerts.map((a) => ({ ...a }))),
+        this.meilisearchService.indexDocuments(
+          'doctors',
+          doctors.map((d) => ({ ...d })),
+        ),
+        this.meilisearchService.indexDocuments(
+          'alerts',
+          alerts.map((a) => ({ ...a })),
+        ),
       ]);
       this.logger.log('Synced existing rows into Meilisearch indexes');
     } catch (err) {
