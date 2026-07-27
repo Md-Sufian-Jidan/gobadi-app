@@ -5,13 +5,18 @@ import * as bcrypt from 'bcrypt';
 import { Animal } from '../animals/animal.entity';
 import { Doctor } from '../doctors/doctor.entity';
 import { Availability } from '../doctors/availability.entity';
-import { MarketItem } from '../marketplace/market-item.entity';
 import { ChatMessage, MessageStatus } from '../chat/chat-message.entity';
 import { Conversation } from '../chat/conversation.entity';
 import { User, UserRole } from '../users/user.entity';
 
-// Demo credentials for local/manual testing only — logged once at startup
-// so whoever runs the seeded backend can log in immediately without an OTP.
+import { Category } from '../products/category.entity';
+import { Brand } from '../products/brand.entity';
+import { Product } from '../products/product.entity';
+import { InventoryLedger, InventoryMovementType } from '../products/inventory-ledger.entity';
+import { Livestock, LivestockStatus } from '../livestock/livestock.entity';
+import { Clinic } from '../clinics/clinic.entity';
+import { Service, ProviderType } from '../services/service.entity';
+
 export const SEED_PASSWORD = 'Password123!';
 
 @Injectable()
@@ -19,40 +24,49 @@ export class SeedService implements OnModuleInit {
   private readonly logger = new Logger(SeedService.name);
 
   constructor(
+    @InjectRepository(User)
+    private readonly userRepository: Repository<User>,
     @InjectRepository(Animal)
     private readonly animalRepository: Repository<Animal>,
     @InjectRepository(Doctor)
     private readonly doctorRepository: Repository<Doctor>,
     @InjectRepository(Availability)
     private readonly availabilityRepository: Repository<Availability>,
-    @InjectRepository(MarketItem)
-    private readonly marketItemRepository: Repository<MarketItem>,
     @InjectRepository(ChatMessage)
     private readonly chatMessageRepository: Repository<ChatMessage>,
     @InjectRepository(Conversation)
     private readonly conversationRepository: Repository<Conversation>,
-    @InjectRepository(User)
-    private readonly userRepository: Repository<User>,
+
+    @InjectRepository(Category)
+    private readonly categoryRepository: Repository<Category>,
+    @InjectRepository(Brand)
+    private readonly brandRepository: Repository<Brand>,
+    @InjectRepository(Product)
+    private readonly productRepository: Repository<Product>,
+    @InjectRepository(InventoryLedger)
+    private readonly ledgerRepository: Repository<InventoryLedger>,
+    @InjectRepository(Livestock)
+    private readonly livestockRepository: Repository<Livestock>,
+    @InjectRepository(Clinic)
+    private readonly clinicRepository: Repository<Clinic>,
+    @InjectRepository(Service)
+    private readonly serviceRepository: Repository<Service>,
   ) {}
 
   async onModuleInit() {
     this.logger.log('Checking database status to run seeder...');
     const users = await this.seedUsers();
-    await this.seedDoctors(users);
+    const doctors = await this.seedDoctors(users);
     await this.seedAvailability();
     await this.seedAnimals();
-    await this.seedMarketItems();
+    await this.seedCategoriesAndBrandsAndProducts();
+    await this.seedClinicsAndServices(users, doctors);
+    await this.seedLivestock(users);
     await this.seedChatMessages(users);
     await this.backfillDemoLoginCredentials();
     this.logger.log('Database seeding checks completed successfully!');
   }
 
-  /**
-   * Grants the demo doctor/patient a known password even on databases that
-   * were already seeded before login credentials existed — seedUsers() only
-   * runs once against an empty table, so pre-existing installs need this
-   * separate idempotent backfill to gain the same test login.
-   */
   private async backfillDemoLoginCredentials(): Promise<void> {
     const passwordHash = await bcrypt.hash(SEED_PASSWORD, 10);
     const demoAccounts = [
@@ -100,35 +114,43 @@ export class SeedService implements OnModuleInit {
           phone: '+8801700000002',
           role: UserRole.DOCTOR,
           name: 'Dr. Jessica Taylor',
+          password: passwordHash,
+          verified: true,
         },
         {
           phone: '+8801800000001',
           email: 'patient@gobadi.test',
-          role: UserRole.PATIENT,
-          name: 'Test Patient One',
+          role: UserRole.USER,
+          name: 'Test Farmer Patient',
           password: passwordHash,
           verified: true,
         },
         {
           phone: '+8801800000002',
-          role: UserRole.PATIENT,
-          name: 'Test Patient Two',
+          role: UserRole.CLINIC,
+          name: 'Savar Clinic Manager',
+          password: passwordHash,
+          verified: true,
+        },
+        {
+          phone: '+8801900000001',
+          role: UserRole.ADMIN,
+          name: 'Admin Supervisor',
+          password: passwordHash,
+          verified: true,
         },
       ]);
-      this.logger.log(
-        `Seeded login credentials — doctor@gobadi.test / patient@gobadi.test, password: ${SEED_PASSWORD}`,
-      );
       return users;
     }
     return this.userRepository.find();
   }
 
-  private async seedDoctors(users: User[]): Promise<void> {
+  private async seedDoctors(users: User[]): Promise<Doctor[]> {
     const count = await this.doctorRepository.count();
     if (count === 0) {
       this.logger.log('Seeding doctors...');
       const doctorUsers = users.filter((u) => u.role === UserRole.DOCTOR);
-      await this.doctorRepository.save([
+      return this.doctorRepository.save([
         {
           userId: doctorUsers[0]?.id ?? null,
           name: 'Dr. Michael Wilson',
@@ -137,6 +159,10 @@ export class SeedService implements OnModuleInit {
           rating: 4.8,
           avatar: 'michael_doctor.png',
           bio: 'Dr. Michael has spent over 8 years caring for farm animals, specialized in large cattle surgery and herd management.',
+          qualifications: ['DVM, BAU', 'MS in Large Animal Surgery'],
+          licenseNumber: 'VET-LIC-8821',
+          consultationFee: 800,
+          isVerified: true,
         },
         {
           userId: doctorUsers[1]?.id ?? null,
@@ -146,9 +172,14 @@ export class SeedService implements OnModuleInit {
           rating: 4.9,
           avatar: 'jessica_doctor.png',
           bio: 'Dr. Jessica specializes in optimal nutrition and disease prevention for cows, goats, and sheep.',
+          qualifications: ['DVM, BAU', 'MS in Animal Nutrition'],
+          licenseNumber: 'VET-LIC-9932',
+          consultationFee: 600,
+          isVerified: true,
         },
       ]);
     }
+    return this.doctorRepository.find();
   }
 
   private async seedAvailability(): Promise<void> {
@@ -194,34 +225,157 @@ export class SeedService implements OnModuleInit {
     }
   }
 
-  private async seedMarketItems() {
-    const count = await this.marketItemRepository.count();
-    if (count === 0) {
-      this.logger.log('Seeding marketplace catalog...');
-      await this.marketItemRepository.save([
+  private async seedCategoriesAndBrandsAndProducts() {
+    const catCount = await this.categoryRepository.count();
+    if (catCount === 0) {
+      this.logger.log('Seeding products, categories, and brands...');
+      const cats = await this.categoryRepository.save([
+        { name: 'Medicine & Vaccines', description: 'Antibiotics, vaccines, and supplements' },
+        { name: 'Feeds & Supplements', description: 'Animal feeds, bhushi, and growth boosters' },
+        { name: 'Tools & Accessories', description: 'Ear tags, milk pails, and farm machinery' },
+      ]);
+
+      const brands = await this.brandRepository.save([
+        { name: 'Renata Animal Health', logo: 'renata.png', website: 'https://renata-ltd.com' },
+        { name: 'ACI Animal Health', logo: 'aci.png', website: 'https://aci-bd.com' },
+        { name: 'Square Vet', logo: 'square.png', website: 'https://squarepharma.com.bd' },
+      ]);
+
+      const prods = await this.productRepository.save([
         {
-          name: 'Cattle Bhushi Mix Feed',
+          name: 'Renadex Injection 100ml',
+          sku: 'MED-REN-001',
+          price: 260,
+          discount: 15,
+          images: ['renadex.png'],
+          description: 'Effective rehydration and support injection for weak cattle.',
+          categoryId: cats[0].id,
+          brandId: brands[0].id,
+          isPublished: true,
+        },
+        {
+          name: 'ACI Cattle Feed Premium Mix 25kg',
+          sku: 'FED-ACI-002',
           price: 1350,
-          category: 'Feeds',
-          image: 'feed.png',
+          discount: 50,
+          images: ['cattle_feed.png'],
+          description: 'Balanced feed formulated to boost milk production in dairy cows.',
+          categoryId: cats[1].id,
+          brandId: brands[1].id,
+          isPublished: true,
         },
         {
-          name: 'Premium Milk Pail',
-          price: 850,
-          category: 'Milk',
-          image: 'milk.png',
+          name: 'Square Dewormer Bolus',
+          sku: 'MED-SQ-003',
+          price: 45,
+          discount: 0,
+          images: ['dewormer.png'],
+          description: 'Broad spectrum dewormer tablet for goats and cows.',
+          categoryId: cats[0].id,
+          brandId: brands[2].id,
+          isPublished: true,
+        },
+      ]);
+
+      // Seed initial stock ledger additions
+      const stockAdditions = [
+        { productId: prods[0].id, quantity: 150, movementType: InventoryMovementType.ADDITION, description: 'Initial import stock' },
+        { productId: prods[1].id, quantity: 80, movementType: InventoryMovementType.ADDITION, description: 'Initial warehouse arrival' },
+        { productId: prods[2].id, quantity: 1200, movementType: InventoryMovementType.ADDITION, description: 'Initial pharmacy stock' },
+      ];
+      await this.ledgerRepository.save(stockAdditions);
+    }
+  }
+
+  private async seedClinicsAndServices(users: User[], doctors: Doctor[]) {
+    const count = await this.clinicRepository.count();
+    if (count === 0) {
+      this.logger.log('Seeding clinics and consultation services...');
+      const clinicManager = users.find((u) => u.role === UserRole.CLINIC) || users[0];
+
+      const clinic = await this.clinicRepository.save({
+        userId: clinicManager.id,
+        name: 'Savar Central Veterinary Clinic',
+        location: 'Dhaka - Aricha Hwy, Savar',
+        description: 'Comprehensive medical care, diagnostic lab, and surgery suite for all livestock species.',
+        isVerified: true,
+        rating: 4.9,
+        avatar: 'savar_clinic.png',
+        businessHours: { mon_fri: '08:00 - 20:00', sat_sun: '09:00 - 15:00' },
+        doctors, // Link seeded doctors
+      });
+
+      // Seed consulting services
+      await this.serviceRepository.save([
+        {
+          providerType: ProviderType.CLINIC,
+          providerId: clinic.id,
+          name: 'Cattle Vaccination & Deworming Package',
+          description: 'Full herd diagnostic and immunization package.',
+          price: 1800,
+          durationMinutes: 45,
+          isOnline: false,
+          isOffline: true,
+          location: clinic.location,
+          isActive: true,
         },
         {
-          name: 'Albenian Buffalo',
+          providerType: ProviderType.DOCTOR,
+          providerId: doctors[0].id,
+          name: 'Large Cattle Surgical Consult',
+          description: 'Emergency and scheduled surgical consultation for cattle.',
+          price: 1000,
+          durationMinutes: 30,
+          isOnline: true,
+          isOffline: true,
+          isActive: true,
+        },
+      ]);
+    }
+  }
+
+  private async seedLivestock(users: User[]) {
+    const count = await this.livestockRepository.count();
+    if (count === 0) {
+      this.logger.log('Seeding livestock marketplace listings...');
+      const farmer = users.find((u) => u.role === UserRole.USER) || users[0];
+
+      await this.livestockRepository.save([
+        {
+          sellerId: farmer.id,
+          species: 'cow',
+          breed: 'Friesian Crossbreed',
           price: 320000,
-          category: 'Animals',
-          image: 'albino_buffalo.png',
+          age: '24 Months',
+          weight: 520,
+          gender: 'male',
+          images: ['friesian_cow.jpg'],
+          videos: [],
+          location: 'Savar, Dhaka',
+          isSold: false,
+          isReserved: false,
+          status: LivestockStatus.PUBLISHED,
+          healthStatus: 'Healthy',
+          farmName: 'Savar Dairy Farm',
+          createdAt: new Date(),
         },
         {
-          name: 'Pure Mutton Cuts',
-          price: 1200,
-          category: 'Meat',
-          image: 'meat.png',
+          sellerId: farmer.id,
+          species: 'goat',
+          breed: 'Black Bengal',
+          price: 28000,
+          age: '12 Months',
+          weight: 38,
+          gender: 'female',
+          images: ['black_bengal_goat.jpg'],
+          videos: [],
+          location: 'Manikganj, Dhaka',
+          isSold: false,
+          isReserved: false,
+          status: LivestockStatus.PUBLISHED,
+          healthStatus: 'Healthy',
+          farmName: 'Black Bengal Farm',
+          createdAt: new Date(),
         },
       ]);
     }
@@ -234,7 +388,7 @@ export class SeedService implements OnModuleInit {
         where: {},
         order: { id: 'ASC' },
       });
-      const patient = users.find((u) => u.role === UserRole.PATIENT);
+      const patient = users.find((u) => u.role === UserRole.USER);
       if (!doctor || !patient) {
         return;
       }
@@ -258,7 +412,7 @@ export class SeedService implements OnModuleInit {
         {
           conversationId: conversation.id,
           senderId: patient.id,
-          senderRole: UserRole.PATIENT,
+          senderRole: UserRole.USER,
           text: 'Thank you for reaching out!\nWe are looking for a surgery.',
           status: MessageStatus.DELIVERED,
         },

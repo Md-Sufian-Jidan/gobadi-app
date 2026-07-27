@@ -15,7 +15,8 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
-import { MarketplaceService, Order } from '../marketplace/marketplace.service';
+import { OrdersService } from '../orders/orders.service';
+import { Order } from '../orders/order.entity';
 import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -29,7 +30,7 @@ import { PaginatedResult } from '../common/paginated-result.interface';
 @Roles(UserRole.ADMIN)
 @Controller('admin/orders')
 export class AdminOrdersController {
-  constructor(private readonly marketplaceService: MarketplaceService) {}
+  constructor(private readonly ordersService: OrdersService) {}
 
   @Get()
   @ApiOperation({
@@ -44,10 +45,10 @@ export class AdminOrdersController {
     @Query('limit') limit?: string,
     @Query('status') status?: string,
   ): Promise<Order[] | PaginatedResult<Order>> {
-    return this.marketplaceService.getOrders(
-      page ? parseInt(page, 10) : 1,
-      limit ? parseInt(limit, 10) : 20,
-      status,
+    return this.ordersService.getOrders(
+      page ? parseInt(page, 10) : undefined,
+      limit ? parseInt(limit, 10) : undefined,
+      status as any,
     );
   }
 
@@ -59,6 +60,6 @@ export class AdminOrdersController {
     @Param('id') id: string,
     @Body() body: UpdateOrderStatusDto,
   ): Promise<Order> {
-    return this.marketplaceService.updateOrderStatus(id, body.status);
+    return this.ordersService.updateStatus(id, body.status as any);
   }
 }

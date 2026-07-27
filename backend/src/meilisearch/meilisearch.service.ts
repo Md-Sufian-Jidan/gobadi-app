@@ -33,27 +33,29 @@ export class MeilisearchService implements OnModuleInit {
     try {
       await Promise.all([
         this.client
-          .index('animals')
-          .updateSearchableAttributes(['name', 'breed', 'color']),
+          .index('products')
+          .updateSearchableAttributes(['name', 'brandName', 'categoryName', 'description']),
         this.client
-          .index('animals')
-          .updateFilterableAttributes(['breed', 'userId']),
+          .index('products')
+          .updateFilterableAttributes(['categoryName', 'brandName']),
         this.client
-          .index('marketplace')
-          .updateSearchableAttributes(['name', 'category']),
+          .index('livestock')
+          .updateSearchableAttributes(['breed', 'species', 'description', 'location']),
         this.client
-          .index('marketplace')
-          .updateFilterableAttributes(['category']),
+          .index('livestock')
+          .updateFilterableAttributes(['species', 'breed', 'isSold']),
         this.client
           .index('doctors')
-          .updateSearchableAttributes(['name', 'specialty']),
-        this.client.index('doctors').updateFilterableAttributes(['specialty']),
+          .updateSearchableAttributes(['name', 'specialty', 'bio']),
         this.client
-          .index('alerts')
-          .updateSearchableAttributes(['title', 'crop', 'location']),
+          .index('doctors')
+          .updateFilterableAttributes(['specialty', 'isVerified']),
         this.client
-          .index('alerts')
-          .updateFilterableAttributes(['severity', 'isActive']),
+          .index('clinics')
+          .updateSearchableAttributes(['name', 'location', 'description']),
+        this.client
+          .index('clinics')
+          .updateFilterableAttributes(['isVerified']),
       ]);
     } catch (err) {
       this.logger.warn(`Failed to configure Meilisearch indexes: ${err}`);
