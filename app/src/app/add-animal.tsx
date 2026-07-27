@@ -12,16 +12,23 @@ import {
   Modal,
   FlatList,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useEffect } from 'react';
 
-import { apiFetch } from '@/constants/api';
+import {
+  useGetAnimalByIdQuery,
+  useAddAnimalMutation,
+  useUpdateAnimalMutation,
+} from '@/store/animalsApi';
 
 export default function AddAnimalScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams();
+  const editId = params.edit ? String(params.id || '') : '';
   const [step, setStep] = useState(1); // 1: Info, 2: Details, 3: Visual, 4: Pricing
 
   // Form State
-  const [name, setName] = useState('Donald Tramp');
+  const [name, setName] = useState(editId ? '' : 'Donald Tramp');
   const [description, setDescription] = useState('');
   const [dob, setDob] = useState('');
   const [gender, setGender] = useState('');
@@ -55,25 +62,39 @@ export default function AddAnimalScreen() {
     setModalVisible(true);
   };
 
+  const { data: existingAnimal } = useGetAnimalByIdQuery(editId, { skip: !editId });
+  const [addAnimal] = useAddAnimalMutation();
+  const [updateAnimal] = useUpdateAnimalMutation();
+
+  useEffect(() => {
+    if (!existingAnimal) return;
+    setName(existingAnimal.name);
+    setBreed(existingAnimal.breed);
+    setWeight(existingAnimal.weight);
+    setAge(existingAnimal.age);
+    setColor(existingAnimal.color);
+  }, [existingAnimal]);
+
   const handleNext = async () => {
     if (step < 4) {
       setStep(step + 1);
     } else {
       try {
-        await apiFetch('/animals', {
-          method: 'POST',
-          body: JSON.stringify({
-            name: name || 'Donald Tramp',
-            breed: breed || 'Albino Buffalo',
-            weight: weight || '725 Kg',
-            age: age || '8 months',
-            color: color || 'Cream-white',
-          }),
-        });
+        const payload = {
+          name: name || 'Donald Tramp',
+          breed: breed || 'Albino Buffalo',
+          weight: weight || '725 Kg',
+          age: age || '8 months',
+          color: color || 'Cream-white',
+        };
+        if (editId) {
+          await updateAnimal({ id: editId, data: payload }).unwrap();
+        } else {
+          await addAnimal(payload).unwrap();
+        }
       } catch (err) {
-        console.log('Error adding animal:', err);
+        console.log('Error saving animal:', err);
       }
-      console.log('Animal Added successfully!');
       router.replace('/(tabs)/animals');
     }
   };
@@ -92,7 +113,7 @@ export default function AddAnimalScreen() {
       >
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>Add New Animal</Text>
+          <Text style={styles.headerTitle}>{editId ? 'Edit Animal' : 'Add New Animal'}</Text>
           <TouchableOpacity
             style={styles.closeButton}
             onPress={() => router.back()}

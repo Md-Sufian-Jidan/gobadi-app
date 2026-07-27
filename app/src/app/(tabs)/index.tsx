@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   StyleSheet,
   View,
@@ -8,25 +8,90 @@ import {
   SafeAreaView,
   Image,
   Dimensions,
+  Share,
+  TextInput,
+  Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useGetAnimalsQuery } from '@/store/animalsApi';
+import { useGetTasksQuery, useToggleTaskMutation } from '@/store/tasksApi';
+import { useGetWeatherQuery } from '@/store/weatherApi';
+import { useGetAlertsQuery, useActOnAlertMutation } from '@/store/alertsApi';
+import { useGetMyReferralQuery, useClaimReferralMutation } from '@/store/referralsApi';
 
 const { width } = Dimensions.get('window');
+
+function todayDateKey(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function formatFullDate(): string {
+  return new Date().toLocaleDateString(undefined, {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
+}
+
+function formatClockTime(iso: string): string {
+  return new Date(iso).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+}
+
+function formatTaskTime(scheduledTime: string): string {
+  return new Date(scheduledTime).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+}
 
 export default function HomeDashboard() {
   const router = useRouter();
 
-  const mockAnimals = [
-    { id: '1', name: 'Donald Tramp', breed: 'Albino Buffalo' },
-    { id: '2', name: 'Donald Tramp', breed: 'Albino Buffalo' },
-    { id: '3', name: 'Donald Tramp', breed: 'Albino Buffalo' },
-  ];
+  const { data: allAnimals } = useGetAnimalsQuery();
+  const { data: tasks = [] } = useGetTasksQuery(todayDateKey());
+  const { data: weather } = useGetWeatherQuery();
+  const { data: alerts = [] } = useGetAlertsQuery();
+  const { data: referral } = useGetMyReferralQuery();
+  const [claimReferral, { isLoading: isClaiming }] = useClaimReferralMutation();
 
-  const mockTasks = [
-    { id: '1', title: 'Feed Animals', detail: '12 animals • 98kg grains', time: '7:00 AM', done: true },
-    { id: '2', title: 'Bath Animals', detail: '12 animals • 12 shampoos', time: '11:00 AM', done: false },
-    { id: '3', title: 'Buy Grains', detail: '', time: '5:30 PM', done: false },
-  ];
+  const [toggleTaskMutation] = useToggleTaskMutation();
+  const [actOnAlertMutation] = useActOnAlertMutation();
+
+  const [showClaimInput, setShowClaimInput] = useState(false);
+  const [claimCode, setClaimCode] = useState('');
+
+  const animals = (allAnimals || []).slice(0, 3);
+
+  async function shareReferral() {
+    if (!referral) return;
+    try {
+      await Share.share({
+        message: `Join me on Gobadi! Use my referral code ${referral.referralCode} to sign up: ${referral.shareLink}`,
+      });
+    } catch (err) {
+      console.log('Error sharing referral:', err);
+    }
+  }
+
+  async function handleClaimReferral() {
+    const code = claimCode.trim();
+    if (!code) return;
+    try {
+      await claimReferral(code).unwrap();
+      setClaimCode('');
+      setShowClaimInput(false);
+      Alert.alert('Success', 'Referral code claimed!');
+    } catch (err) {
+      console.log('Error claiming referral:', err);
+      Alert.alert('Could not claim', 'That code may be invalid or already used.');
+    }
+  }
+
+  function toggleTask(id: number) {
+    toggleTaskMutation(String(id));
+  }
+
+  function actOnAlert(alertId: number, actionChoice: 'MANAGE' | 'SCHEDULE') {
+    actOnAlertMutation({ id: alertId, actionChoice });
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -36,19 +101,28 @@ export default function HomeDashboard() {
           <View style={styles.headerTextContainer}>
             <Text style={styles.greetingText}>Hello, <Text style={styles.greetingBold}>Good Morning</Text></Text>
             <TouchableOpacity style={styles.dateSelector} activeOpacity={0.7}>
-              <Text style={styles.dateText}>Sunday, 15 May 2026</Text>
+              <Text style={styles.dateText}>{formatFullDate()}</Text>
               <Text style={styles.dropdownArrow}>∨</Text>
             </TouchableOpacity>
           </View>
-          <TouchableOpacity style={styles.notificationButton} activeOpacity={0.8}>
-            <Text style={styles.bellIcon}>🔔</Text>
-          </TouchableOpacity>
+          <View style={{ flexDirection: 'row', gap: 10 }}>
+            <TouchableOpacity
+              style={styles.notificationButton}
+              activeOpacity={0.8}
+              onPress={() => router.push('/search')}
+            >
+              <Text style={styles.bellIcon}>🔍</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.notificationButton} activeOpacity={0.8}>
+              <Text style={styles.bellIcon}>🔔</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Farm Weather Card */}
         <View style={styles.weatherCard}>
           <View style={styles.weatherCardHeader}>
-            <Text style={styles.weatherLocation}>📍 Farm Weather - Munshiganj</Text>
+            <Text style={styles.weatherLocation}>📍 Farm Weather{weather ? ` - ${weather.location}` : ''}</Text>
             <Image
               source={require('@/assets/images/farm_barn.png')}
               style={styles.barnImage}
@@ -57,10 +131,12 @@ export default function HomeDashboard() {
           </View>
 
           <View style={styles.tempContainer}>
-            <Text style={styles.tempText}>+35 <Text style={styles.tempUnit}>°C</Text></Text>
+            <Text style={styles.tempText}>
+              {weather ? Math.round(weather.temperature) : '--'} <Text style={styles.tempUnit}>°C</Text>
+            </Text>
             <View style={styles.hiLowContainer}>
-              <Text style={styles.hiLowText}>H: <Text style={styles.hiText}>35°C</Text></Text>
-              <Text style={styles.hiLowText}>L: <Text style={styles.lowText}>15°C</Text></Text>
+              <Text style={styles.hiLowText}>H: <Text style={styles.hiText}>{weather ? Math.round(weather.highTemp) : '--'}°C</Text></Text>
+              <Text style={styles.hiLowText}>L: <Text style={styles.lowText}>{weather ? Math.round(weather.lowTemp) : '--'}°C</Text></Text>
             </View>
           </View>
 
@@ -70,19 +146,19 @@ export default function HomeDashboard() {
           <View style={styles.metricsGrid}>
             <View style={styles.metricItem}>
               <Text style={styles.metricLabel}>Humidity</Text>
-              <Text style={styles.metricValue}>40%</Text>
+              <Text style={styles.metricValue}>{weather ? `${weather.humidityPercentage}%` : '--'}</Text>
             </View>
             <View style={styles.metricItem}>
               <Text style={styles.metricLabel}>Precipitation</Text>
-              <Text style={styles.metricValue}>5.1 ml</Text>
+              <Text style={styles.metricValue}>{weather ? `${weather.precipitationMl} ml` : '--'}</Text>
             </View>
             <View style={styles.metricItem}>
               <Text style={styles.metricLabel}>Pressure</Text>
-              <Text style={styles.metricValue}>450 hpa</Text>
+              <Text style={styles.metricValue}>{weather ? `${weather.pressureHpa} hpa` : '--'}</Text>
             </View>
             <View style={styles.metricItem}>
               <Text style={styles.metricLabel}>Wind</Text>
-              <Text style={styles.metricValue}>23 m/s</Text>
+              <Text style={styles.metricValue}>{weather ? `${weather.windMps} m/s` : '--'}</Text>
             </View>
           </View>
 
@@ -92,11 +168,11 @@ export default function HomeDashboard() {
             <Text style={styles.sunIcon}>☀️</Text>
             <View style={styles.arcLabels}>
               <View>
-                <Text style={styles.arcTime}>5:25 am</Text>
+                <Text style={styles.arcTime}>{weather ? formatClockTime(weather.sunriseTime) : '--'}</Text>
                 <Text style={styles.arcType}>Sunrise</Text>
               </View>
               <View style={{ alignItems: 'flex-end' }}>
-                <Text style={styles.arcTime}>6:53 pm</Text>
+                <Text style={styles.arcTime}>{weather ? formatClockTime(weather.sunsetTime) : '--'}</Text>
                 <Text style={[styles.arcType, { color: '#4A6FA5' }]}>Sunset</Text>
               </View>
             </View>
@@ -112,13 +188,13 @@ export default function HomeDashboard() {
         </View>
 
         <View style={styles.listCard}>
-          {mockAnimals.map((item, idx) => (
+          {animals.map((item, idx) => (
             <TouchableOpacity
               key={idx}
-              style={[styles.listItem, idx === mockAnimals.length - 1 && { borderBottomWidth: 0 }]}
+              style={[styles.listItem, idx === animals.length - 1 && { borderBottomWidth: 0 }]}
               activeOpacity={0.7}
               onPress={() => router.push({
-                pathname: '/animal-details',
+                pathname: '/my-animal-detail',
                 params: { id: item.id }
               })}
             >
@@ -140,10 +216,12 @@ export default function HomeDashboard() {
         <Text style={[styles.sectionTitle, { marginTop: 24, marginBottom: 16 }]}>Today's Task</Text>
 
         <View style={styles.listCard}>
-          {mockTasks.map((task, idx) => (
-            <View
+          {tasks.map((task, idx) => (
+            <TouchableOpacity
               key={idx}
-              style={[styles.taskItem, idx === mockTasks.length - 1 && { borderBottomWidth: 0 }]}
+              activeOpacity={0.7}
+              onPress={() => toggleTask(task.id)}
+              style={[styles.taskItem, idx === tasks.length - 1 && { borderBottomWidth: 0 }]}
             >
               <View style={styles.taskItemLeft}>
                 <View style={styles.checkeredIcon}>
@@ -156,12 +234,12 @@ export default function HomeDashboard() {
               </View>
 
               <View style={styles.taskItemRight}>
-                <Text style={styles.taskTime}>{task.time}</Text>
-                <View style={[styles.checkbox, task.done ? styles.checkboxChecked : styles.checkboxUnchecked]}>
-                  {task.done ? <Text style={styles.checkIcon}>✓</Text> : null}
+                <Text style={styles.taskTime}>{formatTaskTime(task.scheduledTime)}</Text>
+                <View style={[styles.checkbox, task.isDone ? styles.checkboxChecked : styles.checkboxUnchecked]}>
+                  {task.isDone ? <Text style={styles.checkIcon}>✓</Text> : null}
                 </View>
               </View>
-            </View>
+            </TouchableOpacity>
           ))}
         </View>
 
@@ -178,39 +256,78 @@ export default function HomeDashboard() {
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.alertsScroll}
         >
-          {/* Card 1 */}
-          <View style={styles.alertCard}>
-            <View style={[styles.alertIconCircle, styles.alertIconRed]}>
-              <Text style={styles.alertIconText}>⚠</Text>
-            </View>
-            <Text style={styles.alertCardTitle}>High Risk of Leaf Miner</Text>
-            <Text style={styles.alertCardSub}>North Fields • Wheat</Text>
-            <TouchableOpacity style={styles.alertCardBtn} activeOpacity={0.8}>
-              <Text style={styles.alertCardBtnText}>Manage Now</Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Card 2 */}
-          <View style={styles.alertCard}>
-            <View style={[styles.alertIconCircle, styles.alertIconOrange]}>
-              <Text style={styles.alertIconText}>⚙</Text>
-            </View>
-            <Text style={styles.alertCardTitle}>High Risk of Leaf Miner</Text>
-            <Text style={styles.alertCardSub}>North Fields • Wheat</Text>
-            <TouchableOpacity style={styles.alertCardBtn} activeOpacity={0.8}>
-              <Text style={styles.alertCardBtnText}>Schedule</Text>
-            </TouchableOpacity>
-          </View>
+          {alerts.length === 0 ? (
+            <Text style={styles.noAlertsText}>No active alerts right now.</Text>
+          ) : (
+            alerts.map((alert) => (
+              <View key={alert.id} style={styles.alertCard}>
+                <View
+                  style={[
+                    styles.alertIconCircle,
+                    alert.severity === 'HIGH' || alert.severity === 'CRITICAL'
+                      ? styles.alertIconRed
+                      : styles.alertIconOrange,
+                  ]}
+                >
+                  <Text style={styles.alertIconText}>{alert.actionType === 'MANAGE' ? '⚠' : '⚙'}</Text>
+                </View>
+                <Text style={styles.alertCardTitle}>{alert.title}</Text>
+                <Text style={styles.alertCardSub}>{alert.location} • {alert.crop}</Text>
+                <TouchableOpacity
+                  style={styles.alertCardBtn}
+                  activeOpacity={0.8}
+                  onPress={() => actOnAlert(alert.id, alert.actionType)}
+                >
+                  <Text style={styles.alertCardBtnText}>
+                    {alert.actionType === 'MANAGE' ? 'Manage Now' : 'Schedule'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            ))
+          )}
         </ScrollView>
 
         {/* Refer to Friend & Earn Banner */}
         <View style={styles.referBanner}>
           <View style={styles.referLeft}>
             <Text style={styles.referTitle}>Refer to Your Friend and Earn</Text>
-            <Text style={styles.referSub}>Earn Up to Tk 1000 For Every Referral</Text>
-            <TouchableOpacity style={styles.referBtn} activeOpacity={0.8}>
-              <Text style={styles.referBtnText}>Refer Now</Text>
-            </TouchableOpacity>
+            <Text style={styles.referSub}>
+              {referral && referral.totalEarned > 0
+                ? `You've earned Tk ${referral.totalEarned} from ${referral.referralCount} referrals`
+                : 'Earn Tk 100 For Every Referral'}
+            </Text>
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              <TouchableOpacity style={styles.referBtn} activeOpacity={0.8} onPress={shareReferral}>
+                <Text style={styles.referBtnText}>Refer Now</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.referBtn}
+                activeOpacity={0.8}
+                onPress={() => setShowClaimInput((v) => !v)}
+              >
+                <Text style={styles.referBtnText}>Have a code?</Text>
+              </TouchableOpacity>
+            </View>
+            {showClaimInput ? (
+              <View style={{ flexDirection: 'row', gap: 8, marginTop: 10 }}>
+                <TextInput
+                  style={styles.claimInput}
+                  placeholder="Enter code"
+                  placeholderTextColor="#A39E99"
+                  value={claimCode}
+                  onChangeText={setClaimCode}
+                  autoCapitalize="characters"
+                />
+                <TouchableOpacity
+                  style={[styles.referBtn, isClaiming && { opacity: 0.6 }]}
+                  activeOpacity={0.8}
+                  onPress={handleClaimReferral}
+                  disabled={isClaiming}
+                >
+                  <Text style={styles.referBtnText}>Claim</Text>
+                </TouchableOpacity>
+              </View>
+            ) : null}
           </View>
           <Image
             source={require('@/assets/images/referral_badge.png')}
@@ -602,6 +719,11 @@ const styles = StyleSheet.create({
     paddingRight: 8,
     gap: 16,
   },
+  noAlertsText: {
+    fontSize: 13,
+    color: '#9C9690',
+    paddingHorizontal: 24,
+  },
   alertCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 24,
@@ -691,6 +813,17 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '700',
     color: '#BD632F',
+  },
+  claimInput: {
+    flex: 1,
+    backgroundColor: '#FAF9F6',
+    borderWidth: 1,
+    borderColor: '#E6E1DC',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    height: 36,
+    fontSize: 12,
+    color: '#1A1817',
   },
   referImage: {
     width: 70,

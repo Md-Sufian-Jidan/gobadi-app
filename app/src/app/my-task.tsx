@@ -1,17 +1,81 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   StyleSheet,
   View,
   Text,
+  TextInput,
   TouchableOpacity,
   SafeAreaView,
   ScrollView,
   Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useSelector } from 'react-redux';
+import type { RootState } from '@/store/store';
+import { useGetAnimalsQuery } from '@/store/animalsApi';
+import {
+  useGetTasksQuery,
+  useCreateTaskMutation,
+  useToggleTaskMutation,
+  useDeleteTaskMutation,
+} from '@/store/tasksApi';
+
+interface AnimalStats {
+  cow: number;
+  goat: number;
+  buffalo: number;
+}
+
+function todayDateKey(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function formatTaskTime(scheduledTime: string): string {
+  return new Date(scheduledTime).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+}
+
+function countByBreed(animals: Array<{ breed: string }>): AnimalStats {
+  const stats: AnimalStats = { cow: 0, goat: 0, buffalo: 0 };
+  for (const a of animals) {
+    const breed = a.breed.toLowerCase();
+    if (breed.includes('cow')) stats.cow += 1;
+    else if (breed.includes('goat')) stats.goat += 1;
+    else if (breed.includes('buffalo')) stats.buffalo += 1;
+  }
+  return stats;
+}
 
 export default function MyTaskScreen() {
   const router = useRouter();
+  const user = useSelector((state: RootState) => state.auth.user);
+
+  const { data: tasks = [] } = useGetTasksQuery(todayDateKey());
+  const { data: animals = [] } = useGetAnimalsQuery();
+  const stats = countByBreed(animals);
+
+  const [newTaskTitle, setNewTaskTitle] = useState('');
+  const [createTask] = useCreateTaskMutation();
+  const [toggleTaskMutation] = useToggleTaskMutation();
+  const [deleteTaskMutation] = useDeleteTaskMutation();
+
+  async function addTask() {
+    const title = newTaskTitle.trim();
+    if (!title) return;
+    setNewTaskTitle('');
+    try {
+      await createTask({ title, scheduledTime: new Date().toISOString() }).unwrap();
+    } catch (err) {
+      console.log('Error creating task:', err);
+    }
+  }
+
+  function toggleTask(id: number) {
+    toggleTaskMutation(String(id));
+  }
+
+  function deleteTask(id: number) {
+    deleteTaskMutation(String(id));
+  }
 
   const menuItems = [
     { id: '1', label: 'My Farm', icon: '📈', route: '/(tabs)' },
@@ -48,9 +112,9 @@ export default function MyTaskScreen() {
               style={styles.avatar}
             />
             <View style={styles.userDetails}>
-              <Text style={styles.userName}>Michal Wilson</Text>
+              <Text style={styles.userName}>{user?.name || user?.phone || 'Farmer'}</Text>
               <Text style={styles.userSubtitle} numberOfLines={1}>
-                Holding No. 105/19K, Maji...
+                {user?.phone || ''}
               </Text>
             </View>
             <TouchableOpacity
@@ -67,17 +131,64 @@ export default function MyTaskScreen() {
           {/* Stats Cards */}
           <View style={styles.statsRow}>
             <View style={[styles.statBox, styles.statBoxBlue]}>
-              <Text style={[styles.statNumber, styles.statNumberBlue]}>03</Text>
+              <Text style={[styles.statNumber, styles.statNumberBlue]}>{String(stats.cow).padStart(2, '0')}</Text>
               <Text style={styles.statLabel}>Cow</Text>
             </View>
             <View style={[styles.statBox, styles.statBoxOrange]}>
-              <Text style={[styles.statNumber, styles.statNumberOrange]}>12</Text>
+              <Text style={[styles.statNumber, styles.statNumberOrange]}>{String(stats.goat).padStart(2, '0')}</Text>
               <Text style={styles.statLabel}>Goat</Text>
             </View>
             <View style={[styles.statBox, styles.statBoxPink]}>
-              <Text style={[styles.statNumber, styles.statNumberPink]}>06</Text>
+              <Text style={[styles.statNumber, styles.statNumberPink]}>{String(stats.buffalo).padStart(2, '0')}</Text>
               <Text style={styles.statLabel}>Buffalo</Text>
             </View>
+          </View>
+        </View>
+
+        {/* Task List */}
+        <Text style={styles.sectionTitle}>Today's Tasks</Text>
+        <View style={styles.taskListCard}>
+          {tasks.length === 0 ? (
+            <Text style={styles.emptyText}>No tasks for today yet.</Text>
+          ) : (
+            tasks.map((task, idx) => (
+              <View
+                key={task.id}
+                style={[styles.taskRow, idx === tasks.length - 1 && { borderBottomWidth: 0 }]}
+              >
+                <TouchableOpacity
+                  style={styles.taskRowLeft}
+                  activeOpacity={0.7}
+                  onPress={() => toggleTask(task.id)}
+                >
+                  <View style={[styles.checkbox, task.isDone ? styles.checkboxChecked : styles.checkboxUnchecked]}>
+                    {task.isDone ? <Text style={styles.checkIcon}>✓</Text> : null}
+                  </View>
+                  <View style={styles.taskTextContainer}>
+                    <Text style={[styles.taskTitle, task.isDone && styles.taskTitleDone]}>{task.title}</Text>
+                    <Text style={styles.taskTime}>{formatTaskTime(task.scheduledTime)}</Text>
+                  </View>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => deleteTask(task.id)} activeOpacity={0.7} style={styles.deleteButton}>
+                  <Text style={styles.deleteIcon}>✕</Text>
+                </TouchableOpacity>
+              </View>
+            ))
+          )}
+
+          <View style={styles.addTaskRow}>
+            <TextInput
+              style={styles.addTaskInput}
+              placeholder="Add a task..."
+              placeholderTextColor="#A39E99"
+              value={newTaskTitle}
+              onChangeText={setNewTaskTitle}
+              onSubmitEditing={addTask}
+              returnKeyType="done"
+            />
+            <TouchableOpacity style={styles.addTaskButton} onPress={addTask} activeOpacity={0.8}>
+              <Text style={styles.addTaskButtonText}>＋</Text>
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -119,6 +230,117 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#FAF9F6',
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1A1817',
+    marginBottom: 12,
+  },
+  taskListCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: '#E6E1DC',
+    paddingHorizontal: 12,
+    marginBottom: 20,
+  },
+  emptyText: {
+    fontSize: 13,
+    color: '#9C9690',
+    paddingVertical: 20,
+    textAlign: 'center',
+  },
+  taskRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 14,
+    paddingHorizontal: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0EAE1',
+  },
+  taskRowLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  taskTextContainer: {
+    marginLeft: 12,
+    flex: 1,
+  },
+  taskTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#1A1817',
+  },
+  taskTitleDone: {
+    textDecorationLine: 'line-through',
+    color: '#9C9690',
+  },
+  taskTime: {
+    fontSize: 12,
+    color: '#7C7672',
+    marginTop: 2,
+  },
+  checkbox: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  checkboxChecked: {
+    backgroundColor: '#4CAF50',
+  },
+  checkboxUnchecked: {
+    borderWidth: 1.5,
+    borderColor: '#E6E1DC',
+    backgroundColor: '#FFFFFF',
+  },
+  checkIcon: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  deleteButton: {
+    padding: 8,
+  },
+  deleteIcon: {
+    fontSize: 14,
+    color: '#C4C0BB',
+    fontWeight: '700',
+  },
+  addTaskRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    gap: 10,
+  },
+  addTaskInput: {
+    flex: 1,
+    height: 44,
+    backgroundColor: '#FAF9F6',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#E6E1DC',
+    paddingHorizontal: 14,
+    fontSize: 14,
+    color: '#1A1817',
+  },
+  addTaskButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: '#BD632F',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  addTaskButtonText: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: '700',
   },
   scrollContainer: {
     paddingHorizontal: 24,

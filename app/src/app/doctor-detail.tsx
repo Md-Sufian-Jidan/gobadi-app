@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useMemo } from 'react';
 import {
   StyleSheet,
   View,
@@ -9,57 +9,41 @@ import {
   Image,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { apiFetch } from '@/constants/api';
-
-interface Doctor {
-  id: string;
-  name: string;
-  specialty: string;
-  location: string;
-  rating: number;
-  reviews: number;
-  image: any;
-  availability: string;
-}
+import { useGetDoctorByIdQuery } from '@/store/doctorsApi';
 
 export default function DoctorDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams();
+  const doctorId = String(id || '');
 
-  const [doctor, setDoctor] = useState<Doctor>({
-    id: '1',
-    name: 'Dr. David Patel',
-    specialty: 'Veterinary Surgery',
-    location: 'Cardiology Center, USA',
-    rating: 5,
-    reviews: 1872,
-    image: require('@/assets/images/doctor.png'),
-    availability: '6 AM - 9 PM',
-  });
+  const { data: doctorData } = useGetDoctorByIdQuery(doctorId, { skip: !doctorId });
 
-  useEffect(() => {
-    async function loadDoctorDetail() {
-      if (!id) return;
-      try {
-        const d = await apiFetch<{ id: string; name: string; specialty: string; rating: number; avatar: string; bio?: string }>(`/doctors/${id}`);
-        setDoctor({
-          id: d.id,
-          name: d.name,
-          specialty: d.specialty,
-          location: 'Uttar Badda, Dhaka',
-          rating: d.rating || 4.8,
-          reviews: 124,
-          image: d.avatar === 'jessica_doctor.png' 
-            ? require('@/assets/images/jessica_doctor.png') 
-            : require('@/assets/images/michael_doctor.png'),
-          availability: d.avatar === 'jessica_doctor.png' ? '8 AM - 5 PM' : '6 AM - 9 PM',
-        });
-      } catch (err) {
-        console.log('Error loading doctor details:', err);
-      }
+  const doctor = useMemo(() => {
+    if (!doctorData) {
+      return {
+        id: '1',
+        name: 'Dr. David Patel',
+        specialty: 'Veterinary Surgery',
+        location: 'Cardiology Center, USA',
+        rating: 5,
+        reviews: 1872,
+        image: require('@/assets/images/doctor.png'),
+        availability: '6 AM - 9 PM',
+      };
     }
-    loadDoctorDetail();
-  }, [id]);
+    return {
+      id: String(doctorData.id),
+      name: doctorData.name,
+      specialty: doctorData.specialty,
+      location: 'Uttar Badda, Dhaka',
+      rating: doctorData.rating || 4.8,
+      reviews: 124,
+      image: doctorData.avatar === 'jessica_doctor.png'
+        ? require('@/assets/images/jessica_doctor.png')
+        : require('@/assets/images/michael_doctor.png'),
+      availability: doctorData.avatar === 'jessica_doctor.png' ? '8 AM - 5 PM' : '6 AM - 9 PM',
+    };
+  }, [doctorData]);
 
   const specializations = [
     'Veterinary clinical medicine',

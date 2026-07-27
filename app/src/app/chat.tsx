@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   StyleSheet,
   View,
@@ -12,84 +12,36 @@ import {
   Platform,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { apiFetch } from '@/constants/api';
-
-interface Message {
-  id: string;
-  sender: 'doctor' | 'user';
-  text: string;
-  time: string;
-  avatar: any;
-}
+import { useGetMessagesQuery, useSendMessageMutation } from '@/store/chatApi';
 
 export default function ChatScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: '1',
-      sender: 'doctor',
-      text: 'How can I help you?',
-      time: '09:55',
-      avatar: require('@/assets/images/doctor.png'),
-    },
-    {
-      id: '2',
-      sender: 'user',
-      text: 'Thank you for reaching out!\nWe are looking for a surgery.',
-      time: '09:55',
-      avatar: require('@/assets/images/doctor_avatar.png'),
-    },
-  ]);
+  const conversationId = params.conversationId ? Number(params.conversationId) : undefined;
+  const { data: dbMessages = [] } = useGetMessagesQuery(conversationId);
+  const [sendMessage] = useSendMessageMutation();
   const [inputText, setInputText] = useState('');
 
-  useEffect(() => {
-    async function loadMessages() {
-      try {
-        const dbMsgs = await apiFetch<Array<{ id: string; sender: 'user' | 'doctor'; text: string; time: string; avatar?: string }>>('/chat/messages');
-        if (dbMsgs && dbMsgs.length > 0) {
-          const mapped = dbMsgs.map((m) => ({
-            id: m.id,
-            sender: m.sender,
-            text: m.text,
-            time: m.time,
-            avatar: m.sender === 'user' 
-              ? require('@/assets/images/doctor_avatar.png') 
-              : require('@/assets/images/doctor.png'),
-          }));
-          setMessages(mapped);
-        }
-      } catch (err) {
-        console.log('Error loading messages:', err);
-      }
-    }
-    loadMessages();
-  }, []);
+  const messages = useMemo(
+    () =>
+      dbMessages.map((m) => ({
+        id: String(m.id),
+        sender: m.sender,
+        text: m.text,
+        time: m.time,
+        avatar: m.sender === 'user'
+          ? require('@/assets/images/doctor_avatar.png')
+          : require('@/assets/images/doctor.png'),
+      })),
+    [dbMessages],
+  );
 
   const handleSendMessage = async () => {
     if (!inputText.trim()) return;
     const textToSend = inputText;
     setInputText('');
-
-    const tempId = String(messages.length + 1);
-    const localMsg: Message = {
-      id: tempId,
-      sender: 'user',
-      text: textToSend,
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      avatar: require('@/assets/images/doctor_avatar.png'),
-    };
-    setMessages(prev => [...prev, localMsg]);
-
     try {
-      const res = await apiFetch<{ id: string; sender: 'user' | 'doctor'; text: string; time: string }>('/chat/message', {
-        method: 'POST',
-        body: JSON.stringify({ sender: 'user', text: textToSend }),
-      });
-      setMessages(prev => prev.map(m => m.id === tempId ? {
-        ...m,
-        id: res.id,
-      } : m));
+      await sendMessage({ text: textToSend, conversationId }).unwrap();
     } catch (err) {
       console.log('Error sending message to API:', err);
     }

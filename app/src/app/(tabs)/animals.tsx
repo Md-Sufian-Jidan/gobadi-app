@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   StyleSheet,
   View,
@@ -11,82 +11,24 @@ import {
   Dimensions,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { apiFetch } from '@/constants/api';
+import { useGetAnimalsQuery } from '@/store/animalsApi';
 
 const { width } = Dimensions.get('window');
 
-interface Animal {
-  id: string;
-  name: string;
-  breed: string;
-  desc: string;
-  status: 'Healthy' | 'Under Treatment';
-  age: string;
-  weight: string;
-  image: any;
+function animalImage(breed: string) {
+  return breed.toLowerCase().includes('buffalo')
+    ? require('@/assets/images/albino_buffalo.png')
+    : require('@/assets/images/bangladeshi_cow.png');
+}
+
+function animalStatus(id: number): 'Healthy' | 'Under Treatment' {
+  return id % 2 === 0 ? 'Under Treatment' : 'Healthy';
 }
 
 export default function AnimalsListScreen() {
   const router = useRouter();
   const [activeFilter, setActiveFilter] = useState('All');
-  const [animals, setAnimals] = useState<Animal[]>([
-    {
-      id: '1',
-      name: 'Donald Tramp',
-      breed: 'Albino Buffalo',
-      desc: 'cream-colored coat and tuft of blond hair',
-      status: 'Healthy',
-      age: '8 months',
-      weight: '725 Kg',
-      image: require('@/assets/images/albino_buffalo.png'),
-    },
-    {
-      id: '2',
-      name: 'Lali',
-      breed: 'Bangladeshi Cow',
-      desc: 'Bangladeshi Cow',
-      status: 'Under Treatment',
-      age: '18 months',
-      weight: '185 Kg',
-      image: require('@/assets/images/bangladeshi_cow.png'),
-    },
-    {
-      id: '3',
-      name: 'Shada Pahar',
-      breed: 'Bangladeshi Cow',
-      desc: 'cream-white colored coat and tuft of blond hair',
-      status: 'Healthy',
-      age: '13 months',
-      weight: '167 Kg',
-      image: require('@/assets/images/bangladeshi_cow.png'),
-    },
-  ]);
-
-  useEffect(() => {
-    async function loadAnimals() {
-      try {
-        const dbAnimals = await apiFetch<Array<{ id: string; name: string; breed: string; weight: string; age: string; color: string }>>('/animals');
-        if (dbAnimals && dbAnimals.length > 0) {
-          const mapped = dbAnimals.map((a) => ({
-            id: a.id,
-            name: a.name,
-            breed: a.breed,
-            desc: `${a.color || 'cream'} colored coat and characteristics`,
-            status: Number(a.id) % 2 === 0 ? ('Under Treatment' as const) : ('Healthy' as const),
-            age: a.age,
-            weight: a.weight,
-            image: a.breed.toLowerCase().includes('buffalo') 
-              ? require('@/assets/images/albino_buffalo.png') 
-              : require('@/assets/images/bangladeshi_cow.png'),
-          }));
-          setAnimals(mapped);
-        }
-      } catch (err) {
-        console.log('Error loading animals:', err);
-      }
-    }
-    loadAnimals();
-  }, []);
+  const { data: animals = [] } = useGetAnimalsQuery();
 
   return (
     <SafeAreaView style={styles.container}>
@@ -149,11 +91,11 @@ export default function AnimalsListScreen() {
             style={styles.card}
             activeOpacity={0.9}
             onPress={() => router.push({
-              pathname: '/animal-details',
+              pathname: '/my-animal-detail',
               params: { id: item.id }
             })}
           >
-            <Image source={item.image} style={styles.cardImage} resizeMode="cover" />
+            <Image source={item.image ? { uri: item.image } : animalImage(item.breed)} style={styles.cardImage} resizeMode="cover" />
 
             <View style={styles.cardContent}>
               <View style={styles.cardHeader}>
@@ -161,22 +103,22 @@ export default function AnimalsListScreen() {
                 <View
                   style={[
                     styles.statusBadge,
-                    item.status === 'Healthy' ? styles.statusHealthy : styles.statusTreatment,
+                    animalStatus(item.id) === 'Healthy' ? styles.statusHealthy : styles.statusTreatment,
                   ]}
                 >
                   <Text
                     style={[
                       styles.statusText,
-                      item.status === 'Healthy' ? styles.statusTextHealthy : styles.statusTextTreatment,
+                      animalStatus(item.id) === 'Healthy' ? styles.statusTextHealthy : styles.statusTextTreatment,
                     ]}
                   >
-                    {item.status}
+                    {animalStatus(item.id)}
                   </Text>
                 </View>
               </View>
 
               <Text style={styles.cardDesc} numberOfLines={1}>
-                {item.desc}
+                {item.color || 'cream'} colored coat and characteristics
               </Text>
 
               {/* Specs Grid */}

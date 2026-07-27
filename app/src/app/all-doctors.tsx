@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   StyleSheet,
   View,
@@ -10,10 +10,10 @@ import {
   Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { apiFetch } from '@/constants/api';
+import { useGetDoctorsQuery } from '@/store/doctorsApi';
 
-interface Doctor {
-  id: string;
+interface DoctorView {
+  id: number;
   name: string;
   specialty: string;
   location: string;
@@ -25,60 +25,23 @@ interface Doctor {
 export default function AllDoctorsScreen() {
   const router = useRouter();
   const [activeFilter, setActiveFilter] = useState('All');
-  const [doctors, setDoctors] = useState<Doctor[]>([
-    {
-      id: '1',
-      name: 'Dr. David Patel',
-      specialty: 'Veterinary Surgery',
-      location: 'Cardiology Center, USA',
-      rating: 5,
-      reviews: 1872,
-      image: require('@/assets/images/doctor.png'),
-    },
-    {
-      id: '2',
-      name: 'Dr. Jessica Turner',
-      specialty: 'Veterinary Medicine',
-      location: "Women's Clinic, Seattle, USA",
-      rating: 4.9,
-      reviews: 127,
-      image: require('@/assets/images/jessica_doctor.png'),
-    },
-    {
-      id: '3',
-      name: 'Dr. Michael Johnson',
-      specialty: 'Avian & Exotic Medicine',
-      location: 'Maple Associates, NY, USA',
-      rating: 4.7,
-      reviews: 5223,
-      image: require('@/assets/images/michael_doctor.png'),
-    },
-  ]);
+  const { data: doctorList = [] } = useGetDoctorsQuery();
 
-  useEffect(() => {
-    async function loadDoctors() {
-      try {
-        const dbDocs = await apiFetch<Array<{ id: string; name: string; specialty: string; rating: number; avatar: string }>>('/doctors');
-        if (dbDocs && dbDocs.length > 0) {
-          const mappedDocs = dbDocs.map((d) => ({
-            id: d.id,
-            name: d.name,
-            specialty: d.specialty,
-            location: 'Uttar Badda, Dhaka',
-            rating: d.rating || 4.8,
-            reviews: 124,
-            image: d.avatar === 'jessica_doctor.png' 
-              ? require('@/assets/images/jessica_doctor.png') 
-              : require('@/assets/images/michael_doctor.png'),
-          }));
-          setDoctors(mappedDocs);
-        }
-      } catch (err) {
-        console.log('Error loading doctors:', err);
-      }
-    }
-    loadDoctors();
-  }, []);
+  const doctors: DoctorView[] = useMemo(
+    () =>
+      doctorList.map((d) => ({
+        id: d.id,
+        name: d.name,
+        specialty: d.specialty,
+        location: 'Uttar Badda, Dhaka',
+        rating: d.rating || 4.8,
+        reviews: 124,
+        image: d.avatar === 'jessica_doctor.png'
+          ? require('@/assets/images/jessica_doctor.png')
+          : require('@/assets/images/michael_doctor.png'),
+      })),
+    [doctorList],
+  );
 
   const filterOptions = [
     { label: '⚙️ Filter', value: 'filter' },
