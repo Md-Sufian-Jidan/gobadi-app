@@ -110,7 +110,7 @@ export class AppointmentsService {
     status?: AppointmentStatus,
   ): Promise<AppointmentWithPatient[]> {
     const where: any = {};
-    if (role === UserRole.USER || (role as string) === 'patient') {
+    if (role === UserRole.USER) {
       where.patientId = userId;
     } else {
       const doctor = await this.doctorsService.getDoctorByUserId(userId);
@@ -236,7 +236,7 @@ export class AppointmentsService {
     if (!appointment) {
       throw new NotFoundException('Appointment not found');
     }
-    if (requesterRole === UserRole.USER || (requesterRole as string) === 'patient') {
+    if (requesterRole === UserRole.USER) {
       if (appointment.patientId !== requesterId) {
         throw new ForbiddenException(
           'You may only manage your own appointments',

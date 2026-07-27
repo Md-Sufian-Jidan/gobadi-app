@@ -63,7 +63,7 @@ export default function SignUpScreen() {
         phone: mode === 'phone' ? phone : undefined,
         email: mode === 'email' ? email : undefined,
         password,
-        role: 'patient',
+        role: 'user',
       }).unwrap();
       router.push({ pathname: '/otp', params: { phone: identifier, purpose: 'verify' } });
     } catch (err: any) {
