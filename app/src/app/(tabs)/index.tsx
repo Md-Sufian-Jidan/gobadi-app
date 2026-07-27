@@ -113,7 +113,7 @@ export default function HomeDashboard() {
             >
               <Text style={styles.bellIcon}>🔍</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.notificationButton} activeOpacity={0.8}>
+            <TouchableOpacity style={styles.notificationButton} onPress={() => router.push('/notifications')} activeOpacity={0.8}>
               <Text style={styles.bellIcon}>🔔</Text>
             </TouchableOpacity>
           </View>
