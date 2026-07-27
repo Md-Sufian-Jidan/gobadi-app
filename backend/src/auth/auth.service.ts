@@ -323,16 +323,11 @@ export class AuthService {
     }
 
     const passwordHash = await bcrypt.hash(dto.password, 10);
-    let targetRole = dto.role;
-    if ((targetRole as string) === 'patient') {
-      targetRole = UserRole.USER;
-    }
-
     await this.usersService.createWithPassword({
       name: dto.name,
       phone: dto.phone,
       email: dto.email,
-      role: targetRole,
+      role: dto.role,
       passwordHash,
     });
 
