@@ -1,6 +1,5 @@
-import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
-import { API_URL } from '@/constants/api';
-import type { RootState } from './store';
+import { createApi } from '@reduxjs/toolkit/query/react';
+import { baseQueryWithReauth } from './base-query-with-reauth';
 
 export interface ChatMessage {
   id: number;
@@ -10,6 +9,15 @@ export interface ChatMessage {
   time: string;
   createdAt: string;
   status: 'SENT' | 'DELIVERED' | 'READ';
+  attachmentUrl?: string | null;
+  attachmentType?: 'image' | 'document' | null;
+  attachmentMimeType?: string | null;
+}
+
+export interface SendAttachmentInput {
+  conversationId?: number;
+  caption?: string;
+  file: { uri: string; name: string; type: string };
 }
 
 export interface Conversation {
@@ -24,16 +32,7 @@ export interface Conversation {
 
 export const chatApi = createApi({
   reducerPath: 'chatApi',
-  baseQuery: fetchBaseQuery({
-    baseUrl: API_URL,
-    prepareHeaders: (headers, { getState }) => {
-      const token = (getState() as RootState).auth.token;
-      if (token) {
-        headers.set('Authorization', `Bearer ${token}`);
-      }
-      return headers;
-    },
-  }),
+  baseQuery: baseQueryWithReauth,
   tagTypes: ['ChatMessage', 'Conversation'],
   endpoints: (builder) => ({
     getConversations: builder.query<Conversation[], void>({
@@ -53,6 +52,21 @@ export const chatApi = createApi({
       }),
       invalidatesTags: ['ChatMessage', 'Conversation'],
     }),
+    sendAttachmentMessage: builder.mutation<ChatMessage, SendAttachmentInput>({
+      query: ({ conversationId, caption, file }) => {
+        const formData = new FormData();
+        // React Native's FormData accepts { uri, name, type } file objects directly.
+        formData.append('file', file as unknown as Blob);
+        if (conversationId) formData.append('conversationId', String(conversationId));
+        if (caption) formData.append('caption', caption);
+        return {
+          url: '/chat/message/attachment',
+          method: 'POST',
+          body: formData,
+        };
+      },
+      invalidatesTags: ['ChatMessage', 'Conversation'],
+    }),
   }),
 });
 
@@ -60,4 +74,5 @@ export const {
   useGetConversationsQuery,
   useGetMessagesQuery,
   useSendMessageMutation,
+  useSendAttachmentMessageMutation,
 } = chatApi;

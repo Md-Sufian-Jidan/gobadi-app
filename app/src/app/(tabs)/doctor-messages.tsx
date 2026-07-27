@@ -10,6 +10,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useGetConversationsQuery } from '@/store/chatApi';
+import { useConversationListSocket } from '@/hooks/use-chat-socket';
 
 function formatDate(iso?: string | null): string {
   if (!iso) return '';
@@ -19,6 +20,7 @@ function formatDate(iso?: string | null): string {
 export default function DoctorMessagesScreen() {
   const router = useRouter();
   const { data: conversations = [], isLoading } = useGetConversationsQuery();
+  useConversationListSocket();
 
   return (
     <SafeAreaView style={styles.container}>

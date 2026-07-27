@@ -14,6 +14,15 @@ export interface ChatMessageClientView {
   time: string;
   createdAt: Date;
   status: MessageStatus;
+  attachmentUrl?: string | null;
+  attachmentType?: 'image' | 'document' | null;
+  attachmentMimeType?: string | null;
+}
+
+export interface SendMessageAttachment {
+  url: string;
+  type: 'image' | 'document';
+  mimeType: string;
 }
 
 @Injectable()
@@ -37,16 +46,20 @@ export class ChatService {
     senderRole: UserRole,
     conversationId: number,
     text: string,
+    attachment?: SendMessageAttachment,
   ): Promise<ChatMessageClientView> {
-    if (!text || !text.trim()) {
-      throw new BadRequestException('Message text cannot be empty');
+    if ((!text || !text.trim()) && !attachment) {
+      throw new BadRequestException('Message must have text or an attachment');
     }
     const newMessage = this.chatMessageRepository.create({
       conversationId,
       senderId,
       senderRole,
-      text,
+      text: text || '',
       status: MessageStatus.SENT,
+      attachmentUrl: attachment?.url ?? null,
+      attachmentType: attachment?.type ?? null,
+      attachmentMimeType: attachment?.mimeType ?? null,
     });
     const saved = await this.chatMessageRepository.save(newMessage);
     await this.conversationService.touchLastMessageAt(conversationId);
@@ -66,7 +79,9 @@ export class ChatService {
     userId: number,
     role: UserRole,
   ): Promise<ChatMessage> {
-    const message = await this.chatMessageRepository.findOneBy({ id: messageId });
+    const message = await this.chatMessageRepository.findOneBy({
+      id: messageId,
+    });
     if (!message) {
       throw new BadRequestException('Message not found');
     }
@@ -98,6 +113,9 @@ export class ChatService {
       }),
       createdAt: message.createdAt,
       status: message.status,
+      attachmentUrl: message.attachmentUrl,
+      attachmentType: message.attachmentType,
+      attachmentMimeType: message.attachmentMimeType,
     };
   }
 }

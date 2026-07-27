@@ -8,10 +8,12 @@ import { ChatGateway } from './chat.gateway';
 import { ConversationService } from './conversation.service';
 import { Appointment } from '../appointments/appointment.entity';
 import { Doctor } from '../doctors/doctor.entity';
+import { CloudinaryModule } from '../cloudinary/cloudinary.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([ChatMessage, Conversation, Appointment, Doctor]),
+    CloudinaryModule,
   ],
   controllers: [ChatController],
   providers: [ChatService, ChatGateway, ConversationService],
