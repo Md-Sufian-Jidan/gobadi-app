@@ -6,6 +6,10 @@ export class Animal {
   id: number;
 
   @Index()
+  @Column({ nullable: true })
+  userId?: number;
+
+  @Index()
   @Column()
   name: string;
 
