@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   StyleSheet,
   View,
@@ -8,14 +8,31 @@ import {
   SafeAreaView,
   ScrollView,
   Image,
+  Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useGetMyProfileQuery, useUpdateMyProfileMutation } from '@/store/usersApi';
 
 export default function EditProfileScreen() {
   const router = useRouter();
-  const [name, setName] = useState('Ramesh Kumar');
-  const [phone, setPhone] = useState('+91 9988776655');
-  const [location, setLocation] = useState('Bhuj Kutch Gujarat 370001');
+  const { data: profile } = useGetMyProfileQuery();
+  const [updateProfile, { isLoading: isSaving }] = useUpdateMyProfileMutation();
+
+  const [name, setName] = useState('');
+
+  useEffect(() => {
+    if (profile?.name) setName(profile.name);
+  }, [profile]);
+
+  async function handleSave() {
+    try {
+      await updateProfile({ name }).unwrap();
+      router.back();
+    } catch (err) {
+      console.log('Error updating profile:', err);
+      Alert.alert('Could not save', 'Please try again.');
+    }
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -70,9 +87,8 @@ export default function EditProfileScreen() {
             <View style={styles.inputWrapper}>
               <TextInput
                 style={styles.textInput}
-                value={phone}
-                onChangeText={setPhone}
-                placeholder="Enter mobile number"
+                value={profile?.phone || ''}
+                editable={false}
                 placeholderTextColor="#A39E99"
                 keyboardType="phone-pad"
               />
@@ -81,28 +97,13 @@ export default function EditProfileScreen() {
               </View>
             </View>
           </View>
-
-          <View style={styles.fieldContainer}>
-            <Text style={styles.fieldLabel}>Location (Village/District)</Text>
-            <View style={styles.inputWrapper}>
-              <TextInput
-                style={styles.textInput}
-                value={location}
-                onChangeText={setLocation}
-                placeholder="Enter location"
-                placeholderTextColor="#A39E99"
-              />
-              <TouchableOpacity style={styles.inputActionBtn} activeOpacity={0.7}>
-                <Text style={styles.actionIcon}>🎯</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
         </View>
 
         {/* Save Changes Button */}
         <TouchableOpacity
-          style={styles.saveButton}
-          onPress={() => router.back()}
+          style={[styles.saveButton, isSaving && { opacity: 0.6 }]}
+          onPress={handleSave}
+          disabled={isSaving}
           activeOpacity={0.85}
         >
           <Text style={styles.saveText}>Save Changes</Text>
