@@ -1,6 +1,8 @@
 import React from 'react';
 import { Tabs } from 'expo-router';
 import { StyleSheet, View, Text, TouchableOpacity, Dimensions } from 'react-native';
+import { useSelector } from 'react-redux';
+import type { RootState } from '@/store/store';
 
 const { width } = Dimensions.get('window');
 
@@ -45,6 +47,12 @@ function CustomTabBar({ state, descriptors, navigation }: any) {
                 return '🏪';
               case 'profile':
                 return '👤';
+              case 'doctor-bookings':
+                return '📅';
+              case 'doctor-availability':
+                return '🗓️';
+              case 'doctor-messages':
+                return '💬';
               default:
                 return '📍';
             }
@@ -63,6 +71,12 @@ function CustomTabBar({ state, descriptors, navigation }: any) {
                 return 'Market';
               case 'profile':
                 return 'Profile';
+              case 'doctor-bookings':
+                return 'Bookings';
+              case 'doctor-availability':
+                return 'Availability';
+              case 'doctor-messages':
+                return 'Messages';
               default:
                 return routeName;
             }
@@ -115,6 +129,9 @@ function CustomTabBar({ state, descriptors, navigation }: any) {
 }
 
 export default function AppTabs() {
+  const user = useSelector((state: RootState) => state.auth.user);
+  const isDoctor = user?.role === 'doctor';
+
   return (
     <Tabs
       screenOptions={{
@@ -122,11 +139,22 @@ export default function AppTabs() {
       }}
       tabBar={(props) => <CustomTabBar {...props} />}
     >
-      <Tabs.Screen name="index" />
-      <Tabs.Screen name="animals" />
-      <Tabs.Screen name="doctors" />
-      <Tabs.Screen name="market" />
-      <Tabs.Screen name="profile" />
+      {isDoctor ? (
+        <>
+          <Tabs.Screen name="doctor-bookings" />
+          <Tabs.Screen name="doctor-availability" />
+          <Tabs.Screen name="doctor-messages" />
+          <Tabs.Screen name="profile" />
+        </>
+      ) : (
+        <>
+          <Tabs.Screen name="index" />
+          <Tabs.Screen name="animals" />
+          <Tabs.Screen name="doctors" />
+          <Tabs.Screen name="market" />
+          <Tabs.Screen name="profile" />
+        </>
+      )}
     </Tabs>
   );
 }
