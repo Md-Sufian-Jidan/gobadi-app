@@ -12,10 +12,26 @@ import { User, UserRole } from '../users/user.entity';
 import { Category } from '../products/category.entity';
 import { Brand } from '../products/brand.entity';
 import { Product } from '../products/product.entity';
-import { InventoryLedger, InventoryMovementType } from '../products/inventory-ledger.entity';
+import {
+  InventoryLedger,
+  InventoryMovementType,
+} from '../products/inventory-ledger.entity';
 import { Livestock, LivestockStatus } from '../livestock/livestock.entity';
 import { Clinic } from '../clinics/clinic.entity';
 import { Service, ProviderType } from '../services/service.entity';
+import { Address } from '../addresses/address.entity';
+import { CartItem } from '../cart/cart-item.entity';
+import { WishlistItem } from '../wishlist/wishlist-item.entity';
+import { Order, OrderStatus } from '../orders/order.entity';
+import { OrderItem } from '../orders/order-item.entity';
+import { Transaction, PaymentStatus } from '../payments/transaction.entity';
+import { Delivery, DeliveryStatus } from '../delivery/delivery.entity';
+import { Review, ReviewTargetType } from '../reviews/review.entity';
+import {
+  Notification,
+  NotificationType,
+} from '../notifications/notification.entity';
+import { AiDiagnosis } from '../ai-diagnosis/ai-diagnosis.entity';
 
 export const SEED_PASSWORD = 'Password123!';
 
@@ -51,6 +67,26 @@ export class SeedService implements OnModuleInit {
     private readonly clinicRepository: Repository<Clinic>,
     @InjectRepository(Service)
     private readonly serviceRepository: Repository<Service>,
+    @InjectRepository(Address)
+    private readonly addressRepository: Repository<Address>,
+    @InjectRepository(CartItem)
+    private readonly cartItemRepository: Repository<CartItem>,
+    @InjectRepository(WishlistItem)
+    private readonly wishlistItemRepository: Repository<WishlistItem>,
+    @InjectRepository(Order)
+    private readonly orderRepository: Repository<Order>,
+    @InjectRepository(OrderItem)
+    private readonly orderItemRepository: Repository<OrderItem>,
+    @InjectRepository(Transaction)
+    private readonly transactionRepository: Repository<Transaction>,
+    @InjectRepository(Delivery)
+    private readonly deliveryRepository: Repository<Delivery>,
+    @InjectRepository(Review)
+    private readonly reviewRepository: Repository<Review>,
+    @InjectRepository(Notification)
+    private readonly notificationRepository: Repository<Notification>,
+    @InjectRepository(AiDiagnosis)
+    private readonly aiDiagnosisRepository: Repository<AiDiagnosis>,
   ) {}
 
   async onModuleInit() {
@@ -63,6 +99,7 @@ export class SeedService implements OnModuleInit {
     await this.seedClinicsAndServices(users, doctors);
     await this.seedLivestock(users);
     await this.seedChatMessages(users);
+    await this.seedCommerceAndEngagementData(users, doctors);
     await this.backfillDemoLoginCredentials();
     this.logger.log('Database seeding checks completed successfully!');
   }
@@ -230,15 +267,42 @@ export class SeedService implements OnModuleInit {
     if (catCount === 0) {
       this.logger.log('Seeding products, categories, and brands...');
       const cats = await this.categoryRepository.save([
-        { name: 'Medicine & Vaccines', description: 'Antibiotics, vaccines, and supplements' },
-        { name: 'Feeds & Supplements', description: 'Animal feeds, bhushi, and growth boosters' },
-        { name: 'Tools & Accessories', description: 'Ear tags, milk pails, and farm machinery' },
+        {
+          name: 'Medicine & Vaccines',
+          slug: 'medicine-vaccines',
+          description: 'Antibiotics, vaccines, and supplements',
+        },
+        {
+          name: 'Feeds & Supplements',
+          slug: 'feeds-supplements',
+          description: 'Animal feeds, bhushi, and growth boosters',
+        },
+        {
+          name: 'Tools & Accessories',
+          slug: 'tools-accessories',
+          description: 'Ear tags, milk pails, and farm machinery',
+        },
       ]);
 
       const brands = await this.brandRepository.save([
-        { name: 'Renata Animal Health', logo: 'renata.png', website: 'https://renata-ltd.com' },
-        { name: 'ACI Animal Health', logo: 'aci.png', website: 'https://aci-bd.com' },
-        { name: 'Square Vet', logo: 'square.png', website: 'https://squarepharma.com.bd' },
+        {
+          name: 'Renata Animal Health',
+          slug: 'renata-animal-health',
+          logo: 'renata.png',
+          website: 'https://renata-ltd.com',
+        },
+        {
+          name: 'ACI Animal Health',
+          slug: 'aci-animal-health',
+          logo: 'aci.png',
+          website: 'https://aci-bd.com',
+        },
+        {
+          name: 'Square Vet',
+          slug: 'square-vet',
+          logo: 'square.png',
+          website: 'https://squarepharma.com.bd',
+        },
       ]);
 
       const prods = await this.productRepository.save([
@@ -248,7 +312,8 @@ export class SeedService implements OnModuleInit {
           price: 260,
           discount: 15,
           images: ['renadex.png'],
-          description: 'Effective rehydration and support injection for weak cattle.',
+          description:
+            'Effective rehydration and support injection for weak cattle.',
           categoryId: cats[0].id,
           brandId: brands[0].id,
           isPublished: true,
@@ -259,7 +324,8 @@ export class SeedService implements OnModuleInit {
           price: 1350,
           discount: 50,
           images: ['cattle_feed.png'],
-          description: 'Balanced feed formulated to boost milk production in dairy cows.',
+          description:
+            'Balanced feed formulated to boost milk production in dairy cows.',
           categoryId: cats[1].id,
           brandId: brands[1].id,
           isPublished: true,
@@ -279,9 +345,24 @@ export class SeedService implements OnModuleInit {
 
       // Seed initial stock ledger additions
       const stockAdditions = [
-        { productId: prods[0].id, quantity: 150, movementType: InventoryMovementType.ADDITION, description: 'Initial import stock' },
-        { productId: prods[1].id, quantity: 80, movementType: InventoryMovementType.ADDITION, description: 'Initial warehouse arrival' },
-        { productId: prods[2].id, quantity: 1200, movementType: InventoryMovementType.ADDITION, description: 'Initial pharmacy stock' },
+        {
+          productId: prods[0].id,
+          quantity: 150,
+          movementType: InventoryMovementType.ADDITION,
+          description: 'Initial import stock',
+        },
+        {
+          productId: prods[1].id,
+          quantity: 80,
+          movementType: InventoryMovementType.ADDITION,
+          description: 'Initial warehouse arrival',
+        },
+        {
+          productId: prods[2].id,
+          quantity: 1200,
+          movementType: InventoryMovementType.ADDITION,
+          description: 'Initial pharmacy stock',
+        },
       ];
       await this.ledgerRepository.save(stockAdditions);
     }
@@ -291,13 +372,15 @@ export class SeedService implements OnModuleInit {
     const count = await this.clinicRepository.count();
     if (count === 0) {
       this.logger.log('Seeding clinics and consultation services...');
-      const clinicManager = users.find((u) => u.role === UserRole.CLINIC) || users[0];
+      const clinicManager =
+        users.find((u) => u.role === UserRole.CLINIC) || users[0];
 
       const clinic = await this.clinicRepository.save({
         userId: clinicManager.id,
         name: 'Savar Central Veterinary Clinic',
         location: 'Dhaka - Aricha Hwy, Savar',
-        description: 'Comprehensive medical care, diagnostic lab, and surgery suite for all livestock species.',
+        description:
+          'Comprehensive medical care, diagnostic lab, and surgery suite for all livestock species.',
         isVerified: true,
         rating: 4.9,
         avatar: 'savar_clinic.png',
@@ -323,7 +406,8 @@ export class SeedService implements OnModuleInit {
           providerType: ProviderType.DOCTOR,
           providerId: doctors[0].id,
           name: 'Large Cattle Surgical Consult',
-          description: 'Emergency and scheduled surgical consultation for cattle.',
+          description:
+            'Emergency and scheduled surgical consultation for cattle.',
           price: 1000,
           durationMinutes: 30,
           isOnline: true,
@@ -418,5 +502,186 @@ export class SeedService implements OnModuleInit {
         },
       ]);
     }
+  }
+
+  private async seedCommerceAndEngagementData(
+    users: User[],
+    doctors: Doctor[],
+  ) {
+    const count = await this.addressRepository.count();
+    if (count > 0) {
+      return;
+    }
+
+    const farmer = users.find((u) => u.role === UserRole.USER) || users[0];
+    const product = await this.productRepository.findOne({
+      where: {},
+      order: { id: 'ASC' },
+    });
+    const livestock = await this.livestockRepository.findOne({
+      where: {},
+      order: { id: 'ASC' },
+    });
+    const doctor = doctors[0];
+    if (!product || !livestock || !doctor) {
+      return;
+    }
+
+    this.logger.log(
+      'Seeding addresses, cart, wishlist, an order, and engagement data...',
+    );
+
+    await this.addressRepository.save([
+      {
+        userId: farmer.id,
+        label: 'Home',
+        contactName: farmer.name || 'Test Farmer',
+        phone: farmer.phone || '+8801800000001',
+        division: 'Dhaka',
+        district: 'Dhaka',
+        upazila: 'Mirpur',
+        postalCode: '1216',
+        isDefault: true,
+      },
+      {
+        userId: farmer.id,
+        label: 'Farm',
+        contactName: farmer.name || 'Test Farmer',
+        phone: farmer.phone || '+8801800000001',
+        division: 'Dhaka',
+        district: 'Savar',
+        upazila: 'Savar Sadar',
+        postalCode: '1340',
+        isDefault: false,
+      },
+    ]);
+
+    await this.cartItemRepository.save([
+      { userId: farmer.id, productId: product.id, quantity: 2 },
+    ]);
+
+    await this.wishlistItemRepository.save([
+      { userId: farmer.id, livestockId: livestock.id },
+    ]);
+
+    const orderId = `GBD-${Date.now().toString(36).toUpperCase()}`;
+    const itemPrice = product.price;
+    const itemQuantity = 1;
+    const subtotal = itemPrice * itemQuantity;
+    const tax = Math.round(subtotal * 0.05);
+    const shippingFee = 100;
+    const netAmount = subtotal + tax + shippingFee;
+
+    await this.orderRepository.save({
+      id: orderId,
+      userId: farmer.id,
+      totalPrice: subtotal,
+      tax,
+      shippingFee,
+      discountAmount: 0,
+      netAmount,
+      deliveryAddress: {
+        label: 'Home',
+        contactName: farmer.name || 'Test Farmer',
+        phone: farmer.phone || '+8801800000001',
+        division: 'Dhaka',
+        district: 'Dhaka',
+        upazila: 'Mirpur',
+        postalCode: '1216',
+        addressLine: 'Road# 9, house# 5, Lane#3, Mirpur 11/a',
+      },
+      deliveryMethod: 'standard',
+      status: OrderStatus.DELIVERED,
+      paymentStatus: 'successful',
+    });
+
+    await this.orderItemRepository.save({
+      orderId,
+      productId: product.id,
+      quantity: itemQuantity,
+      price: itemPrice,
+      discount: product.discount || 0,
+      name: product.name,
+    });
+
+    await this.transactionRepository.save({
+      orderId,
+      userId: farmer.id,
+      amount: netAmount,
+      provider: 'simulate',
+      status: PaymentStatus.SUCCESSFUL,
+      gatewayTransactionId: `SIM-${orderId}`,
+      auditTrail: [{ status: PaymentStatus.SUCCESSFUL, timestamp: new Date() }],
+    });
+
+    await this.deliveryRepository.save({
+      orderId,
+      trackingNumber: `TRK-${orderId}`,
+      courierName: 'Gobadi Logistics',
+      status: DeliveryStatus.DELIVERED,
+      timeline: [
+        {
+          status: DeliveryStatus.PENDING,
+          timestamp: new Date(),
+          description: 'Order placed',
+        },
+        {
+          status: DeliveryStatus.DELIVERED,
+          timestamp: new Date(),
+          description: 'Delivered to customer',
+        },
+      ],
+    });
+
+    await this.reviewRepository.save([
+      {
+        userId: farmer.id,
+        targetType: ReviewTargetType.PRODUCT,
+        targetId: String(product.id),
+        rating: 5,
+        text: 'Worked great for my herd, will buy again.',
+        isVerified: true,
+      },
+      {
+        userId: farmer.id,
+        targetType: ReviewTargetType.DOCTOR,
+        targetId: String(doctor.id),
+        rating: 5,
+        text: 'Very knowledgeable and responsive, highly recommend.',
+        isVerified: true,
+      },
+    ]);
+
+    await this.notificationRepository.save([
+      {
+        userId: farmer.id,
+        title: 'Order delivered',
+        body: `Your order ${orderId} has been delivered.`,
+        type: NotificationType.DELIVERY,
+        referenceType: 'Order',
+        referenceId: orderId,
+        isRead: false,
+      },
+      {
+        userId: farmer.id,
+        title: 'AI diagnosis ready',
+        body: 'Your animal health scan results are ready to view.',
+        type: NotificationType.AI_READY,
+        isRead: false,
+      },
+    ]);
+
+    await this.aiDiagnosisRepository.save({
+      userId: farmer.id,
+      images: [],
+      symptoms: ['visual_scan'],
+      analysisResult: 'Possible early-stage Foot and Mouth Disease detected',
+      confidenceScore: 0.82,
+      recommendations: [
+        'Quarantine the herd',
+        'Contact a veterinarian immediately',
+      ],
+      recommendedDoctorIds: [doctor.id],
+    });
   }
 }
