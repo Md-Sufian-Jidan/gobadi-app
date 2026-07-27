@@ -16,7 +16,10 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
-import { AppointmentsService } from './appointments.service';
+import {
+  AppointmentsService,
+  AppointmentWithPatient,
+} from './appointments.service';
 import { BookSlotDto } from './dto/book-slot.dto';
 import { RescheduleAppointmentDto } from './dto/reschedule-appointment.dto';
 import { Appointment } from './appointment.entity';
@@ -73,7 +76,9 @@ export class AppointmentsController {
       "List the current user's appointments (patient: own bookings, doctor: their bookings)",
   })
   @ApiResponse({ status: 200, description: 'List of appointments' })
-  async getBookings(@CurrentUser() user: JwtPayload): Promise<Appointment[]> {
+  async getBookings(
+    @CurrentUser() user: JwtPayload,
+  ): Promise<AppointmentWithPatient[]> {
     return this.appointmentsService.listForUser(user.sub, user.role);
   }
 
