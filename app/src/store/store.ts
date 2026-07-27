@@ -1,7 +1,6 @@
 import { configureStore } from '@reduxjs/toolkit';
 import authReducer, { setCredentials, setBootstrapped } from './authSlice';
 import { authApi } from './authApi';
-import { marketplaceApi } from './marketplaceApi';
 import { medicalRecordsApi } from './medicalRecordsApi';
 import { doctorPortalApi } from './doctorPortalApi';
 import { animalsApi } from './animalsApi';
@@ -13,6 +12,18 @@ import { referralsApi } from './referralsApi';
 import { chatApi } from './chatApi';
 import { searchApi } from './searchApi';
 import { usersApi } from './usersApi';
+import { productsApi } from './productsApi';
+import { livestockApi } from './livestockApi';
+import { cartApi } from './cartApi';
+import { wishlistApi } from './wishlistApi';
+import { ordersApi } from './ordersApi';
+import { paymentsApi } from './paymentsApi';
+import { deliveryApi } from './deliveryApi';
+import { clinicsApi } from './clinicsApi';
+import { servicesApi } from './servicesApi';
+import { aiDiagnosisApi } from './aiDiagnosisApi';
+import { reviewsApi } from './reviewsApi';
+import { notificationsApi } from './notificationsApi';
 import { getToken, getRefreshToken } from '@/constants/api';
 import { decodeJwt } from './decode-jwt';
 import type { AuthUser } from './authSlice';
@@ -21,7 +32,6 @@ export const store = configureStore({
   reducer: {
     auth: authReducer,
     [authApi.reducerPath]: authApi.reducer,
-    [marketplaceApi.reducerPath]: marketplaceApi.reducer,
     [medicalRecordsApi.reducerPath]: medicalRecordsApi.reducer,
     [doctorPortalApi.reducerPath]: doctorPortalApi.reducer,
     [animalsApi.reducerPath]: animalsApi.reducer,
@@ -33,11 +43,22 @@ export const store = configureStore({
     [chatApi.reducerPath]: chatApi.reducer,
     [searchApi.reducerPath]: searchApi.reducer,
     [usersApi.reducerPath]: usersApi.reducer,
+    [productsApi.reducerPath]: productsApi.reducer,
+    [livestockApi.reducerPath]: livestockApi.reducer,
+    [cartApi.reducerPath]: cartApi.reducer,
+    [wishlistApi.reducerPath]: wishlistApi.reducer,
+    [ordersApi.reducerPath]: ordersApi.reducer,
+    [paymentsApi.reducerPath]: paymentsApi.reducer,
+    [deliveryApi.reducerPath]: deliveryApi.reducer,
+    [clinicsApi.reducerPath]: clinicsApi.reducer,
+    [servicesApi.reducerPath]: servicesApi.reducer,
+    [aiDiagnosisApi.reducerPath]: aiDiagnosisApi.reducer,
+    [reviewsApi.reducerPath]: reviewsApi.reducer,
+    [notificationsApi.reducerPath]: notificationsApi.reducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware().concat(
       authApi.middleware,
-      marketplaceApi.middleware,
       medicalRecordsApi.middleware,
       doctorPortalApi.middleware,
       animalsApi.middleware,
@@ -49,6 +70,18 @@ export const store = configureStore({
       chatApi.middleware,
       searchApi.middleware,
       usersApi.middleware,
+      productsApi.middleware,
+      livestockApi.middleware,
+      cartApi.middleware,
+      wishlistApi.middleware,
+      ordersApi.middleware,
+      paymentsApi.middleware,
+      deliveryApi.middleware,
+      clinicsApi.middleware,
+      servicesApi.middleware,
+      aiDiagnosisApi.middleware,
+      reviewsApi.middleware,
+      notificationsApi.middleware,
     ),
 });
 
