@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { ILike, Repository } from 'typeorm';
 import { User, UserRole } from './user.entity';
@@ -48,6 +52,24 @@ export class UsersService {
 
   async findByEmail(email: string): Promise<User | null> {
     return this.userRepository.findOneBy({ email });
+  }
+
+  async updateProfile(
+    userId: number,
+    data: { name?: string; email?: string },
+  ): Promise<User> {
+    const user = await this.userRepository.findOneBy({ id: userId });
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+    if (data.email && data.email !== user.email) {
+      const existing = await this.userRepository.findOneBy({ email: data.email });
+      if (existing && existing.id !== userId) {
+        throw new ConflictException('Email already in use');
+      }
+    }
+    Object.assign(user, data);
+    return this.userRepository.save(user);
   }
 
   /** Looks up a user by phone or email, including the normally-hidden password hash. */
