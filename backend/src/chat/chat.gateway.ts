@@ -135,8 +135,19 @@ export class ChatGateway
   }
 
   @SubscribeMessage('markRead')
-  async handleMarkRead(@MessageBody() data: { messageId: number }) {
-    const updated = await this.chatService.markRead(data.messageId);
+  async handleMarkRead(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { messageId: number },
+  ) {
+    const user: JwtPayload = client.data.user;
+    if (!user) {
+      return;
+    }
+    const updated = await this.chatService.markRead(
+      data.messageId,
+      user.sub,
+      user.role,
+    );
     this.notifyConversation(updated.conversationId, 'messageStatusUpdate', {
       id: updated.id,
       status: updated.status,
