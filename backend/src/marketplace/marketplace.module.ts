@@ -6,6 +6,7 @@ import { MarketplaceController } from './marketplace.controller';
 import { MarketItem } from './market-item.entity';
 import { Order } from './order.entity';
 import { OrderProcessor } from './order.processor';
+import { UsersModule } from '../users/users.module';
 
 @Module({
   imports: [
@@ -13,6 +14,7 @@ import { OrderProcessor } from './order.processor';
     BullModule.registerQueue({
       name: 'order-queue',
     }),
+    UsersModule,
   ],
   controllers: [MarketplaceController],
   providers: [MarketplaceService, OrderProcessor],
