@@ -195,7 +195,7 @@ export class ChatController {
       return conversationId;
     }
 
-    if (user.role !== UserRole.PATIENT) {
+    if (user.role !== UserRole.USER && (user.role as string) !== 'patient') {
       throw new BadRequestException('conversationId is required');
     }
     const conversation = await this.conversationService.findOrCreateForPatient(

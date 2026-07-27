@@ -83,7 +83,7 @@ export class MedicalRecordsController {
     @Query('patientId') patientIdParam?: string,
   ): Promise<Attachment[]> {
     const patientId =
-      user.role === UserRole.PATIENT
+      (user.role === UserRole.USER || (user.role as string) === 'patient')
         ? user.sub
         : patientIdParam
           ? parseInt(patientIdParam, 10)
@@ -104,7 +104,7 @@ export class MedicalRecordsController {
     const attachment = await this.medicalRecordsService.findById(
       parseInt(id, 10),
     );
-    if (user.role === UserRole.PATIENT && attachment.patientId !== user.sub) {
+    if ((user.role === UserRole.USER || (user.role as string) === 'patient') && attachment.patientId !== user.sub) {
       throw new ForbiddenException(
         'You may only access your own medical records',
       );

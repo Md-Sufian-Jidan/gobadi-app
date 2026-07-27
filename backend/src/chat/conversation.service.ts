@@ -80,7 +80,7 @@ export class ConversationService {
     if (!conversation) {
       return false;
     }
-    return role === UserRole.PATIENT
+    return (role === UserRole.USER || (role as string) === 'patient')
       ? conversation.patientId === userId
       : conversation.doctorUserId === userId;
   }
@@ -90,7 +90,7 @@ export class ConversationService {
   }
 
   async listForUser(userId: number, role: UserRole): Promise<Conversation[]> {
-    if (role === UserRole.PATIENT) {
+    if (role === UserRole.USER || (role as string) === 'patient') {
       return this.conversationRepository.find({
         where: { patientId: userId },
         order: { lastMessageAt: 'DESC' },
