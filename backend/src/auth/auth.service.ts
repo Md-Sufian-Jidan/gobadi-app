@@ -15,7 +15,7 @@ import * as crypto from 'crypto';
 import { OAuth2Client } from 'google-auth-library';
 import { RedisService } from '../redis/redis.service';
 import { UsersService } from '../users/users.service';
-import { User } from '../users/user.entity';
+import { User, UserRole } from '../users/user.entity';
 import { RefreshToken } from './refresh-token.entity';
 import { RegisterDto } from './dto/register.dto';
 import { OtpPurpose } from './otp-purpose.type';
@@ -323,11 +323,16 @@ export class AuthService {
     }
 
     const passwordHash = await bcrypt.hash(dto.password, 10);
+    let targetRole = dto.role;
+    if ((targetRole as string) === 'patient') {
+      targetRole = UserRole.USER;
+    }
+
     await this.usersService.createWithPassword({
       name: dto.name,
       phone: dto.phone,
       email: dto.email,
-      role: dto.role,
+      role: targetRole,
       passwordHash,
     });
 
