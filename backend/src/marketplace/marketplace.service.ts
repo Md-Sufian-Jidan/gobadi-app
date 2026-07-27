@@ -130,7 +130,9 @@ export class MarketplaceService {
     } catch (err) {
       console.warn('Failed to invalidate marketplace catalog cache', err);
     }
-    await this.meilisearchService.indexDocument(MARKETPLACE_INDEX, { ...saved });
+    await this.meilisearchService.indexDocument(MARKETPLACE_INDEX, {
+      ...saved,
+    });
 
     return saved;
   }

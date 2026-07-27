@@ -23,7 +23,9 @@ export class ReferralsController {
   constructor(private readonly referralsService: ReferralsService) {}
 
   @Get('me')
-  @ApiOperation({ summary: "Get the current user's referral code and earnings" })
+  @ApiOperation({
+    summary: "Get the current user's referral code and earnings",
+  })
   @ApiResponse({ status: 200, description: 'Referral summary' })
   async getMine(
     @CurrentUser() user: JwtPayload,

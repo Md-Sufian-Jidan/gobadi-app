@@ -1,5 +1,18 @@
-import { Body, Controller, Delete, Param, Post, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
+import {
+  Body,
+  Controller,
+  Delete,
+  Param,
+  Post,
+  UseGuards,
+} from '@nestjs/common';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiParam,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import { AlertsService, Alert } from '../alerts/alerts.service';
 import { CreateAlertDto } from '../alerts/dto/create-alert.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -26,7 +39,9 @@ export class AdminAlertsController {
   @ApiOperation({ summary: 'Deactivate an alert (admin only)' })
   @ApiParam({ name: 'id', example: '1' })
   @ApiResponse({ status: 200, description: 'Alert deactivated' })
-  async deactivateAlert(@Param('id') id: string): Promise<{ success: boolean }> {
+  async deactivateAlert(
+    @Param('id') id: string,
+  ): Promise<{ success: boolean }> {
     await this.alertsService.deactivateAlert(parseInt(id, 10));
     return { success: true };
   }

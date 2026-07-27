@@ -1,5 +1,11 @@
 import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiParam,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import { ReferralsService, Referral } from '../referrals/referrals.service';
 import { ApproveReferralDto } from './dto/approve-referral.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';

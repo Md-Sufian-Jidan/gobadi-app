@@ -44,10 +44,14 @@ export class AnimalsService {
     if (!q) {
       return [];
     }
-    const hits = await this.meilisearchService.search<Animal>(ANIMALS_INDEX, q, {
-      limit: 10,
-      filter: `userId = ${userId}`,
-    });
+    const hits = await this.meilisearchService.search<Animal>(
+      ANIMALS_INDEX,
+      q,
+      {
+        limit: 10,
+        filter: `userId = ${userId}`,
+      },
+    );
     if (hits !== null) {
       return hits;
     }

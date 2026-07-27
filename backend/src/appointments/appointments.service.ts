@@ -128,12 +128,16 @@ export class AppointmentsService {
       return appointments;
     }
 
-    const distinctPatientIds = [...new Set(appointments.map((a) => a.patientId))];
+    const distinctPatientIds = [
+      ...new Set(appointments.map((a) => a.patientId)),
+    ];
     const patients = await Promise.all(
       distinctPatientIds.map((id) => this.usersService.findById(id)),
     );
     const patientsById = new Map(
-      patients.filter((p): p is NonNullable<typeof p> => !!p).map((p) => [p.id, p]),
+      patients
+        .filter((p): p is NonNullable<typeof p> => !!p)
+        .map((p) => [p.id, p]),
     );
 
     return appointments.map((appointment) => ({
