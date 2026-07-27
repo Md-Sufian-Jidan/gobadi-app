@@ -8,6 +8,11 @@ import {
 } from 'class-validator';
 import { UserRole } from '../../users/user.entity';
 
+export const RegisterRole = {
+  ...UserRole,
+  PATIENT: 'patient' as any,
+};
+
 export class RegisterDto {
   @ApiPropertyOptional({ description: 'Full name', example: 'Abdul Kader' })
   @IsOptional()
@@ -38,7 +43,7 @@ export class RegisterDto {
   @MinLength(8)
   password: string;
 
-  @ApiProperty({ enum: UserRole, description: 'Account role' })
-  @IsEnum(UserRole)
+  @ApiProperty({ enum: RegisterRole, description: 'Account role' })
+  @IsEnum(RegisterRole)
   role: UserRole;
 }
