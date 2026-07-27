@@ -10,6 +10,7 @@ import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { GoogleAuthDto } from './dto/google-auth.dto';
 import { FacebookAuthDto } from './dto/facebook-auth.dto';
+import { RefreshTokenDto } from './dto/refresh-token.dto';
 
 @ApiTags('auth')
 @Throttle({ default: { limit: 10, ttl: 60000 } })
@@ -65,5 +66,17 @@ export class AuthController {
   @ApiOperation({ summary: 'Log in or register via Facebook access token' })
   async facebookAuth(@Body() body: FacebookAuthDto) {
     return this.authService.loginWithFacebook(body.accessToken);
+  }
+
+  @Post('refresh')
+  @ApiOperation({ summary: 'Exchange a refresh token for a new token pair' })
+  async refresh(@Body() body: RefreshTokenDto) {
+    return this.authService.refreshTokens(body.refreshToken);
+  }
+
+  @Post('logout')
+  @ApiOperation({ summary: 'Revoke a refresh token' })
+  async logout(@Body() body: RefreshTokenDto) {
+    return this.authService.logout(body.refreshToken);
   }
 }

@@ -6,16 +6,28 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
+import { InjectRepository } from '@nestjs/typeorm';
 import { Queue } from 'bullmq';
+import { Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
+import * as crypto from 'crypto';
 import { OAuth2Client } from 'google-auth-library';
 import { RedisService } from '../redis/redis.service';
 import { UsersService } from '../users/users.service';
 import { User } from '../users/user.entity';
+import { RefreshToken } from './refresh-token.entity';
 import { RegisterDto } from './dto/register.dto';
 import { OtpPurpose } from './otp-purpose.type';
 import { ResetTokenPayload } from './reset-token-payload.interface';
+
+const REFRESH_TOKEN_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+const ACCESS_TOKEN_EXPIRES_IN = '15m';
+
+export interface TokenPair {
+  accessToken: string;
+  refreshToken: string;
+}
 
 interface OtpRecord {
   code: string;
@@ -36,6 +48,8 @@ export class AuthService {
     private readonly jwtService: JwtService,
     @InjectQueue('mail-queue')
     private readonly mailQueue: Queue,
+    @InjectRepository(RefreshToken)
+    private readonly refreshTokenRepository: Repository<RefreshToken>,
   ) {}
 
   private toPublicUser(user: User): Partial<User> {
@@ -49,12 +63,79 @@ export class AuthService {
     };
   }
 
-  private async issueSessionToken(user: User): Promise<string> {
-    return this.jwtService.signAsync({
-      sub: user.id,
-      role: user.role,
-      phone: user.phone,
+  private hashToken(rawToken: string): string {
+    return crypto.createHash('sha256').update(rawToken).digest('hex');
+  }
+
+  private async issueAccessToken(user: User): Promise<string> {
+    return this.jwtService.signAsync(
+      {
+        sub: user.id,
+        role: user.role,
+        phone: user.phone,
+      },
+      { expiresIn: ACCESS_TOKEN_EXPIRES_IN },
+    );
+  }
+
+  private async issueRefreshToken(userId: number): Promise<string> {
+    const rawToken = crypto.randomBytes(32).toString('hex');
+    const refreshToken = this.refreshTokenRepository.create({
+      userId,
+      tokenHash: this.hashToken(rawToken),
+      expiresAt: new Date(Date.now() + REFRESH_TOKEN_TTL_MS),
     });
+    await this.refreshTokenRepository.save(refreshToken);
+    return rawToken;
+  }
+
+  private async issueTokenPair(user: User): Promise<TokenPair> {
+    const [accessToken, refreshToken] = await Promise.all([
+      this.issueAccessToken(user),
+      this.issueRefreshToken(user.id),
+    ]);
+    return { accessToken, refreshToken };
+  }
+
+  async refreshTokens(rawRefreshToken: string): Promise<TokenPair> {
+    if (!rawRefreshToken) {
+      throw new UnauthorizedException('Refresh token is required');
+    }
+    const tokenHash = this.hashToken(rawRefreshToken);
+    const existing = await this.refreshTokenRepository.findOneBy({
+      tokenHash,
+    });
+    if (
+      !existing ||
+      existing.revokedAt ||
+      existing.expiresAt.getTime() < Date.now()
+    ) {
+      throw new UnauthorizedException('Invalid or expired refresh token');
+    }
+
+    const user = await this.usersService.findById(existing.userId);
+    if (!user) {
+      throw new UnauthorizedException('Invalid or expired refresh token');
+    }
+
+    // Rotate: revoke the used token before issuing a new pair so a stolen
+    // refresh token cannot be replayed after the legitimate client rotates.
+    await this.refreshTokenRepository.update(existing.id, {
+      revokedAt: new Date(),
+    });
+    return this.issueTokenPair(user);
+  }
+
+  async logout(rawRefreshToken: string): Promise<{ success: boolean }> {
+    if (!rawRefreshToken) {
+      return { success: true };
+    }
+    const tokenHash = this.hashToken(rawRefreshToken);
+    await this.refreshTokenRepository.update(
+      { tokenHash },
+      { revokedAt: new Date() },
+    );
+    return { success: true };
   }
 
   async sendOtp(
@@ -111,7 +192,8 @@ export class AuthService {
     purpose: OtpPurpose = 'login',
   ): Promise<{
     verified: boolean;
-    token?: string;
+    accessToken?: string;
+    refreshToken?: string;
     resetToken?: string;
     user?: Partial<User>;
     message: string;
@@ -182,7 +264,9 @@ export class AuthService {
     }
 
     if (savedRecord.purpose === 'verify') {
-      const user = await this.usersService.findByPhone(phone);
+      const user =
+        (await this.usersService.findByPhone(phone)) ??
+        (await this.usersService.findByEmail(phone));
       if (!user) {
         return {
           verified: false,
@@ -190,10 +274,11 @@ export class AuthService {
         };
       }
       await this.usersService.markVerified(user.id);
-      const token = await this.issueSessionToken(user);
+      const { accessToken, refreshToken } = await this.issueTokenPair(user);
       return {
         verified: true,
-        token,
+        accessToken,
+        refreshToken,
         user: this.toPublicUser({ ...user, verified: true }),
         message: 'OTP verified successfully.',
       };
@@ -201,10 +286,11 @@ export class AuthService {
 
     // purpose === 'login': preserve original auto-register-on-first-verify behavior
     const user = await this.usersService.findOrCreateByPhone(phone);
-    const token = await this.issueSessionToken(user);
+    const { accessToken, refreshToken } = await this.issueTokenPair(user);
     return {
       verified: true,
-      token,
+      accessToken,
+      refreshToken,
       user: this.toPublicUser(user),
       message: 'OTP verified successfully.',
     };
@@ -213,11 +299,19 @@ export class AuthService {
   async register(
     dto: RegisterDto,
   ): Promise<{ success: boolean; message: string }> {
-    const existingByPhone = await this.usersService.findByPhone(dto.phone);
-    if (existingByPhone) {
-      throw new ConflictException(
-        'An account with this phone number already exists.',
+    if (!dto.phone && !dto.email) {
+      throw new BadRequestException(
+        'Either a phone number or an email address is required.',
       );
+    }
+
+    if (dto.phone) {
+      const existingByPhone = await this.usersService.findByPhone(dto.phone);
+      if (existingByPhone) {
+        throw new ConflictException(
+          'An account with this phone number already exists.',
+        );
+      }
     }
     if (dto.email) {
       const existingByEmail = await this.usersService.findByEmail(dto.email);
@@ -237,19 +331,22 @@ export class AuthService {
       passwordHash,
     });
 
-    await this.sendOtp(dto.phone, 'verify');
+    // The OTP identifier is whichever of phone/email the user registered
+    // with — sendOtp/verifyOtp already treat this generically (see the
+    // email-branch check inside sendOtp and the phone-or-email lookup above).
+    await this.sendOtp(dto.phone ?? dto.email!, 'verify');
 
     return {
       success: true,
       message:
-        'Registered successfully. Please verify your phone number with the OTP sent to you.',
+        'Registered successfully. Please verify your account with the code sent to you.',
     };
   }
 
   async login(
     identifier: string,
     password: string,
-  ): Promise<{ token: string; user: Partial<User> }> {
+  ): Promise<TokenPair & { user: Partial<User> }> {
     const user =
       await this.usersService.findByIdentifierWithPassword(identifier);
     if (!user || !user.password) {
@@ -267,8 +364,8 @@ export class AuthService {
       );
     }
 
-    const token = await this.issueSessionToken(user);
-    return { token, user: this.toPublicUser(user) };
+    const { accessToken, refreshToken } = await this.issueTokenPair(user);
+    return { accessToken, refreshToken, user: this.toPublicUser(user) };
   }
 
   async forgotPassword(
@@ -315,7 +412,7 @@ export class AuthService {
 
   async loginWithGoogle(
     idToken: string,
-  ): Promise<{ token: string; user: Partial<User> }> {
+  ): Promise<TokenPair & { user: Partial<User> }> {
     const audience = [
       process.env.GOOGLE_CLIENT_ID_WEB,
       process.env.GOOGLE_CLIENT_ID_IOS,
@@ -344,13 +441,13 @@ export class AuthService {
       email: payload.email,
       name: payload.name,
     });
-    const token = await this.issueSessionToken(user);
-    return { token, user: this.toPublicUser(user) };
+    const { accessToken, refreshToken } = await this.issueTokenPair(user);
+    return { accessToken, refreshToken, user: this.toPublicUser(user) };
   }
 
   async loginWithFacebook(
     accessToken: string,
-  ): Promise<{ token: string; user: Partial<User> }> {
+  ): Promise<TokenPair & { user: Partial<User> }> {
     const appId = process.env.FACEBOOK_APP_ID;
     const appSecret = process.env.FACEBOOK_APP_SECRET;
     const debugResponse = await fetch(
@@ -388,7 +485,7 @@ export class AuthService {
       email: profile.email,
       name: profile.name,
     });
-    const token = await this.issueSessionToken(user);
-    return { token, user: this.toPublicUser(user) };
+    const tokenPair = await this.issueTokenPair(user);
+    return { ...tokenPair, user: this.toPublicUser(user) };
   }
 }

@@ -3,7 +3,6 @@ import {
   StyleSheet,
   View,
   Text,
-  TextInput,
   TouchableOpacity,
   ScrollView,
   KeyboardAvoidingView,
@@ -14,6 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 
 import { useResetPasswordMutation } from '@/store/authApi';
+import { PasswordField } from '@/components/password-field';
 
 export default function ResetPasswordScreen() {
   const router = useRouter();
@@ -22,8 +22,6 @@ export default function ResetPasswordScreen() {
 
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
   const [resetPassword, { isLoading }] = useResetPasswordMutation();
@@ -77,43 +75,13 @@ export default function ResetPasswordScreen() {
             {/* Password */}
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Password*</Text>
-              <View style={styles.passwordContainer}>
-                <TextInput
-                  style={styles.passwordInput}
-                  value={password}
-                  onChangeText={setPassword}
-                  placeholder="•••••••••••••••••"
-                  placeholderTextColor="#A39E99"
-                  secureTextEntry={!showPassword}
-                />
-                <TouchableOpacity
-                  style={styles.eyeButton}
-                  onPress={() => setShowPassword(!showPassword)}
-                >
-                  <Text style={styles.eyeIcon}>{showPassword ? '👁️' : '👁️‍🗨️'}</Text>
-                </TouchableOpacity>
-              </View>
+              <PasswordField value={password} onChangeText={setPassword} />
             </View>
 
             {/* Confirm Password */}
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Confirm Password*</Text>
-              <View style={styles.passwordContainer}>
-                <TextInput
-                  style={styles.passwordInput}
-                  value={confirmPassword}
-                  onChangeText={setConfirmPassword}
-                  placeholder="•••••••••••••••••"
-                  placeholderTextColor="#A39E99"
-                  secureTextEntry={!showConfirmPassword}
-                />
-                <TouchableOpacity
-                  style={styles.eyeButton}
-                  onPress={() => setShowConfirmPassword(!showConfirmPassword)}
-                >
-                  <Text style={styles.eyeIcon}>{showConfirmPassword ? '👁️' : '👁️‍🗨️'}</Text>
-                </TouchableOpacity>
-              </View>
+              <PasswordField value={confirmPassword} onChangeText={setConfirmPassword} />
             </View>
 
             {/* Error message */}
@@ -201,31 +169,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#1A1817',
     marginBottom: 8,
-  },
-  passwordContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E6E1DC',
-    borderRadius: 12,
-    height: 52,
-  },
-  passwordInput: {
-    flex: 1,
-    height: '100%',
-    paddingHorizontal: 16,
-    fontSize: 16,
-    color: '#1A1817',
-  },
-  eyeButton: {
-    paddingHorizontal: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  eyeIcon: {
-    fontSize: 18,
-    color: '#7C7672',
   },
   resetButton: {
     backgroundColor: '#BD632F',
