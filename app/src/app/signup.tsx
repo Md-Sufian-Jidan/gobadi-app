@@ -9,8 +9,6 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
-  Modal,
-  FlatList,
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -21,9 +19,6 @@ import { useSocialAuth } from '@/hooks/use-social-auth';
 import { PasswordField } from '@/components/password-field';
 import { IdentifierTabs, IdentifierMode } from '@/components/identifier-tabs';
 
-// Farm-domain labels shown in the picker have no equivalent in the backend's
-// UserRole enum (patient/doctor) yet, so every selection maps to PATIENT for now.
-const ROLES = ['Farmer', 'Supplier', 'Retailer', 'Distributor', 'Veterinarian'];
 
 export default function SignUpScreen() {
   const router = useRouter();
@@ -32,11 +27,9 @@ export default function SignUpScreen() {
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
-  const [role, setRole] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
 
-  const [roleModalVisible, setRoleModalVisible] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
   const [register, { isLoading }] = useRegisterMutation();
@@ -144,21 +137,6 @@ export default function SignUpScreen() {
               </View>
             )}
 
-            {/* Role */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Role*</Text>
-              <TouchableOpacity
-                style={styles.dropdownSelector}
-                activeOpacity={0.7}
-                onPress={() => setRoleModalVisible(true)}
-              >
-                <Text style={[styles.dropdownValue, !role && styles.placeholderText]}>
-                  {role || 'Select your role'}
-                </Text>
-                <Text style={styles.dropdownArrow}>▼</Text>
-              </TouchableOpacity>
-            </View>
-
             {/* Password */}
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Password*</Text>
@@ -244,39 +222,6 @@ export default function SignUpScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
-
-      {/* Role Picker Modal */}
-      <Modal
-        visible={roleModalVisible}
-        transparent={true}
-        animationType="slide"
-        onRequestClose={() => setRoleModalVisible(false)}
-      >
-        <TouchableOpacity
-          style={styles.modalOverlay}
-          activeOpacity={1}
-          onPress={() => setRoleModalVisible(false)}
-        >
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Select Your Role</Text>
-            <FlatList
-              data={ROLES}
-              keyExtractor={(item) => item}
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  style={styles.modalItem}
-                  onPress={() => {
-                    setRole(item);
-                    setRoleModalVisible(false);
-                  }}
-                >
-                  <Text style={styles.modalItemText}>{item}</Text>
-                </TouchableOpacity>
-              )}
-            />
-          </View>
-        </TouchableOpacity>
-      </Modal>
     </SafeAreaView>
   );
 }
