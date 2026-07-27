@@ -95,8 +95,12 @@ export class ChatController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Mark a message as read' })
   @ApiResponse({ status: 200, description: 'Message marked read' })
-  async markRead(@Param('id') id: string) {
-    const updated = await this.chatService.markRead(parseInt(id, 10));
+  async markRead(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
+    const updated = await this.chatService.markRead(
+      parseInt(id, 10),
+      user.sub,
+      user.role,
+    );
     this.chatGateway.notifyConversation(
       updated.conversationId,
       'messageStatusUpdate',

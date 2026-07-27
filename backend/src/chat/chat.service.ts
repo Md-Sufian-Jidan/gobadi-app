@@ -61,7 +61,24 @@ export class ChatService {
     return this.chatMessageRepository.findOneByOrFail({ id: messageId });
   }
 
-  async markRead(messageId: number): Promise<ChatMessage> {
+  async markRead(
+    messageId: number,
+    userId: number,
+    role: UserRole,
+  ): Promise<ChatMessage> {
+    const message = await this.chatMessageRepository.findOneBy({ id: messageId });
+    if (!message) {
+      throw new BadRequestException('Message not found');
+    }
+    const isParticipant = await this.conversationService.isParticipant(
+      message.conversationId,
+      userId,
+      role,
+    );
+    if (!isParticipant) {
+      throw new BadRequestException('Not a participant in this conversation');
+    }
+
     await this.chatMessageRepository.update(messageId, {
       status: MessageStatus.READ,
       readAt: new Date(),
