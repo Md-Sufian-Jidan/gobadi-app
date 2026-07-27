@@ -14,6 +14,8 @@ services:
       DB_PORT: 5432
       REDIS_HOST: redis
       REDIS_PORT: 6379
+      MEILISEARCH_HOST: http://meilisearch:7700
+      MEILISEARCH_API_KEY: dev-master-key
     ports:
       - '3000:3000'
     volumes:
@@ -22,6 +24,19 @@ services:
     depends_on:
       - postgres
       - redis
+      - meilisearch
+
+  meilisearch:
+    image: getmeili/meilisearch:v1.10
+    container_name: gobadi-meilisearch
+    restart: always
+    environment:
+      MEILI_MASTER_KEY: dev-master-key
+      MEILI_NO_ANALYTICS: 'true'
+    ports:
+      - '7700:7700'
+    volumes:
+      - meilisearch_data:/meili_data
 
   postgres:
     image: postgres:15-alpine
@@ -48,3 +63,4 @@ services:
 volumes:
   postgres_data:
   redis_data:
+  meilisearch_data:
