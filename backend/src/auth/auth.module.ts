@@ -5,13 +5,14 @@ import { AuthService } from './auth.service';
 import { UsersModule } from '../users/users.module';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { RolesGuard } from './guards/roles.guard';
+import { getRequiredJwtSecret } from './jwt-secret.util';
 
 @Global()
 @Module({
   imports: [
     UsersModule,
     JwtModule.register({
-      secret: process.env.JWT_SECRET || 'dev-secret-change-me',
+      secret: getRequiredJwtSecret(),
       signOptions: { expiresIn: (process.env.JWT_EXPIRES_IN || '7d') as any },
     }),
   ],

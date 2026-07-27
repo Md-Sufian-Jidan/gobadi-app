@@ -1,8 +1,9 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { ILike, Repository } from 'typeorm';
 import { Doctor } from './doctor.entity';
 import { Availability } from './availability.entity';
+import { PaginatedResult } from '../common/paginated-result.interface';
 export { Doctor } from './doctor.entity';
 export { Availability } from './availability.entity';
 
@@ -23,8 +24,31 @@ export class DoctorsService {
     private readonly availabilityRepository: Repository<Availability>,
   ) {}
 
-  async getDoctors(): Promise<Doctor[]> {
-    return this.doctorRepository.find({ order: { id: 'ASC' } });
+  async getDoctors(
+    page?: number,
+    limit?: number,
+  ): Promise<Doctor[] | PaginatedResult<Doctor>> {
+    if (!page && !limit) {
+      return this.doctorRepository.find({ order: { id: 'ASC' } });
+    }
+    const currentPage = page && page > 0 ? page : 1;
+    const pageSize = limit && limit > 0 ? limit : 20;
+    const [data, total] = await this.doctorRepository.findAndCount({
+      order: { id: 'ASC' },
+      skip: (currentPage - 1) * pageSize,
+      take: pageSize,
+    });
+    return { data, page: currentPage, limit: pageSize, total };
+  }
+
+  async search(q: string): Promise<Doctor[]> {
+    if (!q) {
+      return [];
+    }
+    return this.doctorRepository.find({
+      where: [{ name: ILike(`%${q}%`) }, { specialty: ILike(`%${q}%`) }],
+      take: 10,
+    });
   }
 
   async getDoctorById(id: string | number): Promise<Doctor> {

@@ -20,6 +20,12 @@ import { HealthController } from './health/health.controller';
 import { MailModule } from './mail/mail.module';
 import { MedicalRecordsModule } from './medical-records/medical-records.module';
 import { RemindersModule } from './reminders/reminders.module';
+import { WeatherModule } from './weather/weather.module';
+import { TasksModule } from './tasks/tasks.module';
+import { AlertsModule } from './alerts/alerts.module';
+import { ReferralsModule } from './referrals/referrals.module';
+import { AdminModule } from './admin/admin.module';
+import { SearchModule } from './search/search.module';
 
 @Module({
   imports: [
@@ -58,6 +64,12 @@ import { RemindersModule } from './reminders/reminders.module';
     MailModule,
     MedicalRecordsModule,
     RemindersModule,
+    WeatherModule,
+    TasksModule,
+    AlertsModule,
+    ReferralsModule,
+    AdminModule,
+    SearchModule,
   ],
   controllers: [AppController, HealthController],
   providers: [

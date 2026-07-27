@@ -4,6 +4,7 @@ import {
   Post,
   Param,
   Body,
+  Query,
   UseGuards,
   ForbiddenException,
 } from '@nestjs/common';
@@ -11,6 +12,7 @@ import {
   ApiBearerAuth,
   ApiOperation,
   ApiParam,
+  ApiQuery,
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
@@ -22,6 +24,7 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { UserRole } from '../users/user.entity';
 import type { JwtPayload } from '../auth/jwt-payload.interface';
+import { PaginatedResult } from '../common/paginated-result.interface';
 
 @ApiTags('doctors')
 @Controller('doctors')
@@ -30,9 +33,17 @@ export class DoctorsController {
 
   @Get()
   @ApiOperation({ summary: 'List all doctors' })
+  @ApiQuery({ name: 'page', required: false })
+  @ApiQuery({ name: 'limit', required: false })
   @ApiResponse({ status: 200, description: 'List of doctors' })
-  async getDoctors(): Promise<Doctor[]> {
-    return this.doctorsService.getDoctors();
+  async getDoctors(
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ): Promise<Doctor[] | PaginatedResult<Doctor>> {
+    return this.doctorsService.getDoctors(
+      page ? parseInt(page, 10) : undefined,
+      limit ? parseInt(limit, 10) : undefined,
+    );
   }
 
   @Get(':id')

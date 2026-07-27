@@ -14,6 +14,7 @@ import { Server, Socket } from 'socket.io';
 import { ChatService } from './chat.service';
 import { ConversationService } from './conversation.service';
 import { JwtPayload } from '../auth/jwt-payload.interface';
+import { getRequiredJwtSecret } from '../auth/jwt-secret.util';
 
 @WebSocketGateway({
   cors: {
@@ -51,7 +52,7 @@ export class ChatGateway
 
     try {
       const payload = await this.jwtService.verifyAsync<JwtPayload>(token, {
-        secret: process.env.JWT_SECRET || 'dev-secret-change-me',
+        secret: getRequiredJwtSecret(),
       });
       client.data.user = payload;
       client.join(`user:${payload.sub}`);
@@ -152,5 +153,9 @@ export class ChatGateway
 
   notifyUser(userId: number, event: string, payload: any): void {
     this.server.to(`user:${userId}`).emit(event, payload);
+  }
+
+  broadcastAll(event: string, payload: any): void {
+    this.server.emit(event, payload);
   }
 }

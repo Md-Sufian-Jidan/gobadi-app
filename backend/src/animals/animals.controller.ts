@@ -1,7 +1,24 @@
-import { Controller, Get, Post, Param, Body } from '@nestjs/common';
-import { ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
+import {
+  Controller,
+  Get,
+  Post,
+  Param,
+  Body,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiParam,
+  ApiQuery,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import { AnimalsService, Animal } from './animals.service';
 import { CreateAnimalDto } from './dto/create-animal.dto';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { PaginatedResult } from '../common/paginated-result.interface';
 
 @ApiTags('animals')
 @Controller('animals')
@@ -10,9 +27,17 @@ export class AnimalsController {
 
   @Get()
   @ApiOperation({ summary: 'List all animals' })
+  @ApiQuery({ name: 'page', required: false })
+  @ApiQuery({ name: 'limit', required: false })
   @ApiResponse({ status: 200, description: 'List of animals' })
-  async getAnimals(): Promise<Animal[]> {
-    return this.animalsService.getAnimals();
+  async getAnimals(
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ): Promise<Animal[] | PaginatedResult<Animal>> {
+    return this.animalsService.getAnimals(
+      page ? parseInt(page, 10) : undefined,
+      limit ? parseInt(limit, 10) : undefined,
+    );
   }
 
   @Get(':id')
@@ -24,6 +49,8 @@ export class AnimalsController {
   }
 
   @Post()
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Add a new animal' })
   @ApiResponse({ status: 201, description: 'Animal created' })
   async addAnimal(@Body() body: CreateAnimalDto): Promise<Animal> {

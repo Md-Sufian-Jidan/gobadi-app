@@ -23,6 +23,7 @@ export class Attachment {
   @Column()
   patientId: number;
 
+  @Index()
   @Column('int', { nullable: true })
   appointmentId?: number | null;
 

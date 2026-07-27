@@ -1,4 +1,4 @@
-import { Entity, PrimaryColumn, Column } from 'typeorm';
+import { Entity, PrimaryColumn, Column, Index } from 'typeorm';
 
 @Entity('orders')
 export class Order {
@@ -11,6 +11,7 @@ export class Order {
   @Column()
   deliveryAddress: string;
 
+  @Index()
   @Column({ default: 'Placed' })
   status: string;
 
