@@ -32,18 +32,28 @@ export class MeilisearchService implements OnModuleInit {
     }
     try {
       await Promise.all([
-        this.client.index('animals').updateSearchableAttributes(['name', 'breed', 'color']),
-        this.client.index('animals').updateFilterableAttributes(['breed', 'userId']),
+        this.client
+          .index('animals')
+          .updateSearchableAttributes(['name', 'breed', 'color']),
+        this.client
+          .index('animals')
+          .updateFilterableAttributes(['breed', 'userId']),
         this.client
           .index('marketplace')
           .updateSearchableAttributes(['name', 'category']),
-        this.client.index('marketplace').updateFilterableAttributes(['category']),
-        this.client.index('doctors').updateSearchableAttributes(['name', 'specialty']),
+        this.client
+          .index('marketplace')
+          .updateFilterableAttributes(['category']),
+        this.client
+          .index('doctors')
+          .updateSearchableAttributes(['name', 'specialty']),
         this.client.index('doctors').updateFilterableAttributes(['specialty']),
         this.client
           .index('alerts')
           .updateSearchableAttributes(['title', 'crop', 'location']),
-        this.client.index('alerts').updateFilterableAttributes(['severity', 'isActive']),
+        this.client
+          .index('alerts')
+          .updateFilterableAttributes(['severity', 'isActive']),
       ]);
     } catch (err) {
       this.logger.warn(`Failed to configure Meilisearch indexes: ${err}`);
