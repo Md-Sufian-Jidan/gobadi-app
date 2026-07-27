@@ -9,20 +9,45 @@ import {
   Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 
 import { logout } from '@/store/authApi';
+import { useGetAnimalsQuery } from '@/store/animalsApi';
+import type { RootState } from '@/store/store';
+
+interface AnimalStats {
+  cow: number;
+  goat: number;
+  buffalo: number;
+}
+
+function countByBreed(animals: Array<{ breed: string }>): AnimalStats {
+  const stats: AnimalStats = { cow: 0, goat: 0, buffalo: 0 };
+  for (const a of animals) {
+    const breed = a.breed.toLowerCase();
+    if (breed.includes('cow')) stats.cow += 1;
+    else if (breed.includes('goat')) stats.goat += 1;
+    else if (breed.includes('buffalo')) stats.buffalo += 1;
+  }
+  return stats;
+}
 
 export default function ProfileScreen() {
   const router = useRouter();
   const dispatch = useDispatch();
+  const user = useSelector((state: RootState) => state.auth.user);
+
+  const { data: animals = [] } = useGetAnimalsQuery();
+  const stats = countByBreed(animals);
 
   const menuItems = [
     { id: '1', label: 'My Task', icon: '📈', route: '/my-task' },
-    { id: '2', label: 'Notification', icon: '🔔', route: null },
-    { id: '3', label: 'Language', icon: '🔤', route: null },
-    { id: '4', label: 'Refer & Earn', icon: '🎁', route: null },
-    { id: '5', label: 'Help Support', icon: '🎧', route: null },
+    { id: '2', label: 'My Orders', icon: '📦', route: '/my-orders' },
+    { id: '3', label: 'Medical Records', icon: '🩺', route: '/medical-records' },
+    { id: '4', label: 'Notification', icon: '🔔', route: null },
+    { id: '5', label: 'Language', icon: '🔤', route: null },
+    { id: '6', label: 'Refer & Earn', icon: '🎁', route: null },
+    { id: '7', label: 'Help Support', icon: '🎧', route: null },
   ];
 
   return (
@@ -39,9 +64,9 @@ export default function ProfileScreen() {
               style={styles.avatar}
             />
             <View style={styles.userDetails}>
-              <Text style={styles.userName}>Michal Wilson</Text>
+              <Text style={styles.userName}>{user?.name || user?.phone || 'Farmer'}</Text>
               <Text style={styles.userSubtitle} numberOfLines={1}>
-                Holding No. 105/19K, Maji...
+                {user?.phone || ''}
               </Text>
             </View>
             <TouchableOpacity
@@ -58,15 +83,15 @@ export default function ProfileScreen() {
           {/* Stats Cards */}
           <View style={styles.statsRow}>
             <View style={[styles.statBox, styles.statBoxBlue]}>
-              <Text style={[styles.statNumber, styles.statNumberBlue]}>03</Text>
+              <Text style={[styles.statNumber, styles.statNumberBlue]}>{String(stats.cow).padStart(2, '0')}</Text>
               <Text style={styles.statLabel}>Cow</Text>
             </View>
             <View style={[styles.statBox, styles.statBoxOrange]}>
-              <Text style={[styles.statNumber, styles.statNumberOrange]}>12</Text>
+              <Text style={[styles.statNumber, styles.statNumberOrange]}>{String(stats.goat).padStart(2, '0')}</Text>
               <Text style={styles.statLabel}>Goat</Text>
             </View>
             <View style={[styles.statBox, styles.statBoxPink]}>
-              <Text style={[styles.statNumber, styles.statNumberPink]}>06</Text>
+              <Text style={[styles.statNumber, styles.statNumberPink]}>{String(stats.buffalo).padStart(2, '0')}</Text>
               <Text style={styles.statLabel}>Buffalo</Text>
             </View>
           </View>

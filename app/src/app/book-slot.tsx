@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   StyleSheet,
   View,
@@ -9,68 +9,80 @@ import {
   Image,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { apiFetch } from '@/constants/api';
+import { useGetDoctorByIdQuery, useGetSlotsQuery, useBookSlotMutation } from '@/store/doctorsApi';
+import { useRescheduleBookingMutation } from '@/store/doctorPortalApi';
 
-interface Doctor {
-  id: string;
-  name: string;
-  specialty: string;
-  location: string;
-  rating: number;
-  reviews: number;
-  image: any;
+function pad(n: number): string {
+  return String(n).padStart(2, '0');
 }
 
 export default function BookSlotScreen() {
   const router = useRouter();
-  const { id } = useLocalSearchParams();
+  const { id, appointmentId, mode } = useLocalSearchParams();
+  const doctorId = String(id || '');
+  const isReschedule = mode === 'reschedule' && !!appointmentId;
+  const today = new Date();
   const [selectedVisitType, setSelectedVisitType] = useState('Online');
-  const [selectedDay, setSelectedDay] = useState(28);
-  const [selectedTimeSlot, setSelectedTimeSlot] = useState('09.00 AM');
+  const [selectedDay, setSelectedDay] = useState(today.getDate());
+  const [selectedTimeSlot, setSelectedTimeSlot] = useState('');
 
-  const [doctor, setDoctor] = useState<Doctor>({
-    id: '1',
-    name: 'Dr. David Patel',
-    specialty: 'Veterinary Surgery',
-    location: 'Cardiology Center, USA',
-    rating: 5,
-    reviews: 1872,
-    image: require('@/assets/images/doctor.png'),
-  });
+  const selectedDateStr = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(selectedDay)}`;
 
-  useEffect(() => {
-    async function loadDoctorDetail() {
-      if (!id) return;
-      try {
-        const d = await apiFetch<{ id: string; name: string; specialty: string; rating: number; avatar: string }>(`/doctors/${id}`);
-        setDoctor({
-          id: d.id,
-          name: d.name,
-          specialty: d.specialty,
-          location: 'Uttar Badda, Dhaka',
-          rating: d.rating || 4.8,
-          reviews: 124,
-          image: d.avatar === 'jessica_doctor.png' 
-            ? require('@/assets/images/jessica_doctor.png') 
-            : require('@/assets/images/michael_doctor.png'),
-        });
-      } catch (err) {
-        console.log('Error loading doctor details:', err);
-      }
+  const { data: availableSlots = [] } = useGetSlotsQuery(
+    { doctorId, date: selectedDateStr },
+    { skip: !doctorId },
+  );
+
+  React.useEffect(() => {
+    setSelectedTimeSlot(availableSlots[0] || '');
+  }, [availableSlots]);
+
+  const { data: doctorData } = useGetDoctorByIdQuery(doctorId, { skip: !doctorId });
+  const [bookSlot] = useBookSlotMutation();
+  const [rescheduleBooking] = useRescheduleBookingMutation();
+
+  const doctor = useMemo(() => {
+    if (!doctorData) {
+      return {
+        id: '1',
+        name: 'Dr. David Patel',
+        specialty: 'Veterinary Surgery',
+        location: 'Cardiology Center, USA',
+        rating: 5,
+        reviews: 1872,
+        image: require('@/assets/images/doctor.png'),
+      };
     }
-    loadDoctorDetail();
-  }, [id]);
+    return {
+      id: String(doctorData.id),
+      name: doctorData.name,
+      specialty: doctorData.specialty,
+      location: 'Uttar Badda, Dhaka',
+      rating: doctorData.rating || 4.8,
+      reviews: 124,
+      image: doctorData.avatar === 'jessica_doctor.png'
+        ? require('@/assets/images/jessica_doctor.png')
+        : require('@/assets/images/michael_doctor.png'),
+    };
+  }, [doctorData]);
 
   const handleConfirmSlot = async () => {
+    if (!selectedTimeSlot) return;
     try {
-      await apiFetch('/doctors/book', {
-        method: 'POST',
-        body: JSON.stringify({
-          doctorId: doctor.id,
-          date: `2026-12-${selectedDay}`,
+      if (isReschedule) {
+        await rescheduleBooking({
+          id: String(appointmentId),
+          date: selectedDateStr,
           time: selectedTimeSlot,
-        }),
-      });
+        }).unwrap();
+        router.back();
+        return;
+      }
+      await bookSlot({
+        doctorId: doctor.id,
+        date: selectedDateStr,
+        time: selectedTimeSlot,
+      }).unwrap();
     } catch (err) {
       console.log('Error booking slot:', err);
     }
@@ -99,8 +111,6 @@ export default function BookSlotScreen() {
     [26, 27, 28, 29, 30, 31, 1],  // Dec 26-31, Jan 1
   ];
 
-  const timeSlots = ['09.00 AM', '10.00 AM', '11.00 AM', '01.00 PM'];
-
   const handleDaySelect = (dayNum: number, rowIndex: number) => {
     // Prevent selecting previous/next month overflow dates
     if (rowIndex === 0 && dayNum > 20) return;
@@ -120,7 +130,7 @@ export default function BookSlotScreen() {
           <Text style={styles.buttonText}>←</Text>
         </TouchableOpacity>
 
-        <Text style={styles.headerTitle}>Book Slot</Text>
+        <Text style={styles.headerTitle}>{isReschedule ? 'Reschedule' : 'Book Slot'}</Text>
 
         <TouchableOpacity style={styles.circleButton} activeOpacity={0.8}>
           <Text style={styles.buttonText}>🔔</Text>
@@ -220,7 +230,10 @@ export default function BookSlotScreen() {
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.timeSlotsRow}
         >
-          {timeSlots.map((slot) => {
+          {availableSlots.length === 0 ? (
+            <Text style={styles.noSlotsText}>No open slots for this date.</Text>
+          ) : null}
+          {availableSlots.map((slot) => {
             const isSelected = slot === selectedTimeSlot;
             return (
               <TouchableOpacity
@@ -241,11 +254,14 @@ export default function BookSlotScreen() {
       {/* Floating Bottom Confirm Button */}
       <View style={styles.bottomBar}>
         <TouchableOpacity
-          style={styles.confirmButton}
+          style={[styles.confirmButton, !selectedTimeSlot && { opacity: 0.5 }]}
           onPress={handleConfirmSlot}
+          disabled={!selectedTimeSlot}
           activeOpacity={0.85}
         >
-          <Text style={styles.confirmButtonText}>📅 Confirm Slot</Text>
+          <Text style={styles.confirmButtonText}>
+            {isReschedule ? '📅 Confirm Reschedule' : '📅 Confirm Slot'}
+          </Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -474,6 +490,11 @@ const styles = StyleSheet.create({
   timeSlotTextSelected: {
     color: '#BD632F',
     fontWeight: '700',
+  },
+  noSlotsText: {
+    fontSize: 13,
+    color: '#9C9690',
+    paddingVertical: 10,
   },
   bottomBar: {
     position: 'absolute',

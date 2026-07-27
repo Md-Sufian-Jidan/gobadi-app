@@ -10,36 +10,26 @@ import {
   Dimensions,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useGetCatalogItemQuery } from '@/store/marketplaceApi';
 
 const { width } = Dimensions.get('window');
 
 export default function AnimalDetailsScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
-  const id = params.id || '1';
+  const id = String(params.id || '');
 
-  // Mock database lookup
-  const isGoat = id === '1';
-  const animalImage = isGoat
-    ? require('@/assets/images/kota_goat.png')
-    : require('@/assets/images/albino_buffalo.png');
-  const animalName = isGoat ? 'Kota Goat' : 'Donald Tramp';
-  const animalPrice = isGoat ? '16,000' : '3,20,000';
-  const animalBreed = isGoat ? 'Bangladeshi' : 'Albenian';
-  const animalAge = isGoat ? '13 months' : '28 months';
-  const animalWeight = isGoat ? '32 Kg' : '725 Kg';
-  const animalColor = isGoat ? 'Black & White' : 'Pinkish White';
+  const { data: item } = useGetCatalogItemQuery(id, { skip: !id });
 
-  const basicInfo = [
-    { label: 'Date Of Birth', value: isGoat ? '15/06/2025' : '31/01/2025' },
-    { label: 'Gender', value: 'Male' },
-    { label: 'Source', value: 'Purchased' },
-    { label: 'Breed', value: animalBreed },
-    { label: 'Age', value: animalAge },
-    { label: 'Color', value: animalColor },
-    { label: 'Live Weight', value: animalWeight },
-    { label: 'Tag', value: isGoat ? 'G-402' : 'B-108' },
-  ];
+  const animalImage = item?.image
+    ? { uri: item.image }
+    : item?.name?.toLowerCase().includes('goat')
+      ? require('@/assets/images/kota_goat.png')
+      : require('@/assets/images/albino_buffalo.png');
+  const animalName = item?.name || 'Loading...';
+  const animalPrice = item?.price?.toLocaleString() || '—';
+
+  const basicInfo = item ? [{ label: 'Category', value: item.category }] : [];
 
   return (
     <SafeAreaView style={styles.container}>
@@ -61,16 +51,6 @@ export default function AnimalDetailsScreen() {
               <Text style={styles.buttonText}>📤</Text>
             </TouchableOpacity>
           </View>
-
-          {/* Carousel Dots */}
-          <View style={styles.dotsContainer}>
-            {[1, 2, 3, 4, 5, 6, 7].map((dot, idx) => (
-              <View
-                key={idx}
-                style={[styles.dot, idx === 1 ? styles.dotActive : styles.dotInactive]}
-              />
-            ))}
-          </View>
         </View>
 
         {/* Content Area */}
@@ -79,15 +59,9 @@ export default function AnimalDetailsScreen() {
           <View style={styles.titlePriceRow}>
             <View style={{ flex: 1 }}>
               <Text style={styles.animalTitle}>{animalName}</Text>
-              <View style={styles.verifiedRow}>
-                <View style={styles.verifiedBadge}>
-                  <Text style={styles.verifiedText}>✓ VERIFIED SELLER</Text>
-                </View>
-              </View>
             </View>
             <View style={styles.priceCol}>
               <Text style={styles.priceText}>৳ {animalPrice}</Text>
-              <Text style={styles.negotiableText}>(Negotiable)</Text>
             </View>
           </View>
 
@@ -97,17 +71,14 @@ export default function AnimalDetailsScreen() {
               <View style={styles.sellerAvatar}>
                 <Text style={styles.avatarEmoji}>👤</Text>
               </View>
-              <View>
-                <Text style={styles.sellerName}>Abdur Rahman</Text>
-                <Text style={styles.sellerLocation}>📍 Gabtoli, Dhaka</Text>
-              </View>
+              <Text style={styles.sellerName}>Have a question about this listing?</Text>
             </View>
             <TouchableOpacity
               style={styles.messageBtn}
               onPress={() => router.push('/chat')}
               activeOpacity={0.8}
             >
-              <Text style={styles.messageBtnText}>💬 Message Seller</Text>
+              <Text style={styles.messageBtnText}>💬 Message</Text>
             </TouchableOpacity>
           </View>
 
@@ -116,10 +87,7 @@ export default function AnimalDetailsScreen() {
 
           {/* Basic Information */}
           <View style={styles.sectionHeaderRow}>
-            <Text style={styles.sectionTitle}>Basic Informations</Text>
-            <View style={styles.statusBadge}>
-              <Text style={styles.statusBadgeText}>Healthy</Text>
-            </View>
+            <Text style={styles.sectionTitle}>Details</Text>
           </View>
 
           <View style={styles.gridContainer}>

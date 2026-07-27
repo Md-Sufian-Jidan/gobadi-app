@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   StyleSheet,
   View,
@@ -10,7 +10,7 @@ import {
   Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { apiFetch } from '@/constants/api';
+import { useGetCatalogQuery, useGetMyListingsQuery } from '@/store/marketplaceApi';
 
 interface Category {
   id: string;
@@ -18,8 +18,8 @@ interface Category {
   icon: string;
 }
 
-interface MarketItem {
-  id: string;
+interface MarketItemView {
+  id: number;
   title: string;
   price: string;
   timeAgo: string;
@@ -47,64 +47,33 @@ export default function MarketScreen() {
     { id: '6', name: 'Vaccines', icon: '💉' },
   ];
 
-  const [marketItems, setMarketItems] = useState<MarketItem[]>([
-    {
-      id: '1',
-      title: 'Kota Goat',
-      price: '16,000',
-      timeAgo: '1hr ago',
-      species: 'Bangladeshi',
-      age: '13 months',
-      liveWeight: '32 Kg',
-      sellerName: 'Abdur Rahman',
-      location: 'Gabtoli, Dhaka',
-      image: require('@/assets/images/kota_goat.png'),
-    },
-    {
-      id: '2',
-      title: 'Albenian Buffalo',
-      price: '3,20,000',
-      timeAgo: '2hr ago',
-      species: 'Albenian',
-      age: '28 months',
-      liveWeight: '725 Kg',
-      sellerName: 'Abdur Rahman',
-      location: 'Gabtoli, Dhaka',
-      image: require('@/assets/images/albino_buffalo.png'),
-    },
-  ]);
+  const { data: catalog = [] } = useGetCatalogQuery();
+  const { data: myListings = [] } = useGetMyListingsQuery(undefined, { skip: tradeType !== 'Sell' });
 
-  useEffect(() => {
-    async function loadMarketplace() {
-      try {
-        const dbItems = await apiFetch<Array<{ id: string; name: string; price: number; category: string; image: string }>>('/marketplace');
-        if (dbItems && dbItems.length > 0) {
-          const mapped = dbItems.map((item) => ({
-            id: item.id,
-            title: item.name,
-            price: item.price.toLocaleString(),
-            timeAgo: 'Just now',
-            species: item.category === 'Animals' ? 'Albenian' : 'Feed Pack',
-            age: item.category === 'Animals' ? '28 months' : 'N/A',
-            liveWeight: item.category === 'Animals' ? '725 Kg' : '50 Kg',
-            sellerName: 'Abdur Rahman',
-            location: 'Gabtoli, Dhaka',
-            image: item.name.toLowerCase().includes('goat') 
-              ? require('@/assets/images/kota_goat.png')
-              : require('@/assets/images/albino_buffalo.png'),
-          }));
-          setMarketItems(mapped);
-        }
-      } catch (err) {
-        console.log('Error loading marketplace:', err);
-      }
-    }
-    loadMarketplace();
-  }, []);
+  const marketItems: MarketItemView[] = useMemo(
+    () =>
+      catalog.map((item) => ({
+        id: item.id,
+        title: item.name,
+        price: item.price.toLocaleString(),
+        timeAgo: 'Just now',
+        species: item.category === 'Animals' ? 'Albenian' : 'Feed Pack',
+        age: item.category === 'Animals' ? '28 months' : 'N/A',
+        liveWeight: item.category === 'Animals' ? '725 Kg' : '50 Kg',
+        sellerName: 'Abdur Rahman',
+        location: 'Gabtoli, Dhaka',
+        image: item.image
+          ? { uri: item.image }
+          : item.name.toLowerCase().includes('goat')
+            ? require('@/assets/images/kota_goat.png')
+            : require('@/assets/images/albino_buffalo.png'),
+      })),
+    [catalog],
+  );
 
   const filteredItems = marketItems.filter((item) => {
     if (searchQuery && !item.title.toLowerCase().includes(searchQuery.toLowerCase())) return false;
-    
+
     // Calf/Bull Filters simulation
     if (activeFilter === 'Calf(3)' && item.title !== 'Kota Goat') return false;
     if (activeFilter === 'Bull(2)' && item.title !== 'Albenian Buffalo') return false;
@@ -197,119 +166,159 @@ export default function MarketScreen() {
           })}
         </ScrollView>
 
-        {/* Trending Section */}
-        <View style={styles.sectionHeaderRow}>
-          <Text style={styles.sectionTitle}>Most Trending Animals</Text>
-        </View>
+        {tradeType === 'Sell' ? (
+          <>
+            <View style={styles.sectionHeaderRow}>
+              <Text style={styles.sectionTitle}>My Listings</Text>
+            </View>
 
-        {/* Filters Row */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.filtersRow}
-        >
-          <TouchableOpacity style={styles.filterBtn} activeOpacity={0.8}>
-            <Text style={styles.filterBtnIcon}>⚙️</Text>
-            <Text style={styles.filterBtnText}>Filter</Text>
-          </TouchableOpacity>
-          {['All (12)', 'Calf(3)', 'Bull (2)'].map((filterVal) => {
-            const isSelected = activeFilter === filterVal || (filterVal.startsWith('All') && activeFilter === 'All');
-            return (
-              <TouchableOpacity
-                key={filterVal}
-                style={[styles.filterChip, isSelected && styles.filterChipActive]}
-                onPress={() => setActiveFilter(filterVal.startsWith('All') ? 'All' : filterVal)}
-                activeOpacity={0.7}
-              >
-                <Text style={[styles.filterChipText, isSelected && styles.filterChipTextActive]}>
-                  {filterVal}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
+            <View style={styles.itemsList}>
+              {myListings.length === 0 ? (
+                <Text style={styles.emptyListingsText}>You haven't listed anything for sale yet.</Text>
+              ) : (
+                myListings.map((item) => (
+                  <View key={item.id} style={styles.itemCard}>
+                    <View style={styles.cardMain}>
+                      <Image
+                        source={item.image ? { uri: item.image } : require('@/assets/images/albino_buffalo.png')}
+                        style={styles.itemImage}
+                      />
+                      <View style={styles.itemMeta}>
+                        <Text style={styles.itemTitle}>{item.name}</Text>
+                        <Text style={styles.itemPrice}>৳ {item.price.toLocaleString()}</Text>
+                        <Text style={styles.specValue}>{item.category}</Text>
+                      </View>
+                    </View>
+                  </View>
+                ))
+              )}
+            </View>
 
-        {/* Item Cards List */}
-        <View style={styles.itemsList}>
-          {filteredItems.map((item) => (
             <TouchableOpacity
-              key={item.id}
-              style={styles.itemCard}
-              onPress={() => router.push({ pathname: '/animal-details', params: { id: item.id } })}
-              activeOpacity={0.9}
+              style={styles.addListingBtn}
+              onPress={() => router.push('/add-listing')}
+              activeOpacity={0.85}
             >
-              <View style={styles.cardMain}>
-                <Image source={item.image} style={styles.itemImage} />
-                
-                <View style={styles.itemMeta}>
-                  <View style={styles.titleRow}>
-                    <Text style={styles.itemTitle}>{item.title}</Text>
-                    <Text style={styles.timeBadge}>{item.timeAgo}</Text>
-                    <TouchableOpacity style={styles.shareBtn} activeOpacity={0.7}>
-                      <Text style={styles.shareIcon}>📤</Text>
-                    </TouchableOpacity>
-                  </View>
-
-                  <Text style={styles.itemPrice}>৳ {item.price}</Text>
-
-                  {/* Animal Specifications */}
-                  <View style={styles.specsRow}>
-                    <View style={styles.specCell}>
-                      <Text style={styles.specLabel}>Species</Text>
-                      <Text style={styles.specValue}>{item.species}</Text>
-                    </View>
-                    <View style={styles.specCell}>
-                      <Text style={styles.specLabel}>Age</Text>
-                      <Text style={styles.specValue}>{item.age}</Text>
-                    </View>
-                    <View style={styles.specCell}>
-                      <Text style={styles.specLabel}>Live Weight</Text>
-                      <Text style={styles.specValue}>{item.liveWeight}</Text>
-                    </View>
-                  </View>
-
-                  {/* Seller info row */}
-                  <View style={styles.sellerRow}>
-                    <View style={styles.sellerLeft}>
-                      <View style={styles.sellerAvatarCircle}>
-                        <Text style={styles.sellerAvatarEmoji}>👤</Text>
-                      </View>
-                      <View>
-                        <Text style={styles.sellerName}>{item.sellerName}</Text>
-                        <Text style={styles.sellerLoc}>📍 {item.location}</Text>
-                      </View>
-                    </View>
-                    <TouchableOpacity
-                      style={styles.messageBtn}
-                      onPress={() => router.push('/chat')}
-                      activeOpacity={0.8}
-                    >
-                      <Text style={styles.messageBtnText}>💬 Message</Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              </View>
-
-              {/* Action Buttons footer */}
-              <View style={styles.cardActionsRow}>
-                <TouchableOpacity
-                  style={styles.bookBtn}
-                  onPress={() => router.push({ pathname: '/checkout', params: { id: item.id } })}
-                  activeOpacity={0.85}
-                >
-                  <Text style={styles.bookBtnText}>🏷️ Book Animal</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.buyBtn}
-                  onPress={() => router.push({ pathname: '/checkout', params: { id: item.id } })}
-                  activeOpacity={0.85}
-                >
-                  <Text style={styles.buyBtnText}>🛒 Buy Animal</Text>
-                </TouchableOpacity>
-              </View>
+              <Text style={styles.addListingBtnText}>＋ Add Listing</Text>
             </TouchableOpacity>
-          ))}
-        </View>
+          </>
+        ) : (
+          <>
+            {/* Trending Section */}
+            <View style={styles.sectionHeaderRow}>
+              <Text style={styles.sectionTitle}>Most Trending Animals</Text>
+            </View>
+
+            {/* Filters Row */}
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.filtersRow}
+            >
+              <TouchableOpacity style={styles.filterBtn} activeOpacity={0.8}>
+                <Text style={styles.filterBtnIcon}>⚙️</Text>
+                <Text style={styles.filterBtnText}>Filter</Text>
+              </TouchableOpacity>
+              {['All (12)', 'Calf(3)', 'Bull (2)'].map((filterVal) => {
+                const isSelected = activeFilter === filterVal || (filterVal.startsWith('All') && activeFilter === 'All');
+                return (
+                  <TouchableOpacity
+                    key={filterVal}
+                    style={[styles.filterChip, isSelected && styles.filterChipActive]}
+                    onPress={() => setActiveFilter(filterVal.startsWith('All') ? 'All' : filterVal)}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[styles.filterChipText, isSelected && styles.filterChipTextActive]}>
+                      {filterVal}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+
+            {/* Item Cards List */}
+            <View style={styles.itemsList}>
+              {filteredItems.map((item) => (
+                <TouchableOpacity
+                  key={item.id}
+                  style={styles.itemCard}
+                  onPress={() => router.push({ pathname: '/animal-details', params: { id: item.id } })}
+                  activeOpacity={0.9}
+                >
+                  <View style={styles.cardMain}>
+                    <Image source={item.image} style={styles.itemImage} />
+
+                    <View style={styles.itemMeta}>
+                      <View style={styles.titleRow}>
+                        <Text style={styles.itemTitle}>{item.title}</Text>
+                        <Text style={styles.timeBadge}>{item.timeAgo}</Text>
+                        <TouchableOpacity style={styles.shareBtn} activeOpacity={0.7}>
+                          <Text style={styles.shareIcon}>📤</Text>
+                        </TouchableOpacity>
+                      </View>
+
+                      <Text style={styles.itemPrice}>৳ {item.price}</Text>
+
+                      {/* Animal Specifications */}
+                      <View style={styles.specsRow}>
+                        <View style={styles.specCell}>
+                          <Text style={styles.specLabel}>Species</Text>
+                          <Text style={styles.specValue}>{item.species}</Text>
+                        </View>
+                        <View style={styles.specCell}>
+                          <Text style={styles.specLabel}>Age</Text>
+                          <Text style={styles.specValue}>{item.age}</Text>
+                        </View>
+                        <View style={styles.specCell}>
+                          <Text style={styles.specLabel}>Live Weight</Text>
+                          <Text style={styles.specValue}>{item.liveWeight}</Text>
+                        </View>
+                      </View>
+
+                      {/* Seller info row */}
+                      <View style={styles.sellerRow}>
+                        <View style={styles.sellerLeft}>
+                          <View style={styles.sellerAvatarCircle}>
+                            <Text style={styles.sellerAvatarEmoji}>👤</Text>
+                          </View>
+                          <View>
+                            <Text style={styles.sellerName}>{item.sellerName}</Text>
+                            <Text style={styles.sellerLoc}>📍 {item.location}</Text>
+                          </View>
+                        </View>
+                        <TouchableOpacity
+                          style={styles.messageBtn}
+                          onPress={() => router.push('/chat')}
+                          activeOpacity={0.8}
+                        >
+                          <Text style={styles.messageBtnText}>💬 Message</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  </View>
+
+                  {/* Action Buttons footer */}
+                  <View style={styles.cardActionsRow}>
+                    <TouchableOpacity
+                      style={styles.bookBtn}
+                      onPress={() => router.push({ pathname: '/checkout', params: { id: item.id } })}
+                      activeOpacity={0.85}
+                    >
+                      <Text style={styles.bookBtnText}>🏷️ Book Animal</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.buyBtn}
+                      onPress={() => router.push({ pathname: '/checkout', params: { id: item.id } })}
+                      activeOpacity={0.85}
+                    >
+                      <Text style={styles.buyBtnText}>🛒 Buy Animal</Text>
+                    </TouchableOpacity>
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -508,6 +517,25 @@ const styles = StyleSheet.create({
   },
   itemsList: {
     gap: 20,
+  },
+  emptyListingsText: {
+    fontSize: 13,
+    color: '#9C9690',
+    textAlign: 'center',
+    paddingVertical: 30,
+  },
+  addListingBtn: {
+    backgroundColor: '#BD632F',
+    height: 52,
+    borderRadius: 26,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 20,
+  },
+  addListingBtnText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '700',
   },
   itemCard: {
     backgroundColor: '#FFFFFF',

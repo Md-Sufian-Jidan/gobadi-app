@@ -10,21 +10,33 @@ import {
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 
-import { apiFetch } from '@/constants/api';
+import { useGetCatalogItemQuery, useCheckoutMutation, useVerifyPaymentMutation } from '@/store/marketplaceApi';
+
+const DELIVERY_CHARGE = 1500;
 
 export default function CheckoutScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
+  const itemId = String(params.id || '');
+
+  const { data: item } = useGetCatalogItemQuery(itemId, { skip: !itemId });
+  const [checkout] = useCheckoutMutation();
+  const [verifyPayment] = useVerifyPaymentMutation();
+
+  const totalPrice = (item?.price || 0) + DELIVERY_CHARGE;
 
   const handlePlaceOrder = async () => {
     try {
-      await apiFetch('/marketplace/checkout', {
-        method: 'POST',
-        body: JSON.stringify({
-          items: [{ itemId: String(params.id || '3'), quantity: 1 }],
-          deliveryAddress: 'Road# 9, house# 5, Lane#3, Mirpur 11/a, Dhaka-1216.',
-        }),
-      });
+      const order = await checkout({
+        items: [{ itemId, quantity: 1 }],
+        deliveryAddress: 'Road# 9, house# 5, Lane#3, Mirpur 11/a, Dhaka-1216.',
+      }).unwrap();
+      // Simulated bKash payment gateway - no real payment provider is integrated,
+      // so we confirm payment immediately with a synthesized transaction reference.
+      await verifyPayment({
+        orderId: order.id,
+        transactionId: `TXN-${Date.now()}`,
+      }).unwrap();
     } catch (err) {
       console.log('Error placing order:', err);
     }
@@ -56,29 +68,17 @@ export default function CheckoutScreen() {
         
         <View style={styles.summaryCard}>
           <Image
-            source={require('@/assets/images/albino_buffalo.png')}
+            source={item?.image ? { uri: item.image } : require('@/assets/images/albino_buffalo.png')}
             style={styles.animalImage}
           />
           <View style={styles.summaryDetails}>
             <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Cow:</Text>
-              <Text style={styles.detailValue}>Albenian Buffalo</Text>
+              <Text style={styles.detailLabel}>Item:</Text>
+              <Text style={styles.detailValue}>{item?.name || 'Loading...'}</Text>
             </View>
             <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Live Weight:</Text>
-              <Text style={styles.detailValue}>725 Kg</Text>
-            </View>
-            <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Age:</Text>
-              <Text style={styles.detailValue}>28 Months</Text>
-            </View>
-            <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Breed:</Text>
-              <Text style={styles.detailValue}>Albenian</Text>
-            </View>
-            <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Color:</Text>
-              <Text style={styles.detailValue}>Pinkish White</Text>
+              <Text style={styles.detailLabel}>Category:</Text>
+              <Text style={styles.detailValue}>{item?.category || '—'}</Text>
             </View>
           </View>
         </View>
@@ -106,17 +106,17 @@ export default function CheckoutScreen() {
 
         <View style={styles.pricingCard}>
           <View style={styles.priceRow}>
-            <Text style={styles.priceLabel}>Animal Price</Text>
-            <Text style={styles.priceVal}>৳ 3,20,000</Text>
+            <Text style={styles.priceLabel}>Item Price</Text>
+            <Text style={styles.priceVal}>৳ {(item?.price || 0).toLocaleString()}</Text>
           </View>
           <View style={styles.priceRow}>
             <Text style={styles.priceLabel}>Delivery Charge</Text>
-            <Text style={styles.priceVal}>৳ 1,500</Text>
+            <Text style={styles.priceVal}>৳ {DELIVERY_CHARGE.toLocaleString()}</Text>
           </View>
           <View style={styles.divider} />
           <View style={styles.priceRow}>
             <Text style={styles.totalLabel}>Total Payment</Text>
-            <Text style={styles.totalVal}>৳ 3,21,500</Text>
+            <Text style={styles.totalVal}>৳ {totalPrice.toLocaleString()}</Text>
           </View>
         </View>
       </ScrollView>

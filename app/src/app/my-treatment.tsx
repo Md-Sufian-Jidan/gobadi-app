@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   StyleSheet,
   View,
@@ -8,75 +8,85 @@ import {
   SafeAreaView,
   ScrollView,
   Image,
+  Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useGetDoctorsQuery } from '@/store/doctorsApi';
+import {
+  useGetDoctorBookingsQuery,
+  useCancelBookingMutation,
+  type AppointmentStatus,
+} from '@/store/doctorPortalApi';
 
 interface Treatment {
   id: string;
+  doctorId: number;
   name: string;
-  type: 'Online' | 'Physical';
   specialty: string;
-  location: string;
   rating: number;
-  reviews: number;
-  service: string;
+  avatar: string;
   date: string;
   bookedOn: string;
-  status: 'Upcoming' | 'Completed';
-  price: string;
-  image: any;
+  status: AppointmentStatus;
+}
+
+function formatDate(iso: string): string {
+  return new Date(iso).toLocaleDateString(undefined, {
+    weekday: 'short',
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  });
+}
+
+function isUpcoming(status: AppointmentStatus): boolean {
+  return status === 'PENDING' || status === 'CONFIRMED' || status === 'RESCHEDULED';
 }
 
 export default function MyTreatmentScreen() {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<'Online' | 'Physical'>('Online');
-  const [activeFilter, setActiveFilter] = useState('All');
+  const [activeFilter, setActiveFilter] = useState<'All' | 'Upcoming'>('All');
   const [searchQuery, setSearchQuery] = useState('');
 
-  const treatments: Treatment[] = [
-    {
-      id: '1',
-      name: 'Dr. David Patel',
-      type: 'Online',
-      specialty: 'Veterinary Surgery',
-      location: 'Oak Street, CA',
-      rating: 4.4,
-      reviews: 343,
-      service: 'Consultancy',
-      date: 'Wed, 20 May 2024',
-      bookedOn: 'Mon, 18 May 2024',
-      status: 'Upcoming',
-      price: '120',
-      image: require('@/assets/images/doctor.png'),
-    },
-    {
-      id: '2',
-      name: 'Sunrise Health Clinic',
-      type: 'Physical',
-      specialty: 'Veterinary Hospital',
-      location: 'San Francisco, CA',
-      rating: 4.8,
-      reviews: 943,
-      service: 'Vaccination',
-      date: 'Wed, 20 May 2024',
-      bookedOn: 'Mon, 18 May 2024',
-      status: 'Completed',
-      price: '120',
-      image: require('@/assets/images/clinic_lobby.png'),
-    },
-  ];
+  const { data: appointments = [] } = useGetDoctorBookingsQuery();
+  const { data: doctors = [] } = useGetDoctorsQuery();
+  const [cancelBookingMutation] = useCancelBookingMutation();
+
+  const doctorsById = useMemo(
+    () => Object.fromEntries(doctors.map((d) => [d.id, d])),
+    [doctors],
+  );
+
+  async function cancelBooking(id: number) {
+    try {
+      await cancelBookingMutation(String(id)).unwrap();
+    } catch (err) {
+      Alert.alert('Could not cancel', 'Appointments can only be cancelled more than 2 hours before the start time.');
+    }
+  }
+
+  const treatments: Treatment[] = useMemo(
+    () =>
+      appointments.map((a) => {
+        const doctor = doctorsById[a.doctorId];
+        return {
+          id: String(a.id),
+          doctorId: a.doctorId,
+          name: doctor?.name || 'Doctor',
+          specialty: doctor?.specialty || '',
+          rating: doctor?.rating || 0,
+          avatar: doctor?.avatar || '',
+          date: formatDate(a.startAt),
+          bookedOn: formatDate(a.createdAt),
+          status: a.status,
+        };
+      }),
+    [appointments, doctorsById],
+  );
 
   const filteredTreatments = treatments.filter((item) => {
-    // Tab filter
-    if (item.type !== activeTab) return false;
-    
-    // Search query filter
     if (searchQuery && !item.name.toLowerCase().includes(searchQuery.toLowerCase())) return false;
-    
-    // Status/Filter Chips
-    if (activeFilter === 'Upcoming(01)' && item.status !== 'Upcoming') return false;
-    if (activeFilter === 'Medicine(03)' && item.specialty !== 'Medicine') return false; // simulated
-
+    if (activeFilter === 'Upcoming' && !isUpcoming(item.status)) return false;
     return true;
   });
 
@@ -122,41 +132,15 @@ export default function MyTreatmentScreen() {
           />
         </View>
 
-        {/* Online / Physical Tab Switch */}
-        <View style={styles.tabContainer}>
-          <TouchableOpacity
-            style={[styles.tabButton, activeTab === 'Online' && styles.tabButtonActive]}
-            onPress={() => setActiveTab('Online')}
-            activeOpacity={0.8}
-          >
-            <Text style={[styles.tabText, activeTab === 'Online' && styles.tabTextActive]}>
-              Online Visit
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.tabButton, activeTab === 'Physical' && styles.tabButtonActive]}
-            onPress={() => setActiveTab('Physical')}
-            activeOpacity={0.8}
-          >
-            <Text style={[styles.tabText, activeTab === 'Physical' && styles.tabTextActive]}>
-              Physical Visit
-            </Text>
-          </TouchableOpacity>
-        </View>
-
         {/* Filter Chips row */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.filtersRow}
-        >
-          {['All (12)', 'Upcoming(01)', 'Medicine(03)'].map((filter) => {
-            const isSelected = activeFilter === filter || (filter.startsWith('All') && activeFilter === 'All');
+        <View style={styles.filtersRow}>
+          {(['All', 'Upcoming'] as const).map((filter) => {
+            const isSelected = activeFilter === filter;
             return (
               <TouchableOpacity
                 key={filter}
                 style={[styles.filterChip, isSelected && styles.filterChipActive]}
-                onPress={() => setActiveFilter(filter.startsWith('All') ? 'All' : filter)}
+                onPress={() => setActiveFilter(filter)}
                 activeOpacity={0.7}
               >
                 <Text style={[styles.filterChipText, isSelected && styles.filterChipTextActive]}>
@@ -165,94 +149,93 @@ export default function MyTreatmentScreen() {
               </TouchableOpacity>
             );
           })}
-        </ScrollView>
+        </View>
 
         {/* Treatment card List */}
         <View style={styles.listContainer}>
-          {filteredTreatments.map((item) => (
-            <TouchableOpacity
-              key={item.id}
-              style={styles.treatmentCard}
-              onPress={() => router.push(item.type === 'Online' ? '/video-call' : '/doctor-detail')}
-              activeOpacity={0.9}
-            >
-              {/* Top Card Row */}
-              <View style={styles.cardHeader}>
-                <Image source={item.image} style={styles.cardImage} />
-                <View style={styles.cardInfo}>
-                  <View style={styles.nameRow}>
-                    <Text style={styles.doctorName}>{item.name}</Text>
-                    <View
-                      style={[
-                        styles.typeBadge,
-                        item.type === 'Online' ? styles.badgeOnline : styles.badgePhysical,
-                      ]}
-                    >
-                      <Text
-                        style={[
-                          styles.badgeText,
-                          item.type === 'Online' ? styles.badgeTextOnline : styles.badgeTextPhysical,
-                        ]}
-                      >
-                        {item.type}
-                      </Text>
+          {filteredTreatments.length === 0 ? (
+            <Text style={styles.emptyText}>No appointments yet.</Text>
+          ) : (
+            filteredTreatments.map((item) => (
+              <TouchableOpacity
+                key={item.id}
+                style={styles.treatmentCard}
+                onPress={() => router.push('/doctor-detail')}
+                activeOpacity={0.9}
+              >
+                {/* Top Card Row */}
+                <View style={styles.cardHeader}>
+                  <Image
+                    source={item.avatar ? { uri: item.avatar } : require('@/assets/images/doctor.png')}
+                    style={styles.cardImage}
+                  />
+                  <View style={styles.cardInfo}>
+                    <View style={styles.nameRow}>
+                      <Text style={styles.doctorName}>{item.name}</Text>
                     </View>
-                  </View>
 
-                  <Text style={styles.doctorSpecialty}>{item.specialty}</Text>
+                    <Text style={styles.doctorSpecialty}>{item.specialty}</Text>
 
-                  <View style={styles.ratingLocationRow}>
-                    <Text style={styles.metaLabel}>📍 {item.location}</Text>
-                    <Text style={styles.metaDot}>•</Text>
-                    <Text style={styles.metaLabel}>⭐ {item.rating} ({item.reviews})</Text>
-                  </View>
-
-                  {/* Detail Info Grid */}
-                  <View style={styles.detailsGrid}>
-                    <View style={styles.detailsCol}>
-                      <Text style={styles.gridLabel}>Service</Text>
-                      <Text style={styles.gridValue}>{item.service}</Text>
+                    <View style={styles.ratingLocationRow}>
+                      <Text style={styles.metaLabel}>⭐ {item.rating.toFixed(1)}</Text>
                     </View>
-                    <View style={styles.detailsColRight}>
-                      <Text style={styles.gridLabelRight}>Date</Text>
-                      <Text style={styles.gridValueRight}>{item.date}</Text>
-                    </View>
-                  </View>
 
-                  <View style={styles.detailsGrid}>
-                    <View style={styles.detailsCol}>
-                      <Text style={styles.gridLabel}>Booked on</Text>
-                      <Text style={styles.gridValue}>{item.bookedOn}</Text>
+                    {/* Detail Info Grid */}
+                    <View style={styles.detailsGrid}>
+                      <View style={styles.detailsCol}>
+                        <Text style={styles.gridLabel}>Appointment</Text>
+                        <Text style={styles.gridValue}>{item.date}</Text>
+                      </View>
+                      <View style={styles.detailsColRight}>
+                        <Text style={styles.gridLabelRight}>Booked on</Text>
+                        <Text style={styles.gridValueRight}>{item.bookedOn}</Text>
+                      </View>
                     </View>
                   </View>
                 </View>
-              </View>
 
-              {/* Bottom Card Row */}
-              <View style={styles.cardFooter}>
-                <View
-                  style={[
-                    styles.statusIndicatorBadge,
-                    item.status === 'Upcoming' ? styles.statusUpcoming : styles.statusCompleted,
-                  ]}
-                >
-                  <Text
+                {/* Bottom Card Row */}
+                <View style={styles.cardFooter}>
+                  <View
                     style={[
-                      styles.statusIndicatorText,
-                      item.status === 'Upcoming' ? styles.statusTextUpcoming : styles.statusTextCompleted,
+                      styles.statusIndicatorBadge,
+                      isUpcoming(item.status) ? styles.statusUpcoming : styles.statusCompleted,
                     ]}
                   >
-                    {item.status}
-                  </Text>
+                    <Text
+                      style={[
+                        styles.statusIndicatorText,
+                        isUpcoming(item.status) ? styles.statusTextUpcoming : styles.statusTextCompleted,
+                      ]}
+                    >
+                      {item.status}
+                    </Text>
+                  </View>
+                  {isUpcoming(item.status) ? (
+                    <View style={styles.bookingActionsRow}>
+                      <TouchableOpacity
+                        onPress={() =>
+                          router.push({
+                            pathname: '/book-slot',
+                            params: { id: item.doctorId, appointmentId: item.id, mode: 'reschedule' },
+                          })
+                        }
+                        activeOpacity={0.7}
+                      >
+                        <Text style={styles.rescheduleText}>Reschedule</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        onPress={() => cancelBooking(Number(item.id))}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={styles.cancelText}>Cancel</Text>
+                      </TouchableOpacity>
+                    </View>
+                  ) : null}
                 </View>
-                <View style={styles.priceContainer}>
-                  <Text style={styles.currencySymbol}>৳ </Text>
-                  <Text style={styles.priceAmount}>{item.price} </Text>
-                  <Text style={styles.paidBadge}>(Paid)</Text>
-                </View>
-              </View>
-            </TouchableOpacity>
-          ))}
+              </TouchableOpacity>
+            ))
+          )}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -547,5 +530,25 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: '#2E7D32',
     fontWeight: '600',
+  },
+  emptyText: {
+    fontSize: 13,
+    color: '#9C9690',
+    textAlign: 'center',
+    paddingVertical: 40,
+  },
+  cancelText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#E53935',
+  },
+  bookingActionsRow: {
+    flexDirection: 'row',
+    gap: 16,
+  },
+  rescheduleText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#BD632F',
   },
 });
