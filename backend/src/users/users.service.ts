@@ -10,7 +10,7 @@ import { PaginatedResult } from '../common/paginated-result.interface';
 
 interface CreateWithPasswordInput {
   name?: string;
-  phone: string;
+  phone?: string;
   email?: string;
   role: UserRole;
   passwordHash: string;
@@ -63,7 +63,9 @@ export class UsersService {
       throw new NotFoundException('User not found');
     }
     if (data.email && data.email !== user.email) {
-      const existing = await this.userRepository.findOneBy({ email: data.email });
+      const existing = await this.userRepository.findOneBy({
+        email: data.email,
+      });
       if (existing && existing.id !== userId) {
         throw new ConflictException('Email already in use');
       }
@@ -139,7 +141,11 @@ export class UsersService {
     search?: string,
   ): Promise<PaginatedResult<User>> {
     const where = search
-      ? [{ name: ILike(`%${search}%`) }, { phone: ILike(`%${search}%`) }, { email: ILike(`%${search}%`) }]
+      ? [
+          { name: ILike(`%${search}%`) },
+          { phone: ILike(`%${search}%`) },
+          { email: ILike(`%${search}%`) },
+        ]
       : {};
     const [data, total] = await this.userRepository.findAndCount({
       where,

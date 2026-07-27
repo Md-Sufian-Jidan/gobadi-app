@@ -1,12 +1,15 @@
-import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
-import { API_URL, setToken, clearToken } from '@/constants/api';
+import { createApi } from '@reduxjs/toolkit/query/react';
+import { setToken, setRefreshToken, clearToken, clearRefreshToken, getRefreshToken } from '@/constants/api';
+import { baseQueryWithReauth } from './base-query-with-reauth';
 import { setCredentials, clearCredentials } from './authSlice';
 import type { AuthUser } from './authSlice';
 import { jwtToAuthUser } from './decode-jwt';
-import type { RootState, AppDispatch } from './store';
+import { socketManager } from '@/lib/socket-manager';
+import type { AppDispatch } from './store';
 
 interface SessionResponse {
-  token: string;
+  accessToken: string;
+  refreshToken: string;
   user?: Partial<AuthUser>;
 }
 
@@ -21,7 +24,8 @@ interface OtpResponse extends MessageResponse {
 
 interface VerifyOtpResponse {
   verified: boolean;
-  token?: string;
+  accessToken?: string;
+  refreshToken?: string;
   resetToken?: string;
   user?: Partial<AuthUser>;
   message: string;
@@ -29,28 +33,26 @@ interface VerifyOtpResponse {
 
 export const authApi = createApi({
   reducerPath: 'authApi',
-  baseQuery: fetchBaseQuery({
-    baseUrl: API_URL,
-    prepareHeaders: (headers, { getState }) => {
-      const token = (getState() as RootState).auth.token;
-      if (token) {
-        headers.set('Authorization', `Bearer ${token}`);
-      }
-      return headers;
-    },
-  }),
+  baseQuery: baseQueryWithReauth,
   endpoints: (builder) => ({
     register: builder.mutation<
       MessageResponse,
-      { name?: string; phone: string; email?: string; password: string; role: string }
+      { name?: string; phone?: string; email?: string; password: string; role: string }
     >({
       query: (body) => ({ url: '/auth/register', method: 'POST', body }),
     }),
 
-    login: builder.mutation<SessionResponse, { identifier: string; password: string }>({
-      query: (body) => ({ url: '/auth/login', method: 'POST', body }),
-      onQueryStarted: async (_arg, { dispatch, queryFulfilled }) => {
-        await persistSession(dispatch, queryFulfilled);
+    login: builder.mutation<
+      SessionResponse,
+      { identifier: string; password: string; rememberMe?: boolean }
+    >({
+      query: ({ identifier, password }) => ({
+        url: '/auth/login',
+        method: 'POST',
+        body: { identifier, password },
+      }),
+      onQueryStarted: async (arg, { dispatch, queryFulfilled }) => {
+        await persistSession(dispatch, queryFulfilled, arg.rememberMe ?? true);
       },
     }),
 
@@ -65,10 +67,13 @@ export const authApi = createApi({
       query: (body) => ({ url: '/auth/verify-otp', method: 'POST', body }),
       onQueryStarted: async (_arg, { dispatch, queryFulfilled }) => {
         const { data } = await queryFulfilled;
-        if (data.token) {
-          const user = (data.user as AuthUser) ?? jwtToAuthUser(data.token);
-          dispatch(setCredentials({ user, token: data.token }));
-          await setToken(data.token);
+        if (data.accessToken && data.refreshToken) {
+          const user = (data.user as AuthUser) ?? jwtToAuthUser(data.accessToken);
+          dispatch(
+            setCredentials({ user, token: data.accessToken, refreshToken: data.refreshToken }),
+          );
+          await setToken(data.accessToken);
+          await setRefreshToken(data.refreshToken);
         }
       },
     }),
@@ -94,22 +99,40 @@ export const authApi = createApi({
         await persistSession(dispatch, queryFulfilled);
       },
     }),
+
+    logoutSession: builder.mutation<MessageResponse, { refreshToken: string }>({
+      query: (body) => ({ url: '/auth/logout', method: 'POST', body }),
+    }),
   }),
 });
 
 async function persistSession(
   dispatch: AppDispatch,
   queryFulfilled: Promise<{ data: SessionResponse }>,
+  rememberMe = true,
 ) {
   const { data } = await queryFulfilled;
-  const user = (data.user as AuthUser) ?? jwtToAuthUser(data.token);
-  dispatch(setCredentials({ user, token: data.token }));
-  await setToken(data.token);
+  const user = (data.user as AuthUser) ?? jwtToAuthUser(data.accessToken);
+  dispatch(setCredentials({ user, token: data.accessToken, refreshToken: data.refreshToken }));
+  // "Keep me signed in" unchecked: keep the session in memory only (RTK Query's
+  // baseQueryWithReauth can still refresh mid-session) but never write it to
+  // SecureStore, so bootstrapAuth finds nothing and the user is signed out
+  // the next time the app cold-starts.
+  if (rememberMe) {
+    await setToken(data.accessToken);
+    await setRefreshToken(data.refreshToken);
+  }
 }
 
 export async function logout(dispatch: AppDispatch) {
+  const refreshToken = await getRefreshToken();
+  if (refreshToken) {
+    dispatch(authApi.endpoints.logoutSession.initiate({ refreshToken }));
+  }
+  socketManager.disconnect();
   dispatch(clearCredentials());
   await clearToken();
+  await clearRefreshToken();
 }
 
 export const {

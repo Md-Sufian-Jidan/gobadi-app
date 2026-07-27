@@ -2,7 +2,6 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsEmail,
   IsEnum,
-  IsNotEmpty,
   IsOptional,
   IsString,
   MinLength,
@@ -15,10 +14,13 @@ export class RegisterDto {
   @IsString()
   name?: string;
 
-  @ApiProperty({ description: 'Phone number', example: '+8801XXXXXXXXX' })
+  @ApiPropertyOptional({
+    description: 'Phone number (either phone or email is required)',
+    example: '+8801XXXXXXXXX',
+  })
+  @IsOptional()
   @IsString()
-  @IsNotEmpty()
-  phone: string;
+  phone?: string;
 
   @ApiPropertyOptional({
     description: 'Email address',

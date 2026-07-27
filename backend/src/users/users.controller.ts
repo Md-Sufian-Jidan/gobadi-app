@@ -1,5 +1,10 @@
 import { Body, Controller, Get, Patch, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import { UsersService } from './users.service';
 import { User } from './user.entity';
 import { UpdateProfileDto } from './dto/update-profile.dto';
@@ -17,7 +22,9 @@ export class UsersController {
   @Get('me')
   @ApiOperation({ summary: "Get the current user's own profile" })
   @ApiResponse({ status: 200, description: 'The user profile' })
-  async getMe(@CurrentUser() user: JwtPayload): Promise<Omit<User, 'password'>> {
+  async getMe(
+    @CurrentUser() user: JwtPayload,
+  ): Promise<Omit<User, 'password'>> {
     const found = await this.usersService.findById(user.sub);
     return found as Omit<User, 'password'>;
   }

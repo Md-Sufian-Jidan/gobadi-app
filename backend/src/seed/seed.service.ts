@@ -1,6 +1,7 @@
 import { Injectable, OnModuleInit, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import * as bcrypt from 'bcrypt';
 import { Animal } from '../animals/animal.entity';
 import { Doctor } from '../doctors/doctor.entity';
 import { Availability } from '../doctors/availability.entity';
@@ -8,6 +9,10 @@ import { MarketItem } from '../marketplace/market-item.entity';
 import { ChatMessage, MessageStatus } from '../chat/chat-message.entity';
 import { Conversation } from '../chat/conversation.entity';
 import { User, UserRole } from '../users/user.entity';
+
+// Demo credentials for local/manual testing only — logged once at startup
+// so whoever runs the seeded backend can log in immediately without an OTP.
+export const SEED_PASSWORD = 'Password123!';
 
 @Injectable()
 export class SeedService implements OnModuleInit {
@@ -38,18 +43,58 @@ export class SeedService implements OnModuleInit {
     await this.seedAnimals();
     await this.seedMarketItems();
     await this.seedChatMessages(users);
+    await this.backfillDemoLoginCredentials();
     this.logger.log('Database seeding checks completed successfully!');
+  }
+
+  /**
+   * Grants the demo doctor/patient a known password even on databases that
+   * were already seeded before login credentials existed — seedUsers() only
+   * runs once against an empty table, so pre-existing installs need this
+   * separate idempotent backfill to gain the same test login.
+   */
+  private async backfillDemoLoginCredentials(): Promise<void> {
+    const passwordHash = await bcrypt.hash(SEED_PASSWORD, 10);
+    const demoAccounts = [
+      { phone: '+8801700000001', email: 'doctor@gobadi.test' },
+      { phone: '+8801800000001', email: 'patient@gobadi.test' },
+    ];
+    let backfilled = false;
+    for (const account of demoAccounts) {
+      const user = await this.userRepository
+        .createQueryBuilder('user')
+        .addSelect('user.password')
+        .where('user.phone = :phone', { phone: account.phone })
+        .getOne();
+      if (user && !user.password) {
+        await this.userRepository.update(user.id, {
+          email: user.email ?? account.email,
+          password: passwordHash,
+          verified: true,
+        });
+        backfilled = true;
+      }
+    }
+    if (backfilled) {
+      this.logger.log(
+        `Backfilled login credentials — doctor@gobadi.test / patient@gobadi.test, password: ${SEED_PASSWORD}`,
+      );
+    }
   }
 
   private async seedUsers(): Promise<User[]> {
     const count = await this.userRepository.count();
     if (count === 0) {
       this.logger.log('Seeding users...');
-      return this.userRepository.save([
+      const passwordHash = await bcrypt.hash(SEED_PASSWORD, 10);
+      const users = await this.userRepository.save([
         {
           phone: '+8801700000001',
+          email: 'doctor@gobadi.test',
           role: UserRole.DOCTOR,
           name: 'Dr. Michael Wilson',
+          password: passwordHash,
+          verified: true,
         },
         {
           phone: '+8801700000002',
@@ -58,8 +103,11 @@ export class SeedService implements OnModuleInit {
         },
         {
           phone: '+8801800000001',
+          email: 'patient@gobadi.test',
           role: UserRole.PATIENT,
           name: 'Test Patient One',
+          password: passwordHash,
+          verified: true,
         },
         {
           phone: '+8801800000002',
@@ -67,6 +115,10 @@ export class SeedService implements OnModuleInit {
           name: 'Test Patient Two',
         },
       ]);
+      this.logger.log(
+        `Seeded login credentials — doctor@gobadi.test / patient@gobadi.test, password: ${SEED_PASSWORD}`,
+      );
+      return users;
     }
     return this.userRepository.find();
   }

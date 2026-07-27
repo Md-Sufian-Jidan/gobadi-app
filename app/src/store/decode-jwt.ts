@@ -3,7 +3,7 @@ import { AuthUser } from './authSlice';
 interface DecodedJwt {
   sub: number;
   role: string;
-  phone: string;
+  phone?: string;
   exp: number;
 }
 

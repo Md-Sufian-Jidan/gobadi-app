@@ -12,17 +12,22 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
 import { useLoginMutation } from '@/store/authApi';
 import { useSocialAuth } from '@/hooks/use-social-auth';
+import { PasswordField } from '@/components/password-field';
+import { IdentifierTabs, IdentifierMode } from '@/components/identifier-tabs';
 
 export default function LoginScreen() {
   const router = useRouter();
 
+  const [mode, setMode] = useState<IdentifierMode>('phone');
   const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true);
   const [errorMessage, setErrorMessage] = useState('');
 
   const [login, { isLoading }] = useLoginMutation();
@@ -31,8 +36,9 @@ export default function LoginScreen() {
 
   const handleLogin = async () => {
     setErrorMessage('');
+    const identifier = mode === 'phone' ? phone : email;
     try {
-      await login({ identifier: phone, password }).unwrap();
+      await login({ identifier, password, rememberMe }).unwrap();
       goToTabs();
     } catch (err: any) {
       setErrorMessage(err?.data?.message || 'Invalid credentials. Please try again.');
@@ -46,60 +52,54 @@ export default function LoginScreen() {
         style={{ flex: 1 }}
       >
         <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
-          {/* Logo Section */}
-          <View style={styles.logoContainer}>
-            <Image
-              source={require('@/assets/images/splash-icon.png')}
-              style={styles.logo}
-              resizeMode="contain"
-            />
-          </View>
-
           {/* Heading */}
-          <Text style={styles.title}>Welcome Back</Text>
-          <Text style={styles.subtitle}>Sign in to access your farm dashboard</Text>
+          <Text style={styles.title}>Sign in</Text>
+          <Text style={styles.subtitle}>Welcome Back!</Text>
 
           {/* Form Fields */}
           <View style={styles.form}>
-            {/* Phone Number */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Phone Number*</Text>
-              <View style={styles.phoneInputContainer}>
-                <View style={styles.countryCodeSelector}>
-                  <Text style={styles.flagEmoji}>🇧🇩</Text>
-                  <Text style={styles.countryCode}>+88</Text>
+            <IdentifierTabs mode={mode} onChange={setMode} />
+
+            {mode === 'phone' ? (
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Phone Number*</Text>
+                <View style={styles.phoneInputContainer}>
+                  <View style={styles.countryCodeSelector}>
+                    <Text style={styles.flagEmoji}>🇧🇩</Text>
+                    <Text style={styles.countryCode}>+88</Text>
+                  </View>
+                  <View style={styles.phoneDivider} />
+                  <TextInput
+                    style={styles.phoneInput}
+                    value={phone}
+                    onChangeText={setPhone}
+                    placeholder="Phone number"
+                    placeholderTextColor="#A39E99"
+                    keyboardType="phone-pad"
+                  />
                 </View>
-                <View style={styles.phoneDivider} />
+              </View>
+            ) : (
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Email</Text>
                 <TextInput
-                  style={styles.phoneInput}
-                  value={phone}
-                  onChangeText={setPhone}
-                  placeholder="Phone number"
+                  style={styles.emailInput}
+                  value={email}
+                  onChangeText={setEmail}
+                  placeholder="johndoe@email.com"
                   placeholderTextColor="#A39E99"
-                  keyboardType="phone-pad"
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoComplete="email"
+                  textContentType="emailAddress"
                 />
               </View>
-            </View>
+            )}
 
             {/* Password */}
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Password*</Text>
-              <View style={styles.passwordContainer}>
-                <TextInput
-                  style={styles.passwordInput}
-                  value={password}
-                  onChangeText={setPassword}
-                  placeholder="•••••••••••••••••"
-                  placeholderTextColor="#A39E99"
-                  secureTextEntry={!showPassword}
-                />
-                <TouchableOpacity
-                  style={styles.eyeButton}
-                  onPress={() => setShowPassword(!showPassword)}
-                >
-                  <Text style={styles.eyeIcon}>{showPassword ? '👁️' : '👁️‍🗨️'}</Text>
-                </TouchableOpacity>
-              </View>
+              <PasswordField value={password} onChangeText={setPassword} />
               <TouchableOpacity
                 style={styles.forgotPasswordContainer}
                 onPress={() => router.push('/forgot')}
@@ -107,6 +107,18 @@ export default function LoginScreen() {
                 <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
               </TouchableOpacity>
             </View>
+
+            {/* Keep me signed in */}
+            <TouchableOpacity
+              style={styles.rememberMeRow}
+              activeOpacity={0.7}
+              onPress={() => setRememberMe((v) => !v)}
+            >
+              <View style={[styles.checkbox, rememberMe && styles.checkboxChecked]}>
+                {rememberMe && <Ionicons name="checkmark" size={14} color="#FFFFFF" />}
+              </View>
+              <Text style={styles.rememberMeText}>Keep me signed in</Text>
+            </TouchableOpacity>
 
             {/* Error message */}
             {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
@@ -128,7 +140,7 @@ export default function LoginScreen() {
             {/* Divider */}
             <View style={styles.dividerContainer}>
               <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>or</Text>
+              <Text style={styles.dividerText}>or sign in with</Text>
               <View style={styles.dividerLine} />
             </View>
 
@@ -166,7 +178,7 @@ export default function LoginScreen() {
             {/* Footer */}
             <View style={styles.footerContainer}>
               <Text style={styles.footerText}>
-                Don't have an account?{' '}
+                Don't have any account?{' '}
                 <Text style={styles.signUpLink} onPress={() => router.push('/signup')}>
                   Sign Up
                 </Text>
@@ -190,35 +202,19 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
     alignItems: 'center',
   },
-  logoContainer: {
-    width: 100,
-    height: 100,
-    borderRadius: 20,
-    backgroundColor: '#FFFFFF',
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 2,
-    marginBottom: 20,
-  },
-  logo: {
-    width: 70,
-    height: 70,
-  },
   title: {
-    fontSize: 24,
-    fontWeight: '700',
+    fontSize: 26,
+    fontWeight: '800',
     color: '#BD632F',
-    marginBottom: 8,
+    alignSelf: 'flex-start',
+    marginBottom: 4,
   },
   subtitle: {
-    fontSize: 14,
-    color: '#7C7672',
-    marginBottom: 32,
-    textAlign: 'center',
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1A1817',
+    alignSelf: 'flex-start',
+    marginBottom: 24,
   },
   form: {
     width: '100%',
@@ -268,30 +264,15 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#1A1817',
   },
-  passwordContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  emailInput: {
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: '#E6E1DC',
     borderRadius: 12,
     height: 52,
-  },
-  passwordInput: {
-    flex: 1,
-    height: '100%',
     paddingHorizontal: 16,
     fontSize: 16,
     color: '#1A1817',
-  },
-  eyeButton: {
-    paddingHorizontal: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  eyeIcon: {
-    fontSize: 18,
-    color: '#7C7672',
   },
   loginButton: {
     backgroundColor: '#BD632F',
@@ -370,5 +351,28 @@ const styles = StyleSheet.create({
   signUpLink: {
     color: '#BD632F',
     fontWeight: '600',
+  },
+  rememberMeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderRadius: 5,
+    borderWidth: 1.5,
+    borderColor: '#BD632F',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 10,
+  },
+  checkboxChecked: {
+    backgroundColor: '#BD632F',
+  },
+  rememberMeText: {
+    fontSize: 14,
+    color: '#1A1817',
+    fontWeight: '500',
   },
 });

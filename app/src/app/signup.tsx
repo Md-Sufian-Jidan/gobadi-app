@@ -18,6 +18,8 @@ import { useRouter } from 'expo-router';
 
 import { useRegisterMutation } from '@/store/authApi';
 import { useSocialAuth } from '@/hooks/use-social-auth';
+import { PasswordField } from '@/components/password-field';
+import { IdentifierTabs, IdentifierMode } from '@/components/identifier-tabs';
 
 // Farm-domain labels shown in the picker have no equivalent in the backend's
 // UserRole enum (patient/doctor) yet, so every selection maps to PATIENT for now.
@@ -26,14 +28,14 @@ const ROLES = ['Farmer', 'Supplier', 'Retailer', 'Distributor', 'Veterinarian'];
 export default function SignUpScreen() {
   const router = useRouter();
 
+  const [mode, setMode] = useState<IdentifierMode>('phone');
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
   const [role, setRole] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
 
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [roleModalVisible, setRoleModalVisible] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
@@ -45,8 +47,9 @@ export default function SignUpScreen() {
   const handleSignUp = async () => {
     setErrorMessage('');
 
-    if (!phone || !password) {
-      setErrorMessage('Phone number and password are required.');
+    const identifier = mode === 'phone' ? phone : email;
+    if (!identifier || !password) {
+      setErrorMessage(`${mode === 'phone' ? 'Phone number' : 'Email'} and password are required.`);
       return;
     }
     if (password !== confirmPassword) {
@@ -55,8 +58,14 @@ export default function SignUpScreen() {
     }
 
     try {
-      await register({ name, phone, password, role: 'patient' }).unwrap();
-      router.push({ pathname: '/otp', params: { phone, purpose: 'verify' } });
+      await register({
+        name,
+        phone: mode === 'phone' ? phone : undefined,
+        email: mode === 'email' ? email : undefined,
+        password,
+        role: 'patient',
+      }).unwrap();
+      router.push({ pathname: '/otp', params: { phone: identifier, purpose: 'verify' } });
     } catch (err: any) {
       setErrorMessage(err?.data?.message || 'Could not create account. Please try again.');
     }
@@ -84,6 +93,8 @@ export default function SignUpScreen() {
 
           {/* Form Fields */}
           <View style={styles.form}>
+            <IdentifierTabs mode={mode} onChange={setMode} />
+
             {/* Name */}
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Name</Text>
@@ -96,26 +107,42 @@ export default function SignUpScreen() {
               />
             </View>
 
-            {/* Phone Number */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Phone Number*</Text>
-              <View style={styles.phoneInputContainer}>
-                <TouchableOpacity style={styles.countryCodeSelector} activeOpacity={0.7}>
-                  <Text style={styles.flagEmoji}>🇧🇩</Text>
-                  <Text style={styles.countryCode}>+88</Text>
-                  <Text style={styles.dropdownArrow}>▼</Text>
-                </TouchableOpacity>
-                <View style={styles.phoneDivider} />
+            {mode === 'phone' ? (
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Phone Number*</Text>
+                <View style={styles.phoneInputContainer}>
+                  <TouchableOpacity style={styles.countryCodeSelector} activeOpacity={0.7}>
+                    <Text style={styles.flagEmoji}>🇧🇩</Text>
+                    <Text style={styles.countryCode}>+88</Text>
+                    <Text style={styles.dropdownArrow}>▼</Text>
+                  </TouchableOpacity>
+                  <View style={styles.phoneDivider} />
+                  <TextInput
+                    style={styles.phoneInput}
+                    value={phone}
+                    onChangeText={setPhone}
+                    placeholder="Phone number"
+                    placeholderTextColor="#A39E99"
+                    keyboardType="phone-pad"
+                  />
+                </View>
+              </View>
+            ) : (
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Email*</Text>
                 <TextInput
-                  style={styles.phoneInput}
-                  value={phone}
-                  onChangeText={setPhone}
-                  placeholder="Phone number"
+                  style={styles.input}
+                  value={email}
+                  onChangeText={setEmail}
+                  placeholder="johndoe@email.com"
                   placeholderTextColor="#A39E99"
-                  keyboardType="phone-pad"
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoComplete="email"
+                  textContentType="emailAddress"
                 />
               </View>
-            </View>
+            )}
 
             {/* Role */}
             <View style={styles.inputGroup}>
@@ -135,43 +162,13 @@ export default function SignUpScreen() {
             {/* Password */}
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Password*</Text>
-              <View style={styles.passwordContainer}>
-                <TextInput
-                  style={styles.passwordInput}
-                  value={password}
-                  onChangeText={setPassword}
-                  placeholder="•••••••••••••••••"
-                  placeholderTextColor="#A39E99"
-                  secureTextEntry={!showPassword}
-                />
-                <TouchableOpacity
-                  style={styles.eyeButton}
-                  onPress={() => setShowPassword(!showPassword)}
-                >
-                  <Text style={styles.eyeIcon}>{showPassword ? '👁️' : '👁️‍🗨️'}</Text>
-                </TouchableOpacity>
-              </View>
+              <PasswordField value={password} onChangeText={setPassword} />
             </View>
 
             {/* Confirm Password */}
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Confirm Password*</Text>
-              <View style={styles.passwordContainer}>
-                <TextInput
-                  style={styles.passwordInput}
-                  value={confirmPassword}
-                  onChangeText={setConfirmPassword}
-                  placeholder="•••••••••••••••••"
-                  placeholderTextColor="#A39E99"
-                  secureTextEntry={!showConfirmPassword}
-                />
-                <TouchableOpacity
-                  style={styles.eyeButton}
-                  onPress={() => setShowConfirmPassword(!showConfirmPassword)}
-                >
-                  <Text style={styles.eyeIcon}>{showConfirmPassword ? '👁️' : '👁️‍🗨️'}</Text>
-                </TouchableOpacity>
-              </View>
+              <PasswordField value={confirmPassword} onChangeText={setConfirmPassword} />
             </View>
 
             {/* Terms of Service */}
@@ -399,31 +396,6 @@ const styles = StyleSheet.create({
   },
   placeholderText: {
     color: '#A39E99',
-  },
-  passwordContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E6E1DC',
-    borderRadius: 12,
-    height: 52,
-  },
-  passwordInput: {
-    flex: 1,
-    height: '100%',
-    paddingHorizontal: 16,
-    fontSize: 16,
-    color: '#1A1817',
-  },
-  eyeButton: {
-    paddingHorizontal: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  eyeIcon: {
-    fontSize: 18,
-    color: '#7C7672',
   },
   termsText: {
     fontSize: 13,

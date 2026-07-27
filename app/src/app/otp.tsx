@@ -22,6 +22,7 @@ export default function OTPScreen() {
   const otpHint = params.otpHint || '';
   const purpose = (params.purpose as 'login' | 'verify' | 'reset' | undefined) ?? 'verify';
 
+  const OTP_LENGTH = 4;
   const [otp, setOtp] = useState([otpHint ? otpHint[0] || '5' : '5', '', '', '']); // First prefilled with hint or '5' per mockup
   const [errorMessage, setErrorMessage] = useState('');
   const inputRefs = [
@@ -34,13 +35,35 @@ export default function OTPScreen() {
   const [verifyOtp, { isLoading: isVerifying }] = useVerifyOtpMutation();
   const [sendOtp, { isLoading: isResending }] = useSendOtpMutation();
 
-  const handleOtpChange = (value: string, index: number) => {
+  const handleOtpChange = (rawValue: string, index: number) => {
+    const digits = rawValue.replace(/\D/g, '');
+
+    if (digits.length > 1) {
+      // A paste (or SMS autofill) delivers the whole code at once — distribute
+      // it across boxes starting at whichever box received it.
+      const newOtp = [...otp];
+      let cursor = index;
+      for (const digit of digits) {
+        if (cursor >= OTP_LENGTH) break;
+        newOtp[cursor] = digit;
+        cursor += 1;
+      }
+      setOtp(newOtp);
+      const nextEmptyIndex = newOtp.findIndex((d) => !d);
+      const focusIndex = nextEmptyIndex === -1 ? OTP_LENGTH - 1 : nextEmptyIndex;
+      inputRefs[focusIndex].current?.focus();
+      if (nextEmptyIndex === -1) {
+        inputRefs[OTP_LENGTH - 1].current?.blur();
+      }
+      return;
+    }
+
     const newOtp = [...otp];
-    newOtp[index] = value;
+    newOtp[index] = digits;
     setOtp(newOtp);
 
     // Auto-focus next input
-    if (value && index < 3) {
+    if (digits && index < OTP_LENGTH - 1) {
       inputRefs[index + 1].current?.focus();
     }
   };
@@ -126,7 +149,13 @@ export default function OTPScreen() {
                 onChangeText={(val) => handleOtpChange(val, idx)}
                 onKeyPress={(e) => handleKeyPress(e, idx)}
                 keyboardType="number-pad"
-                maxLength={1}
+                // maxLength is intentionally OTP_LENGTH, not 1: RN truncates
+                // pasted/autofilled text to maxLength before onChangeText ever
+                // sees it, so a 1-char cap would silently eat a pasted code.
+                // handleOtpChange does the real per-box single-digit capping.
+                maxLength={OTP_LENGTH}
+                textContentType="oneTimeCode"
+                autoComplete="one-time-code"
                 selectTextOnFocus
               />
             ))}

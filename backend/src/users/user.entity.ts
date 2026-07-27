@@ -7,7 +7,7 @@ import {
 } from 'typeorm';
 
 export enum UserRole {
-  PATIENT = 'patient',
+  USER = 'user',
   DOCTOR = 'doctor',
   ADMIN = 'admin',
 }
@@ -17,9 +17,9 @@ export class User {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Index({ unique: true })
-  @Column()
-  phone: string;
+  @Index({ unique: true, where: '"phone" IS NOT NULL' })
+  @Column({ nullable: true })
+  phone?: string;
 
   @Column({ type: 'enum', enum: UserRole, default: UserRole.PATIENT })
   role: UserRole;
