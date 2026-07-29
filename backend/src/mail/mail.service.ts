@@ -1,35 +1,26 @@
 import { Injectable, Logger } from '@nestjs/common';
-import * as nodemailer from 'nodemailer';
+import { Resend } from 'resend';
+
+export interface MailAttachment {
+  filename: string;
+  content: Buffer;
+  contentType?: string;
+  contentId?: string;
+}
 
 @Injectable()
 export class MailService {
   private readonly logger = new Logger(MailService.name);
-  private transporter: nodemailer.Transporter | null = null;
-  private useRealSMTP = false;
+  private resend: Resend | null = null;
 
   constructor() {
-    const host = process.env.SMTP_HOST || 'smtp.mailtrap.io';
-    const port = parseInt(process.env.SMTP_PORT || '2525', 10);
-    const user = process.env.SMTP_USER;
-    const pass = process.env.SMTP_PASS;
-
-    if (user && pass) {
-      this.transporter = nodemailer.createTransport({
-        host,
-        port,
-        secure: port === 465, // implicit TLS on 465, STARTTLS on 587/2525
-        auth: {
-          user,
-          pass,
-        },
-      });
-      this.useRealSMTP = true;
-      this.logger.log(
-        `Nodemailer SMTP successfully configured for server ${host}:${port}.`,
-      );
+    const apiKey = process.env.RESEND_API_KEY;
+    if (apiKey) {
+      this.resend = new Resend(apiKey);
+      this.logger.log('Resend API configured for outbound email.');
     } else {
       this.logger.warn(
-        `SMTP credentials not found in env variables. Mock local fallback will be used.`,
+        `RESEND_API_KEY not found in env variables. Mock local fallback will be used.`,
       );
     }
   }
@@ -39,28 +30,31 @@ export class MailService {
     subject: string,
     text: string,
     html?: string,
-    attachments?: nodemailer.SendMailOptions['attachments'],
+    attachments?: MailAttachment[],
   ): Promise<boolean> {
     const from = process.env.SMTP_FROM || '"Gobadi App" <no-reply@gobadi.com>';
 
-    if (this.useRealSMTP && this.transporter) {
-      try {
-        await this.transporter.sendMail({
-          from,
-          to,
-          subject,
-          text,
-          html,
-          attachments,
-        });
-        this.logger.log(
-          `Email successfully dispatched to ${to} (Subject: "${subject}").`,
+    if (this.resend) {
+      const { error } = await this.resend.emails.send({
+        from,
+        to,
+        subject,
+        text,
+        html,
+        attachments,
+      });
+
+      if (error) {
+        this.logger.error(
+          `Failed to dispatch email to ${to} via Resend: ${error.name} - ${error.message}`,
         );
-        return true;
-      } catch (err) {
-        this.logger.error(`Failed to dispatch SMTP email to ${to}`, err.stack);
         return false;
       }
+
+      this.logger.log(
+        `Email successfully dispatched to ${to} (Subject: "${subject}").`,
+      );
+      return true;
     } else {
       this.logger.log(`[MOCK EMAIL DISPATCH]`);
       this.logger.log(`From: ${from}`);
