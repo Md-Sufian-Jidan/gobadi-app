@@ -1,11 +1,17 @@
-
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, ILike } from 'typeorm';
+import { Repository, ILike, EntityManager } from 'typeorm';
 import { Product, ProductStatus } from './product.entity';
 import { Category } from './category.entity';
 import { Brand } from './brand.entity';
-import { InventoryLedger, InventoryMovementType } from './inventory-ledger.entity';
+import {
+  InventoryLedger,
+  InventoryMovementType,
+} from './inventory-ledger.entity';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { RedisService } from '../redis/redis.service';
@@ -27,18 +33,23 @@ export class ProductsService {
     private readonly inventoryLedgerRepository: Repository<InventoryLedger>,
     private readonly redisService: RedisService,
     private readonly meilisearchService: MeilisearchService,
-  ) { }
+  ) {}
 
   // Cache helpers
   private getCatalogCacheKey(categoryId?: number): string {
-    return categoryId ? `cache:products:cat:${categoryId}` : 'cache:products:catalog';
+    return categoryId
+      ? `cache:products:cat:${categoryId}`
+      : 'cache:products:catalog';
   }
 
   private getItemCacheKey(productId: number): string {
     return `cache:products:item:${productId}`;
   }
 
-  private async invalidateCache(productId?: number, categoryId?: number): Promise<void> {
+  private async invalidateCache(
+    productId?: number,
+    categoryId?: number,
+  ): Promise<void> {
     try {
       await this.redisService.del(this.getCatalogCacheKey());
       await this.redisService.del(this.getCatalogCacheKey(categoryId));
@@ -51,8 +62,14 @@ export class ProductsService {
   }
 
   // Categories CRUD
-  async createCategory(data: { name: string; slug: string; description?: string }): Promise<Category> {
-    const existing = await this.categoryRepository.findOne({ where: [{ name: data.name }, { slug: data.slug }] });
+  async createCategory(data: {
+    name: string;
+    slug: string;
+    description?: string;
+  }): Promise<Category> {
+    const existing = await this.categoryRepository.findOne({
+      where: [{ name: data.name }, { slug: data.slug }],
+    });
     if (existing) {
       throw new BadRequestException('Category already exists');
     }
@@ -65,8 +82,14 @@ export class ProductsService {
   }
 
   // Brands CRUD
-  async createBrand(data: { name: string; slug: string; description?: string }): Promise<Brand> {
-    const existing = await this.brandRepository.findOne({ where: [{ name: data.name }, { slug: data.slug }] });
+  async createBrand(data: {
+    name: string;
+    slug: string;
+    description?: string;
+  }): Promise<Brand> {
+    const existing = await this.brandRepository.findOne({
+      where: [{ name: data.name }, { slug: data.slug }],
+    });
     if (existing) {
       throw new BadRequestException('Brand already exists');
     }
@@ -82,7 +105,9 @@ export class ProductsService {
   async create(dto: CreateProductDto): Promise<Product> {
     const existing = await this.productRepository.findOneBy({ sku: dto.sku });
     if (existing) {
-      throw new BadRequestException(`Product with SKU ${dto.sku} already exists`);
+      throw new BadRequestException(
+        `Product with SKU ${dto.sku} already exists`,
+      );
     }
 
     const product = this.productRepository.create(dto);
@@ -129,27 +154,10 @@ export class ProductsService {
     if (categoryId) where.categoryId = categoryId;
     if (brandId) where.brandId = brandId;
 
-    if (!page && !limit) {
-      const list = await this.productRepository.find({
-        where,
-        relations: { category: true, brand: true },
-        order: { name: 'ASC' },
-      });
-
-      // Write cache
-      if (!brandId) {
-        const cacheKey = this.getCatalogCacheKey(categoryId);
-        try {
-          await this.redisService.set(cacheKey, JSON.stringify(list), 1800); // 30 mins
-        } catch (err) {
-          console.warn('Failed to write catalog cache', err);
-        }
-      }
-      return list;
-    }
-
+    // Apply default limit of 50 if pagination is completely missing, ensuring resource safety
     const currentPage = page && page > 0 ? page : 1;
-    const pageSize = limit && limit > 0 ? limit : 20;
+    const pageSize = limit && limit > 0 ? limit : 50;
+
     const [data, total] = await this.productRepository.findAndCount({
       where,
       relations: { category: true, brand: true },
@@ -157,6 +165,19 @@ export class ProductsService {
       skip: (currentPage - 1) * pageSize,
       take: pageSize,
     });
+
+    // Write cache and return plain list only if page and limit were originally omitted
+    if (!page && !limit) {
+      if (!brandId) {
+        const cacheKey = this.getCatalogCacheKey(categoryId);
+        try {
+          await this.redisService.set(cacheKey, JSON.stringify(data), 1800); // 30 mins
+        } catch (err) {
+          console.warn('Failed to write catalog cache', err);
+        }
+      }
+      return data;
+    }
 
     return { data, page: currentPage, limit: pageSize, total };
   }
@@ -233,7 +254,10 @@ export class ProductsService {
     if (!q) return [];
     // Query Meilisearch
     const filter = categoryId ? `categoryId = ${categoryId}` : undefined;
-    const hits = await this.meilisearchService.search<any>(PRODUCTS_INDEX, q, { limit: 15, filter });
+    const hits = await this.meilisearchService.search<any>(PRODUCTS_INDEX, q, {
+      limit: 15,
+      filter,
+    });
     if (hits !== null) {
       const ids = hits.map((hit) => hit.id);
       if (ids.length === 0) return [];
@@ -245,9 +269,21 @@ export class ProductsService {
 
     // Database fallback
     const where: any = [
-      { name: ILike(`%${q}%`), status: ProductStatus.PUBLISHED, visibility: true },
-      { sku: ILike(`%${q}%`), status: ProductStatus.PUBLISHED, visibility: true },
-      { description: ILike(`%${q}%`), status: ProductStatus.PUBLISHED, visibility: true },
+      {
+        name: ILike(`%${q}%`),
+        status: ProductStatus.PUBLISHED,
+        visibility: true,
+      },
+      {
+        sku: ILike(`%${q}%`),
+        status: ProductStatus.PUBLISHED,
+        visibility: true,
+      },
+      {
+        description: ILike(`%${q}%`),
+        status: ProductStatus.PUBLISHED,
+        visibility: true,
+      },
     ];
     if (categoryId) {
       where.forEach((w: any) => (w.categoryId = categoryId));
@@ -261,8 +297,11 @@ export class ProductsService {
   }
 
   // Stock Ledger Management
-  async getStock(productId: number): Promise<number> {
-    const result = await this.inventoryLedgerRepository
+  async getStock(productId: number, manager?: EntityManager): Promise<number> {
+    const repo = manager
+      ? manager.getRepository(InventoryLedger)
+      : this.inventoryLedgerRepository;
+    const result = await repo
       .createQueryBuilder('ledger')
       .select('SUM(ledger.quantity)', 'sum')
       .where('ledger.productId = :productId', { productId })
@@ -270,56 +309,120 @@ export class ProductsService {
     return parseInt(result?.sum || '0', 10);
   }
 
-  async addStock(productId: number, qty: number, batchNumber?: string, expiryDate?: Date): Promise<void> {
+  async addStock(
+    productId: number,
+    qty: number,
+    batchNumber?: string,
+    expiryDate?: Date,
+    manager?: EntityManager,
+  ): Promise<void> {
     if (qty <= 0) {
       throw new BadRequestException('Quantity must be greater than zero');
     }
-    const entry = this.inventoryLedgerRepository.create({
+    const repo = manager
+      ? manager.getRepository(InventoryLedger)
+      : this.inventoryLedgerRepository;
+    const entry = repo.create({
       productId,
       movementType: InventoryMovementType.ADDITION,
       quantity: qty,
       batchNumber,
       expiryDate,
     });
-    await this.inventoryLedgerRepository.save(entry);
+    await repo.save(entry);
   }
 
-  async reserveStock(productId: number, qty: number, referenceId: string): Promise<void> {
+  async reserveStock(
+    productId: number,
+    qty: number,
+    referenceId: string,
+    manager?: EntityManager,
+  ): Promise<void> {
     if (qty <= 0) {
       throw new BadRequestException('Quantity must be greater than zero');
     }
-    const stock = await this.getStock(productId);
-    if (stock < qty) {
-      throw new BadRequestException(`Insufficient stock for product ${productId}. Available: ${stock}`);
-    }
 
-    const entry = this.inventoryLedgerRepository.create({
-      productId,
-      movementType: InventoryMovementType.RESERVATION,
-      quantity: -qty,
-      referenceId,
-    });
-    await this.inventoryLedgerRepository.save(entry);
+    const executeReservation = async (em: EntityManager) => {
+      // 1. Lock the Product entity row to serialize check and insert
+      const product = await em.getRepository(Product).findOne({
+        where: { id: productId },
+        lock: { mode: 'pessimistic_write' },
+      });
+      if (!product) {
+        throw new NotFoundException(`Product ${productId} not found`);
+      }
+
+      // 2. Query current stock within transaction
+      const stock = await this.getStock(productId, em);
+      if (stock < qty) {
+        throw new BadRequestException(
+          `Insufficient stock for product ${productId}. Available: ${stock}`,
+        );
+      }
+
+      // 3. Save reservation ledger entry within transaction
+      const repo = em.getRepository(InventoryLedger);
+      const entry = repo.create({
+        productId,
+        movementType: InventoryMovementType.RESERVATION,
+        quantity: -qty,
+        referenceId,
+      });
+      await repo.save(entry);
+    };
+
+    if (manager) {
+      await executeReservation(manager);
+    } else {
+      // If no manager is passed, run in a dedicated transaction on the default datasource manager
+      await this.productRepository.manager.transaction(async (em) => {
+        await executeReservation(em);
+      });
+    }
   }
 
-  async releaseStock(productId: number, qty: number, referenceId: string): Promise<void> {
-    const entry = this.inventoryLedgerRepository.create({
+  async releaseStock(
+    productId: number,
+    qty: number,
+    referenceId: string,
+    manager?: EntityManager,
+  ): Promise<void> {
+    const repo = manager
+      ? manager.getRepository(InventoryLedger)
+      : this.inventoryLedgerRepository;
+    const entry = repo.create({
       productId,
       movementType: InventoryMovementType.RESERVATION,
       quantity: qty,
       referenceId,
     });
-    await this.inventoryLedgerRepository.save(entry);
+    await repo.save(entry);
   }
 
-  async commitStock(productId: number, qty: number, referenceId: string): Promise<void> {
-    await this.releaseStock(productId, qty, referenceId);
-    const entry = this.inventoryLedgerRepository.create({
-      productId,
-      movementType: InventoryMovementType.SALE,
-      quantity: -qty,
-      referenceId,
-    });
-    await this.inventoryLedgerRepository.save(entry);
+  async commitStock(
+    productId: number,
+    qty: number,
+    referenceId: string,
+    manager?: EntityManager,
+  ): Promise<void> {
+    const executeCommit = async (em: EntityManager) => {
+      await this.releaseStock(productId, qty, referenceId, em);
+      const repo = em.getRepository(InventoryLedger);
+      const entry = repo.create({
+        productId,
+        movementType: InventoryMovementType.SALE,
+        quantity: -qty,
+        referenceId,
+      });
+      await repo.save(entry);
+    };
+
+    if (manager) {
+      await executeCommit(manager);
+    } else {
+      await this.productRepository.manager.transaction(async (em) => {
+        await executeCommit(em);
+      });
+    }
   }
 }
