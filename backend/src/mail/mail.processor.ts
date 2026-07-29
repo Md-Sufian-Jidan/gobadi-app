@@ -1,6 +1,7 @@
 import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Logger } from '@nestjs/common';
 import { Job } from 'bullmq';
+import * as fs from 'fs';
 import * as path from 'path';
 import { MailService } from './mail.service';
 import {
@@ -13,8 +14,9 @@ const LOGO_PATH = path.join(__dirname, 'assets/logo.png');
 
 const LOGO_ATTACHMENT = {
   filename: 'gobadi-logo.png',
-  path: LOGO_PATH,
-  cid: LOGO_CID,
+  content: fs.readFileSync(LOGO_PATH),
+  contentType: 'image/png',
+  contentId: LOGO_CID,
 };
 
 @Processor('mail-queue')
