@@ -18,6 +18,8 @@ import { useGetTasksQuery, useToggleTaskMutation } from '@/store/tasksApi';
 import { useGetWeatherQuery } from '@/store/weatherApi';
 import { useGetAlertsQuery, useActOnAlertMutation } from '@/store/alertsApi';
 import { useGetMyReferralQuery, useClaimReferralMutation } from '@/store/referralsApi';
+import { EmptyState } from '@/components/ui/empty-state';
+import { RowSkeleton, AlertCardSkeleton, SkeletonBox } from '@/components/ui/skeleton';
 
 const { width } = Dimensions.get('window');
 
@@ -45,10 +47,10 @@ function formatTaskTime(scheduledTime: string): string {
 export default function HomeDashboard() {
   const router = useRouter();
 
-  const { data: allAnimals } = useGetAnimalsQuery();
-  const { data: tasks = [] } = useGetTasksQuery(todayDateKey());
-  const { data: weather } = useGetWeatherQuery();
-  const { data: alerts = [] } = useGetAlertsQuery();
+  const { data: allAnimals, isLoading: isAnimalsLoading } = useGetAnimalsQuery();
+  const { data: tasks = [], isLoading: isTasksLoading } = useGetTasksQuery(todayDateKey());
+  const { data: weather, isLoading: isWeatherLoading } = useGetWeatherQuery();
+  const { data: alerts = [], isLoading: isAlertsLoading } = useGetAlertsQuery();
   const { data: referral } = useGetMyReferralQuery();
   const [claimReferral, { isLoading: isClaiming }] = useClaimReferralMutation();
 
@@ -73,7 +75,14 @@ export default function HomeDashboard() {
 
   async function handleClaimReferral() {
     const code = claimCode.trim();
-    if (!code) return;
+    if (!code) {
+      Alert.alert('Enter a code', 'Please enter a referral code to claim.');
+      return;
+    }
+    if (!/^[A-Z0-9]{4,12}$/.test(code)) {
+      Alert.alert('Invalid code', 'Referral codes are 4-12 letters and numbers.');
+      return;
+    }
     try {
       await claimReferral(code).unwrap();
       setClaimCode('');
@@ -130,53 +139,70 @@ export default function HomeDashboard() {
             />
           </View>
 
-          <View style={styles.tempContainer}>
-            <Text style={styles.tempText}>
-              {weather ? Math.round(weather.temperature) : '--'} <Text style={styles.tempUnit}>°C</Text>
-            </Text>
-            <View style={styles.hiLowContainer}>
-              <Text style={styles.hiLowText}>H: <Text style={styles.hiText}>{weather ? Math.round(weather.highTemp) : '--'}°C</Text></Text>
-              <Text style={styles.hiLowText}>L: <Text style={styles.lowText}>{weather ? Math.round(weather.lowTemp) : '--'}°C</Text></Text>
-            </View>
-          </View>
-
-          <View style={styles.weatherDivider} />
-
-          {/* Weather Metrics */}
-          <View style={styles.metricsGrid}>
-            <View style={styles.metricItem}>
-              <Text style={styles.metricLabel}>Humidity</Text>
-              <Text style={styles.metricValue}>{weather ? `${weather.humidityPercentage}%` : '--'}</Text>
-            </View>
-            <View style={styles.metricItem}>
-              <Text style={styles.metricLabel}>Precipitation</Text>
-              <Text style={styles.metricValue}>{weather ? `${weather.precipitationMl} ml` : '--'}</Text>
-            </View>
-            <View style={styles.metricItem}>
-              <Text style={styles.metricLabel}>Pressure</Text>
-              <Text style={styles.metricValue}>{weather ? `${weather.pressureHpa} hpa` : '--'}</Text>
-            </View>
-            <View style={styles.metricItem}>
-              <Text style={styles.metricLabel}>Wind</Text>
-              <Text style={styles.metricValue}>{weather ? `${weather.windMps} m/s` : '--'}</Text>
-            </View>
-          </View>
-
-          {/* Sunrise / Sunset Arc */}
-          <View style={styles.arcContainer}>
-            <View style={styles.arcLine} />
-            <Text style={styles.sunIcon}>☀️</Text>
-            <View style={styles.arcLabels}>
-              <View>
-                <Text style={styles.arcTime}>{weather ? formatClockTime(weather.sunriseTime) : '--'}</Text>
-                <Text style={styles.arcType}>Sunrise</Text>
-              </View>
-              <View style={{ alignItems: 'flex-end' }}>
-                <Text style={styles.arcTime}>{weather ? formatClockTime(weather.sunsetTime) : '--'}</Text>
-                <Text style={[styles.arcType, { color: '#4A6FA5' }]}>Sunset</Text>
+          {isWeatherLoading ? (
+            <View style={{ paddingVertical: 8 }}>
+              <SkeletonBox width={120} height={44} />
+              <SkeletonBox width="100%" height={1} style={{ marginTop: 16, marginBottom: 12 }} />
+              <View style={styles.metricsGrid}>
+                {[0, 1, 2, 3].map((i) => (
+                  <View key={i} style={styles.metricItem}>
+                    <SkeletonBox width={50} height={11} />
+                    <SkeletonBox width={36} height={14} style={{ marginTop: 6 }} />
+                  </View>
+                ))}
               </View>
             </View>
-          </View>
+          ) : (
+            <>
+              <View style={styles.tempContainer}>
+                <Text style={styles.tempText}>
+                  {weather ? Math.round(weather.temperature) : '--'} <Text style={styles.tempUnit}>°C</Text>
+                </Text>
+                <View style={styles.hiLowContainer}>
+                  <Text style={styles.hiLowText}>H: <Text style={styles.hiText}>{weather ? Math.round(weather.highTemp) : '--'}°C</Text></Text>
+                  <Text style={styles.hiLowText}>L: <Text style={styles.lowText}>{weather ? Math.round(weather.lowTemp) : '--'}°C</Text></Text>
+                </View>
+              </View>
+
+              <View style={styles.weatherDivider} />
+
+              {/* Weather Metrics */}
+              <View style={styles.metricsGrid}>
+                <View style={styles.metricItem}>
+                  <Text style={styles.metricLabel}>Humidity</Text>
+                  <Text style={styles.metricValue}>{weather ? `${weather.humidityPercentage}%` : '--'}</Text>
+                </View>
+                <View style={styles.metricItem}>
+                  <Text style={styles.metricLabel}>Precipitation</Text>
+                  <Text style={styles.metricValue}>{weather ? `${weather.precipitationMl} ml` : '--'}</Text>
+                </View>
+                <View style={styles.metricItem}>
+                  <Text style={styles.metricLabel}>Pressure</Text>
+                  <Text style={styles.metricValue}>{weather ? `${weather.pressureHpa} hpa` : '--'}</Text>
+                </View>
+                <View style={styles.metricItem}>
+                  <Text style={styles.metricLabel}>Wind</Text>
+                  <Text style={styles.metricValue}>{weather ? `${weather.windMps} m/s` : '--'}</Text>
+                </View>
+              </View>
+
+              {/* Sunrise / Sunset Arc */}
+              <View style={styles.arcContainer}>
+                <View style={styles.arcLine} />
+                <Text style={styles.sunIcon}>☀️</Text>
+                <View style={styles.arcLabels}>
+                  <View>
+                    <Text style={styles.arcTime}>{weather ? formatClockTime(weather.sunriseTime) : '--'}</Text>
+                    <Text style={styles.arcType}>Sunrise</Text>
+                  </View>
+                  <View style={{ alignItems: 'flex-end' }}>
+                    <Text style={styles.arcTime}>{weather ? formatClockTime(weather.sunsetTime) : '--'}</Text>
+                    <Text style={[styles.arcType, { color: '#4A6FA5' }]}>Sunset</Text>
+                  </View>
+                </View>
+              </View>
+            </>
+          )}
         </View>
 
         {/* My Animals Section */}
@@ -188,59 +214,82 @@ export default function HomeDashboard() {
         </View>
 
         <View style={styles.listCard}>
-          {animals.map((item, idx) => (
-            <TouchableOpacity
-              key={idx}
-              style={[styles.listItem, idx === animals.length - 1 && { borderBottomWidth: 0 }]}
-              activeOpacity={0.7}
-              onPress={() => router.push({
-                pathname: '/my-animal-detail',
-                params: { id: item.id }
-              })}
-            >
-              <View style={styles.listItemLeft}>
-                <View style={styles.checkeredIcon}>
-                  <View style={styles.checkeredGrid} />
+          {isAnimalsLoading ? (
+            <>
+              <RowSkeleton />
+              <RowSkeleton />
+            </>
+          ) : animals.length === 0 ? (
+            <EmptyState
+              compact
+              title="No animals added yet"
+              actionLabel="Add your first animal"
+              onAction={() => router.push('/(tabs)/animals')}
+            />
+          ) : (
+            animals.map((item, idx) => (
+              <TouchableOpacity
+                key={idx}
+                style={[styles.listItem, idx === animals.length - 1 && { borderBottomWidth: 0 }]}
+                activeOpacity={0.7}
+                onPress={() => router.push({
+                  pathname: '/my-animal-detail',
+                  params: { id: item.id }
+                })}
+              >
+                <View style={styles.listItemLeft}>
+                  <View style={styles.checkeredIcon}>
+                    <View style={styles.checkeredGrid} />
+                  </View>
+                  <View>
+                    <Text style={styles.animalName}>{item.name}</Text>
+                    <Text style={styles.animalBreed}>{item.breed}</Text>
+                  </View>
                 </View>
-                <View>
-                  <Text style={styles.animalName}>{item.name}</Text>
-                  <Text style={styles.animalBreed}>{item.breed}</Text>
-                </View>
-              </View>
-              <Text style={styles.arrowIcon}>→</Text>
-            </TouchableOpacity>
-          ))}
+                <Text style={styles.arrowIcon}>→</Text>
+              </TouchableOpacity>
+            ))
+          )}
         </View>
 
         {/* Today's Task Section */}
         <Text style={[styles.sectionTitle, { marginTop: 24, marginBottom: 16 }]}>Today's Task</Text>
 
         <View style={styles.listCard}>
-          {tasks.map((task, idx) => (
-            <TouchableOpacity
-              key={idx}
-              activeOpacity={0.7}
-              onPress={() => toggleTask(task.id)}
-              style={[styles.taskItem, idx === tasks.length - 1 && { borderBottomWidth: 0 }]}
-            >
-              <View style={styles.taskItemLeft}>
-                <View style={styles.checkeredIcon}>
-                  <View style={styles.checkeredGrid} />
+          {isTasksLoading ? (
+            <>
+              <RowSkeleton />
+              <RowSkeleton />
+            </>
+          ) : tasks.length === 0 ? (
+            <EmptyState compact title="No tasks scheduled for today" />
+          ) : (
+            tasks.map((task, idx) => (
+              <TouchableOpacity
+                key={idx}
+                activeOpacity={0.7}
+                onPress={() => toggleTask(task.id)}
+                style={[styles.taskItem, idx === tasks.length - 1 && { borderBottomWidth: 0 }]}
+              >
+                <View style={styles.taskItemLeft}>
+                  <View style={styles.checkeredIcon}>
+                    <View style={styles.checkeredGrid} />
+                  </View>
+                  <View>
+                    <Text style={styles.taskTitle}>{task.title}</Text>
+                    {task.detail ? <Text style={styles.taskDetail}>{task.detail}</Text> : null}
+                  </View>
                 </View>
-                <View>
-                  <Text style={styles.taskTitle}>{task.title}</Text>
-                  {task.detail ? <Text style={styles.taskDetail}>{task.detail}</Text> : null}
-                </View>
-              </View>
 
-              <View style={styles.taskItemRight}>
-                <Text style={styles.taskTime}>{formatTaskTime(task.scheduledTime)}</Text>
-                <View style={[styles.checkbox, task.isDone ? styles.checkboxChecked : styles.checkboxUnchecked]}>
-                  {task.isDone ? <Text style={styles.checkIcon}>✓</Text> : null}
+                <View style={styles.taskItemRight}>
+                  <Text style={styles.taskTime}>{formatTaskTime(task.scheduledTime)}</Text>
+                  <View style={[styles.checkbox, task.isDone ? styles.checkboxChecked : styles.checkboxUnchecked]}>
+                    {task.isDone ? <Text style={styles.checkIcon}>✓</Text> : null}
+                  </View>
                 </View>
-              </View>
-            </TouchableOpacity>
-          ))}
+              </TouchableOpacity>
+            ))
+          )}
         </View>
 
         {/* Alerts Section */}
@@ -256,7 +305,12 @@ export default function HomeDashboard() {
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.alertsScroll}
         >
-          {alerts.length === 0 ? (
+          {isAlertsLoading ? (
+            <>
+              <AlertCardSkeleton />
+              <AlertCardSkeleton />
+            </>
+          ) : alerts.length === 0 ? (
             <Text style={styles.noAlertsText}>No active alerts right now.</Text>
           ) : (
             alerts.map((alert) => (

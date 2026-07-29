@@ -45,7 +45,7 @@ export const tasksApi = createApi({
     toggleTask: builder.mutation<Task, string>({
       query: (id) => ({ url: `/tasks/${id}/toggle`, method: 'PATCH' }),
       async onQueryStarted(id, { dispatch, queryFulfilled, getState }) {
-        const patches: Array<{ undo: () => void }> = [];
+        const patches: { undo: () => void }[] = [];
         const state = getState() as any;
         for (const key of tasksApi.util.selectCachedArgsForQuery(state, 'getTasks')) {
           const patch = dispatch(

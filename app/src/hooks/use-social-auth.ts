@@ -24,9 +24,9 @@ export function useSocialAuth(onSuccess: () => void) {
   const [facebookAuth, { isLoading: isFacebookLoading }] = useFacebookAuthMutation();
 
   const [googleRequest, , promptGoogleAsync] = Google.useIdTokenAuthRequest({
-    iosClientId: GOOGLE_IOS_CLIENT_ID || undefined,
-    androidClientId: GOOGLE_ANDROID_CLIENT_ID || undefined,
-    clientId: GOOGLE_WEB_CLIENT_ID || undefined,
+    iosClientId: GOOGLE_IOS_CLIENT_ID,
+    androidClientId: GOOGLE_ANDROID_CLIENT_ID,
+    clientId: GOOGLE_WEB_CLIENT_ID,
   });
 
   const [facebookRequest, , promptFacebookAsync] = AuthSession.useAuthRequest(

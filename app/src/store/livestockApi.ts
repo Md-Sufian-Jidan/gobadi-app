@@ -80,6 +80,7 @@ export const livestockApi = createApi({
       }),
       invalidatesTags: [
         { type: 'Livestock', id: 'LIST' },
+        { type: 'Livestock', id: 'FEATURED' },
         { type: 'MyLivestock', id: 'LIST' },
       ],
     }),
@@ -92,6 +93,7 @@ export const livestockApi = createApi({
       invalidatesTags: (_result, _error, { id }) => [
         { type: 'Livestock', id },
         { type: 'Livestock', id: 'LIST' },
+        { type: 'Livestock', id: 'FEATURED' },
         { type: 'MyLivestock', id: 'LIST' },
       ],
     }),
@@ -104,6 +106,7 @@ export const livestockApi = createApi({
       invalidatesTags: (_result, _error, { id }) => [
         { type: 'Livestock', id },
         { type: 'Livestock', id: 'LIST' },
+        { type: 'Livestock', id: 'FEATURED' },
         { type: 'MyLivestock', id: 'LIST' },
       ],
     }),
@@ -116,6 +119,7 @@ export const livestockApi = createApi({
       invalidatesTags: (_result, _error, { id }) => [
         { type: 'Livestock', id },
         { type: 'Livestock', id: 'LIST' },
+        { type: 'Livestock', id: 'FEATURED' },
         { type: 'MyLivestock', id: 'LIST' },
       ],
     }),

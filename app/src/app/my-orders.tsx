@@ -1,15 +1,16 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import {
   StyleSheet,
   View,
   Text,
   TouchableOpacity,
   ScrollView,
-  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useGetMyOrdersQuery } from '@/store/ordersApi';
+import { EmptyState } from '@/components/ui/empty-state';
+import { RowSkeleton } from '@/components/ui/skeleton';
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString(undefined, {
@@ -39,9 +40,17 @@ export default function MyOrdersScreen() {
 
       <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
         {ordersLoading ? (
-          <ActivityIndicator size="small" color="#BD632F" style={{ marginTop: 30 }} />
+          <>
+            <RowSkeleton />
+            <RowSkeleton />
+          </>
         ) : !orders || orders.length === 0 ? (
-          <Text style={styles.emptyText}>You haven't placed any orders yet.</Text>
+          <EmptyState
+            title="No orders yet"
+            description="You haven't placed any orders yet."
+            actionLabel="Browse Marketplace"
+            onAction={() => router.push('/market')}
+          />
         ) : (
           orders.map((order) => (
             <View key={order.id} style={styles.orderCard}>
@@ -124,12 +133,6 @@ const styles = StyleSheet.create({
   scrollContainer: {
     paddingHorizontal: 24,
     paddingBottom: 40,
-  },
-  emptyText: {
-    fontSize: 13,
-    color: '#9C9690',
-    textAlign: 'center',
-    paddingVertical: 40,
   },
   orderCard: {
     backgroundColor: '#FFFFFF',

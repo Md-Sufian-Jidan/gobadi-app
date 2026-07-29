@@ -19,6 +19,8 @@ import {
   useToggleTaskMutation,
   useDeleteTaskMutation,
 } from '@/store/tasksApi';
+import { EmptyState } from '@/components/ui/empty-state';
+import { RowSkeleton } from '@/components/ui/skeleton';
 
 interface AnimalStats {
   cow: number;
@@ -34,7 +36,7 @@ function formatTaskTime(scheduledTime: string): string {
   return new Date(scheduledTime).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
 }
 
-function countByBreed(animals: Array<{ breed: string }>): AnimalStats {
+function countByBreed(animals: { breed: string }[]): AnimalStats {
   const stats: AnimalStats = { cow: 0, goat: 0, buffalo: 0 };
   for (const a of animals) {
     const breed = a.breed.toLowerCase();
@@ -49,7 +51,7 @@ export default function MyTaskScreen() {
   const router = useRouter();
   const user = useSelector((state: RootState) => state.auth.user);
 
-  const { data: tasks = [] } = useGetTasksQuery(todayDateKey());
+  const { data: tasks = [], isLoading: isTasksLoading } = useGetTasksQuery(todayDateKey());
   const { data: animals = [] } = useGetAnimalsQuery();
   const stats = countByBreed(animals);
 
@@ -146,10 +148,15 @@ export default function MyTaskScreen() {
         </View>
 
         {/* Task List */}
-        <Text style={styles.sectionTitle}>Today's Tasks</Text>
+        <Text style={styles.sectionTitle}>Today&apos;s Tasks</Text>
         <View style={styles.taskListCard}>
-          {tasks.length === 0 ? (
-            <Text style={styles.emptyText}>No tasks for today yet.</Text>
+          {isTasksLoading ? (
+            <>
+              <RowSkeleton />
+              <RowSkeleton />
+            </>
+          ) : tasks.length === 0 ? (
+            <EmptyState compact title="No tasks for today yet" />
           ) : (
             tasks.map((task, idx) => (
               <View
@@ -244,12 +251,6 @@ const styles = StyleSheet.create({
     borderColor: '#E6E1DC',
     paddingHorizontal: 12,
     marginBottom: 20,
-  },
-  emptyText: {
-    fontSize: 13,
-    color: '#9C9690',
-    paddingVertical: 20,
-    textAlign: 'center',
   },
   taskRow: {
     flexDirection: 'row',

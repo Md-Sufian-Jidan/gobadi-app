@@ -5,7 +5,6 @@ import {
   Text,
   TouchableOpacity,
   ScrollView,
-  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -15,6 +14,8 @@ import {
   useMarkNotificationReadMutation,
   useMarkAllNotificationsReadMutation,
 } from '@/store/notificationsApi';
+import { EmptyState } from '@/components/ui/empty-state';
+import { RowSkeleton } from '@/components/ui/skeleton';
 
 const TYPE_ICONS: Record<string, string> = {
   order: '📦',
@@ -54,10 +55,16 @@ export default function NotificationsScreen() {
       </View>
 
       {isLoading ? (
-        <ActivityIndicator style={{ marginTop: 40 }} color="#BD632F" />
+        <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
+          <View style={styles.listContainer}>
+            <RowSkeleton />
+            <RowSkeleton />
+            <RowSkeleton />
+          </View>
+        </ScrollView>
       ) : notifications.length === 0 ? (
         <View style={styles.emptyState}>
-          <Text style={styles.emptyText}>You&apos;re all caught up.</Text>
+          <EmptyState title="You're all caught up" description="No notifications right now." />
         </View>
       ) : (
         <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
@@ -108,7 +115,6 @@ const styles = StyleSheet.create({
   markAllBtn: { paddingHorizontal: 4, paddingVertical: 8 },
   markAllText: { fontSize: 12, fontWeight: '700', color: '#BD632F' },
   emptyState: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  emptyText: { fontSize: 15, color: '#7C7672' },
   scrollContainer: { paddingHorizontal: 24, paddingBottom: 40 },
   listContainer: { gap: 12 },
   notificationCard: {

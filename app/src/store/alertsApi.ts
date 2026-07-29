@@ -24,9 +24,14 @@ export const alertsApi = createApi({
       return headers;
     },
   }),
+  tagTypes: ['Alert'],
   endpoints: (builder) => ({
     getAlerts: builder.query<AlertItem[], void>({
       query: () => '/alerts',
+      providesTags: (result) =>
+        result
+          ? [...result.map((a) => ({ type: 'Alert' as const, id: a.id })), { type: 'Alert', id: 'LIST' }]
+          : [{ type: 'Alert', id: 'LIST' }],
     }),
     actOnAlert: builder.mutation<{ success: boolean }, { id: number; actionChoice: 'MANAGE' | 'SCHEDULE' }>({
       query: ({ id, actionChoice }) => ({
@@ -34,6 +39,7 @@ export const alertsApi = createApi({
         method: 'POST',
         body: { actionChoice },
       }),
+      invalidatesTags: (_result, _error, { id }) => [{ type: 'Alert', id }, { type: 'Alert', id: 'LIST' }],
     }),
   }),
 });
