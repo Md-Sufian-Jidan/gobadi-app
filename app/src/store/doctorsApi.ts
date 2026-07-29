@@ -24,7 +24,7 @@ export const doctorsApi = createApi({
       return headers;
     },
   }),
-  tagTypes: ['Doctor'],
+  tagTypes: ['Doctor', 'Slot'],
   endpoints: (builder) => ({
     getDoctors: builder.query<DoctorSummary[], void>({
       query: () => '/doctors',
@@ -39,9 +39,11 @@ export const doctorsApi = createApi({
     }),
     getSlots: builder.query<string[], { doctorId: string; date: string }>({
       query: ({ doctorId, date }) => `/doctors/${doctorId}/slots?date=${date}`,
+      providesTags: (_result, _error, { doctorId, date }) => [{ type: 'Slot', id: `${doctorId}-${date}` }],
     }),
     bookSlot: builder.mutation<void, { doctorId: string; date: string; time: string }>({
       query: (body) => ({ url: '/doctors/book', method: 'POST', body }),
+      invalidatesTags: (_result, _error, { doctorId, date }) => [{ type: 'Slot', id: `${doctorId}-${date}` }],
     }),
   }),
 });

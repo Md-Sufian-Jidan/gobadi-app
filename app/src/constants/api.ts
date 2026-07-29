@@ -1,10 +1,6 @@
-import { Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 
-export const API_URL = Platform.select({
-  android: 'http://10.0.2.2:3000',
-  default: 'http://localhost:3000',
-});
+export const API_URL = 'https://gobaadi.onrender.com';
 
 const AUTH_TOKEN_KEY = 'gobadi_jwt';
 const REFRESH_TOKEN_KEY = 'gobadi_refresh_jwt';

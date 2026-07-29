@@ -12,6 +12,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useGetAnimalsQuery } from '@/store/animalsApi';
+import { EmptyState } from '@/components/ui/empty-state';
+import { MediaCardSkeleton } from '@/components/ui/skeleton';
 
 const { width } = Dimensions.get('window');
 
@@ -28,7 +30,7 @@ function animalStatus(id: number): 'Healthy' | 'Under Treatment' {
 export default function AnimalsListScreen() {
   const router = useRouter();
   const [activeFilter, setActiveFilter] = useState('All');
-  const { data: animals = [] } = useGetAnimalsQuery();
+  const { data: animals = [], isLoading } = useGetAnimalsQuery();
 
   return (
     <SafeAreaView style={styles.container}>
@@ -85,7 +87,21 @@ export default function AnimalsListScreen() {
 
       {/* Animals Cards List */}
       <ScrollView contentContainerStyle={styles.listContainer} showsVerticalScrollIndicator={false}>
-        {animals.map((item) => (
+        {isLoading ? (
+          <>
+            <MediaCardSkeleton imageSize={100} />
+            <MediaCardSkeleton imageSize={100} />
+            <MediaCardSkeleton imageSize={100} />
+          </>
+        ) : animals.length === 0 ? (
+          <EmptyState
+            title="No animals yet"
+            description="Add your livestock to start tracking health, tasks, and records."
+            actionLabel="Add Animal"
+            onAction={() => router.push('/add-animal')}
+          />
+        ) : (
+        animals.map((item) => (
           <TouchableOpacity
             key={item.id}
             style={styles.card}
@@ -138,7 +154,7 @@ export default function AnimalsListScreen() {
               </View>
             </View>
           </TouchableOpacity>
-        ))}
+        )))}
       </ScrollView>
 
       {/* Floating Add Animal Button */}
