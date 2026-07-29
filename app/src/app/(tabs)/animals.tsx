@@ -6,9 +6,9 @@ import {
   TextInput,
   ScrollView,
   TouchableOpacity,
-  Image,
   Dimensions,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useGetAnimalsQuery } from '@/store/animalsApi';
@@ -111,7 +111,7 @@ export default function AnimalsListScreen() {
               params: { id: item.id }
             })}
           >
-            <Image source={item.image ? { uri: item.image } : animalImage(item.breed)} style={styles.cardImage} resizeMode="cover" />
+            <Image source={item.image ? { uri: item.image } : animalImage(item.breed)} style={styles.cardImage} contentFit="cover" />
 
             <View style={styles.cardContent}>
               <View style={styles.cardHeader}>

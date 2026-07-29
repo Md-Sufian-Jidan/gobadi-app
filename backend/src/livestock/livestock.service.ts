@@ -1,6 +1,10 @@
-import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, ILike } from 'typeorm';
+import { Repository, ILike, EntityManager } from 'typeorm';
 import { Livestock, LivestockStatus } from './livestock.entity';
 import { CreateLivestockDto } from './dto/create-livestock.dto';
 import { UpdateLivestockDto } from './dto/update-livestock.dto';
@@ -68,16 +72,9 @@ export class LivestockService {
     if (species) where.species = ILike(species);
     if (breed) where.breed = ILike(breed);
 
-    if (!page && !limit) {
-      return this.livestockRepository.find({
-        where,
-        relations: { seller: true },
-        order: { isFeatured: 'DESC', createdAt: 'DESC' },
-      });
-    }
-
+    // Apply default limit of 50 if pagination is completely missing, ensuring resource safety
     const currentPage = page && page > 0 ? page : 1;
-    const pageSize = limit && limit > 0 ? limit : 20;
+    const pageSize = limit && limit > 0 ? limit : 50;
 
     const [data, total] = await this.livestockRepository.findAndCount({
       where,
@@ -86,6 +83,10 @@ export class LivestockService {
       skip: (currentPage - 1) * pageSize,
       take: pageSize,
     });
+
+    if (!page && !limit) {
+      return data;
+    }
 
     return { data, page: currentPage, limit: pageSize, total };
   }
@@ -102,7 +103,12 @@ export class LivestockService {
     }
 
     const featured = await this.livestockRepository.find({
-      where: { isFeatured: true, status: LivestockStatus.PUBLISHED, isSold: false, isReserved: false },
+      where: {
+        isFeatured: true,
+        status: LivestockStatus.PUBLISHED,
+        isSold: false,
+        isReserved: false,
+      },
       relations: { seller: true },
       take: 10,
       order: { createdAt: 'DESC' },
@@ -117,7 +123,7 @@ export class LivestockService {
     return featured;
   }
 
-  async findOne(id: number): Promise<Livestock> {
+  async findOne(id: number, manager?: EntityManager): Promise<Livestock> {
     const cacheKey = this.getItemCacheKey(id);
     try {
       const cached = await this.redisService.get(cacheKey);
@@ -128,7 +134,10 @@ export class LivestockService {
       console.warn('Failed to read livestock details cache', err);
     }
 
-    const listing = await this.livestockRepository.findOne({
+    const repo = manager
+      ? manager.getRepository(Livestock)
+      : this.livestockRepository;
+    const listing = await repo.findOne({
       where: { id },
       relations: { seller: true },
     });
@@ -146,7 +155,11 @@ export class LivestockService {
     return listing;
   }
 
-  async update(id: number, sellerId: number, dto: UpdateLivestockDto): Promise<Livestock> {
+  async update(
+    id: number,
+    sellerId: number,
+    dto: UpdateLivestockDto,
+  ): Promise<Livestock> {
     const listing = await this.findOne(id);
     if (listing.sellerId !== sellerId) {
       throw new ForbiddenException('You do not own this listing');
@@ -192,10 +205,17 @@ export class LivestockService {
     return updated;
   }
 
-  async reserveListing(id: number, isReserved: boolean): Promise<Livestock> {
-    const listing = await this.findOne(id);
+  async reserveListing(
+    id: number,
+    isReserved: boolean,
+    manager?: EntityManager,
+  ): Promise<Livestock> {
+    const listing = await this.findOne(id, manager);
     listing.isReserved = isReserved;
-    const updated = await this.livestockRepository.save(listing);
+    const repo = manager
+      ? manager.getRepository(Livestock)
+      : this.livestockRepository;
+    const updated = await repo.save(listing);
 
     await this.invalidateCache(id);
     await this.syncToSearch(updated);
@@ -203,13 +223,20 @@ export class LivestockService {
     return updated;
   }
 
-  async markSold(id: number, isSold: boolean): Promise<Livestock> {
-    const listing = await this.findOne(id);
+  async markSold(
+    id: number,
+    isSold: boolean,
+    manager?: EntityManager,
+  ): Promise<Livestock> {
+    const listing = await this.findOne(id, manager);
     listing.isSold = isSold;
     if (isSold) {
       listing.isReserved = false;
     }
-    const updated = await this.livestockRepository.save(listing);
+    const repo = manager
+      ? manager.getRepository(Livestock)
+      : this.livestockRepository;
+    const updated = await repo.save(listing);
 
     await this.invalidateCache(id);
     await this.syncToSearch(updated);
@@ -228,7 +255,10 @@ export class LivestockService {
     if (!q) return [];
 
     const filter = species ? `species = "${species}"` : undefined;
-    const hits = await this.meilisearchService.search<any>(LIVESTOCK_INDEX, q, { limit: 15, filter });
+    const hits = await this.meilisearchService.search<any>(LIVESTOCK_INDEX, q, {
+      limit: 15,
+      filter,
+    });
     if (hits !== null) {
       const ids = hits.map((h) => h.id);
       if (ids.length === 0) return [];
@@ -240,9 +270,24 @@ export class LivestockService {
 
     // fallback
     const where: any = [
-      { breed: ILike(`%${q}%`), status: LivestockStatus.PUBLISHED, isSold: false, isReserved: false },
-      { location: ILike(`%${q}%`), status: LivestockStatus.PUBLISHED, isSold: false, isReserved: false },
-      { farmName: ILike(`%${q}%`), status: LivestockStatus.PUBLISHED, isSold: false, isReserved: false },
+      {
+        breed: ILike(`%${q}%`),
+        status: LivestockStatus.PUBLISHED,
+        isSold: false,
+        isReserved: false,
+      },
+      {
+        location: ILike(`%${q}%`),
+        status: LivestockStatus.PUBLISHED,
+        isSold: false,
+        isReserved: false,
+      },
+      {
+        farmName: ILike(`%${q}%`),
+        status: LivestockStatus.PUBLISHED,
+        isSold: false,
+        isReserved: false,
+      },
     ];
     if (species) {
       where.forEach((w: any) => (w.species = species));
