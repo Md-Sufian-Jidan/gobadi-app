@@ -38,6 +38,7 @@ export class MailService {
     subject: string,
     text: string,
     html?: string,
+    attachments?: nodemailer.SendMailOptions['attachments'],
   ): Promise<boolean> {
     const from = process.env.SMTP_FROM || '"Gobadi App" <no-reply@gobadi.com>';
 
@@ -49,6 +50,7 @@ export class MailService {
           subject,
           text,
           html,
+          attachments,
         });
         this.logger.log(
           `Email successfully dispatched to ${to} (Subject: "${subject}").`,

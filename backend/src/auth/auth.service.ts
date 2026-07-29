@@ -141,6 +141,7 @@ export class AuthService {
   async sendOtp(
     phone: string,
     purpose: OtpPurpose = 'login',
+    notifyEmail?: string,
   ): Promise<{ success: boolean; message: string; otp?: string }> {
     if (!phone) {
       throw new BadRequestException('Phone number or email is required');
@@ -166,11 +167,14 @@ export class AuthService {
       });
     }
 
-    // If identifier is an email address, queue an async OTP email job via BullMQ
-    if (phone.includes('@')) {
+    // If the identifier is an email, or a separate email was supplied
+    // alongside a phone identifier, queue an async OTP email job via BullMQ
+    // so the code reaches every channel the user registered with.
+    const emailTarget = phone.includes('@') ? phone : notifyEmail;
+    if (emailTarget) {
       try {
         await this.mailQueue.add('send-otp', {
-          email: phone,
+          email: emailTarget,
           otp,
         });
       } catch (err) {
@@ -334,7 +338,14 @@ export class AuthService {
     // The OTP identifier is whichever of phone/email the user registered
     // with — sendOtp/verifyOtp already treat this generically (see the
     // email-branch check inside sendOtp and the phone-or-email lookup above).
-    await this.sendOtp(dto.phone ?? dto.email!, 'verify');
+    // When both are provided, still email the code even though phone is the
+    // primary identifier (there's no SMS gateway yet, so phone-only signups
+    // still rely on the dev-mode OTP echoed in the response).
+    await this.sendOtp(
+      dto.phone ?? dto.email!,
+      'verify',
+      dto.phone ? dto.email : undefined,
+    );
 
     return {
       success: true,
