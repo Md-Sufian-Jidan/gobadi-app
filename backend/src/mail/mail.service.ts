@@ -17,6 +17,7 @@ export class MailService {
       this.transporter = nodemailer.createTransport({
         host,
         port,
+        secure: port === 465, // implicit TLS on 465, STARTTLS on 587/2525
         auth: {
           user,
           pass,
