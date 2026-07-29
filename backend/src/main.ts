@@ -1,7 +1,14 @@
+import * as dns from 'dns';
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
+
+// Render (and Docker's default bridge network) doesn't provide outbound
+// IPv6 routing, but Node 18+'s default 'verbatim' DNS ordering can still
+// try a host's AAAA record first — smtp.gmail.com publishes one, so SMTP
+// connections fail with ENETUNREACH unless IPv4 is preferred explicitly.
+dns.setDefaultResultOrder('ipv4first');
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
