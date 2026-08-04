@@ -18,7 +18,7 @@ import { RefreshToken } from './refresh-token.entity';
       secret: getRequiredJwtSecret(),
       // Access tokens are short-lived; long-lived sessions are carried by
       // the separate refresh token issued alongside them (see auth.service.ts).
-      signOptions: { expiresIn: '15m' },
+      signOptions: { expiresIn: '3h' },
     }),
   ],
   controllers: [AuthController],
