@@ -15,6 +15,7 @@ import * as crypto from 'crypto';
 import { OAuth2Client } from 'google-auth-library';
 import { RedisService } from '../redis/redis.service';
 import { UsersService } from '../users/users.service';
+import { DoctorsService } from '../doctors/doctors.service';
 import { User, UserRole } from '../users/user.entity';
 import { RefreshToken } from './refresh-token.entity';
 import { RegisterDto } from './dto/register.dto';
@@ -45,6 +46,7 @@ export class AuthService {
   constructor(
     private readonly redisService: RedisService,
     private readonly usersService: UsersService,
+    private readonly doctorsService: DoctorsService,
     private readonly jwtService: JwtService,
     @InjectQueue('mail-queue')
     private readonly mailQueue: Queue,
@@ -278,6 +280,9 @@ export class AuthService {
         };
       }
       await this.usersService.markVerified(user.id);
+      if (user.role === UserRole.DOCTOR) {
+        await this.doctorsService.createProfileForUser(user);
+      }
       const { accessToken, refreshToken } = await this.issueTokenPair(user);
       return {
         verified: true,

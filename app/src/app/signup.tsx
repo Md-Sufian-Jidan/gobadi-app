@@ -29,6 +29,7 @@ export default function SignUpScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [isDoctor, setIsDoctor] = useState(false);
 
   const [errorMessage, setErrorMessage] = useState('');
 
@@ -56,7 +57,7 @@ export default function SignUpScreen() {
         phone: mode === 'phone' ? phone : undefined,
         email: mode === 'email' ? email : undefined,
         password,
-        role: 'user',
+        role: isDoctor ? 'doctor' : 'user',
       }).unwrap();
       router.push({ pathname: '/otp', params: { phone: identifier, purpose: 'verify' } });
     } catch (err: any) {
@@ -148,6 +149,18 @@ export default function SignUpScreen() {
               <Text style={styles.label}>Confirm Password*</Text>
               <PasswordField value={confirmPassword} onChangeText={setConfirmPassword} />
             </View>
+
+            {/* Register as doctor */}
+            <TouchableOpacity
+              style={styles.checkboxRow}
+              activeOpacity={0.7}
+              onPress={() => setIsDoctor((prev) => !prev)}
+            >
+              <View style={[styles.checkbox, isDoctor && styles.checkboxChecked]}>
+                {isDoctor ? <Text style={styles.checkboxTick}>✓</Text> : null}
+              </View>
+              <Text style={styles.checkboxLabel}>Register as a doctor</Text>
+            </TouchableOpacity>
 
             {/* Terms of Service */}
             <Text style={styles.termsText}>
@@ -341,6 +354,35 @@ const styles = StyleSheet.create({
   },
   placeholderText: {
     color: '#A39E99',
+  },
+  checkboxRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  checkbox: {
+    width: 22,
+    height: 22,
+    borderRadius: 6,
+    borderWidth: 1.5,
+    borderColor: '#E6E1DC',
+    backgroundColor: '#FFFFFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 10,
+  },
+  checkboxChecked: {
+    backgroundColor: '#BD632F',
+    borderColor: '#BD632F',
+  },
+  checkboxTick: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  checkboxLabel: {
+    fontSize: 14,
+    color: '#1A1817',
   },
   termsText: {
     fontSize: 13,
