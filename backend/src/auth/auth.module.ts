@@ -16,13 +16,11 @@ import { RefreshToken } from './refresh-token.entity';
     TypeOrmModule.forFeature([RefreshToken]),
     JwtModule.register({
       secret: getRequiredJwtSecret(),
-      // Access tokens are short-lived; long-lived sessions are carried by
-      // the separate refresh token issued alongside them (see auth.service.ts).
-      signOptions: { expiresIn: '3h' },
+      signOptions: { expiresIn: '1d' },
     }),
   ],
   controllers: [AuthController],
   providers: [AuthService, JwtAuthGuard, RolesGuard],
   exports: [JwtModule, UsersModule, JwtAuthGuard, RolesGuard],
 })
-export class AuthModule {}
+export class AuthModule { }

@@ -22,7 +22,7 @@ import { OtpPurpose } from './otp-purpose.type';
 import { ResetTokenPayload } from './reset-token-payload.interface';
 
 const REFRESH_TOKEN_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
-const ACCESS_TOKEN_EXPIRES_IN = '3h';
+const ACCESS_TOKEN_EXPIRES_IN = '1d';
 
 export interface TokenPair {
   accessToken: string;
@@ -50,7 +50,7 @@ export class AuthService {
     private readonly mailQueue: Queue,
     @InjectRepository(RefreshToken)
     private readonly refreshTokenRepository: Repository<RefreshToken>,
-  ) {}
+  ) { }
 
   private toPublicUser(user: User): Partial<User> {
     return {
