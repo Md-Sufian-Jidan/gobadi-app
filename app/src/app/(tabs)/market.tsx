@@ -6,12 +6,14 @@ import {
   TextInput,
   TouchableOpacity,
   ScrollView,
-  Image,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useGetProductsQuery } from '@/store/productsApi';
 import { useGetLivestockQuery, useGetMyListingsQuery } from '@/store/livestockApi';
+import { EmptyState } from '@/components/ui/empty-state';
+import { MediaCardSkeleton } from '@/components/ui/skeleton';
 
 interface Category {
   id: string;
@@ -48,9 +50,11 @@ export default function MarketScreen() {
     { id: '6', name: 'Vaccines', icon: '💉' },
   ];
 
-  const { data: products } = useGetProductsQuery({}, { skip: activeCategory === 'Animals' || tradeType !== 'Buy' });
-  const { data: livestock } = useGetLivestockQuery({}, { skip: activeCategory !== 'Animals' || tradeType !== 'Buy' });
-  const { data: myListings = [] } = useGetMyListingsQuery(undefined, { skip: tradeType !== 'Sell' });
+  const { data: products, isLoading: isProductsLoading } = useGetProductsQuery({}, { skip: activeCategory === 'Animals' || tradeType !== 'Buy' });
+  const { data: livestock, isLoading: isLivestockLoading } = useGetLivestockQuery({}, { skip: activeCategory !== 'Animals' || tradeType !== 'Buy' });
+  const { data: myListings = [], isLoading: isMyListingsLoading } = useGetMyListingsQuery(undefined, { skip: tradeType !== 'Sell' });
+
+  const isCatalogLoading = tradeType === 'Sell' ? isMyListingsLoading : (activeCategory === 'Animals' ? isLivestockLoading : isProductsLoading);
 
   const catalogList = activeCategory === 'Animals' 
     ? (Array.isArray(livestock) ? livestock : (livestock as any)?.data || []) 
@@ -204,8 +208,16 @@ export default function MarketScreen() {
             </View>
 
             <View style={styles.itemsList}>
-              {filteredItems.length === 0 ? (
-                <Text style={styles.emptyListingsText}>You haven&apos;t listed anything for sale yet.</Text>
+              {isCatalogLoading ? (
+                <MediaCardSkeleton imageSize={100} />
+              ) : filteredItems.length === 0 ? (
+                <EmptyState
+                  compact
+                  title="No listings yet"
+                  description="You haven't listed anything for sale yet."
+                  actionLabel="Add Listing"
+                  onAction={() => router.push('/add-listing')}
+                />
               ) : (
                 filteredItems.map((item) => (
                   <View key={item.id} style={styles.itemCard}>
@@ -266,7 +278,19 @@ export default function MarketScreen() {
 
             {/* Item Cards List */}
             <View style={styles.itemsList}>
-              {filteredItems.map((item) => (
+              {isCatalogLoading ? (
+                <>
+                  <MediaCardSkeleton imageSize={100} />
+                  <MediaCardSkeleton imageSize={100} />
+                </>
+              ) : filteredItems.length === 0 ? (
+                <EmptyState
+                  compact
+                  title="Nothing here yet"
+                  description="No items match this category right now."
+                />
+              ) : (
+              filteredItems.map((item) => (
                 <TouchableOpacity
                   key={item.id}
                   style={styles.itemCard}
@@ -343,7 +367,7 @@ export default function MarketScreen() {
                     </TouchableOpacity>
                   </View>
                 </TouchableOpacity>
-              ))}
+              )))}
             </View>
           </>
         )}
@@ -564,12 +588,6 @@ const styles = StyleSheet.create({
   },
   itemsList: {
     gap: 20,
-  },
-  emptyListingsText: {
-    fontSize: 13,
-    color: '#9C9690',
-    textAlign: 'center',
-    paddingVertical: 30,
   },
   addListingBtn: {
     backgroundColor: '#BD632F',

@@ -6,11 +6,13 @@ import {
   TextInput,
   ScrollView,
   TouchableOpacity,
-  Image,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useGetDoctorsQuery } from '@/store/doctorsApi';
+import { EmptyState } from '@/components/ui/empty-state';
+import { MediaCardSkeleton } from '@/components/ui/skeleton';
 
 interface DoctorView {
   id: number;
@@ -25,7 +27,7 @@ interface DoctorView {
 export default function AllDoctorsScreen() {
   const router = useRouter();
   const [activeFilter, setActiveFilter] = useState('All');
-  const { data: doctorList = [] } = useGetDoctorsQuery();
+  const { data: doctorList = [], isLoading } = useGetDoctorsQuery();
 
   const doctors: DoctorView[] = useMemo(
     () =>
@@ -123,7 +125,19 @@ export default function AllDoctorsScreen() {
 
       {/* Doctor Cards Scroll List */}
       <ScrollView contentContainerStyle={styles.cardsScroll} showsVerticalScrollIndicator={false}>
-        {doctors.map((doc) => (
+        {isLoading ? (
+          <>
+            <MediaCardSkeleton imageSize={80} />
+            <MediaCardSkeleton imageSize={80} />
+            <MediaCardSkeleton imageSize={80} />
+          </>
+        ) : doctors.length === 0 ? (
+          <EmptyState
+            title="No doctors available"
+            description="Check back soon — new vets are added regularly."
+          />
+        ) : (
+        doctors.map((doc) => (
           <View key={doc.id} style={styles.doctorCard}>
             <View style={styles.doctorCardMain}>
               <Image source={doc.image} style={styles.doctorPortrait} />
@@ -159,7 +173,7 @@ export default function AllDoctorsScreen() {
               </TouchableOpacity>
             </View>
           </View>
-        ))}
+        )))}
       </ScrollView>
     </SafeAreaView>
   );

@@ -9,6 +9,7 @@ import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import { store, bootstrapAuth } from '@/store/store';
 import type { RootState } from '@/store/store';
 import { socketManager } from '@/lib/socket-manager';
+import { ErrorBoundary } from '@/components/error-boundary';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -87,13 +88,15 @@ export default function RootLayout() {
   }, []);
 
   return (
-    <SafeAreaProvider>
-      <Provider store={store}>
-        <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-          <AnimatedSplashOverlay />
-          <RootNavigator />
-        </ThemeProvider>
-      </Provider>
-    </SafeAreaProvider>
+    <ErrorBoundary>
+      <SafeAreaProvider>
+        <Provider store={store}>
+          <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+            <AnimatedSplashOverlay />
+            <RootNavigator />
+          </ThemeProvider>
+        </Provider>
+      </SafeAreaProvider>
+    </ErrorBoundary>
   );
 }

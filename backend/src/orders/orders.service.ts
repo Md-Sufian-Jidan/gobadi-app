@@ -1,4 +1,9 @@
-import { Injectable, BadRequestException, NotFoundException, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 import { Order, OrderStatus } from './order.entity';
@@ -37,7 +42,9 @@ export class OrdersService {
     // Validate all items are available
     for (const item of cart.items) {
       if (!item.isAvailable) {
-        throw new BadRequestException(`Item ${item.name} is not available: ${item.warning}`);
+        throw new BadRequestException(
+          `Item ${item.name} is not available: ${item.warning}`,
+        );
       }
     }
 
@@ -49,12 +56,19 @@ export class OrdersService {
       // 1. Reserve stock in ledger for products and reserve livestock
       for (const item of cart.items) {
         if (item.productId) {
-          // Reserve via ProductsService using transaction manager if possible,
-          // but we can just use ProductsService which writes to DB. To be transaction-safe,
-          // let's do it inside the transaction:
-          await this.productsService.reserveStock(item.productId, item.quantity, orderId);
+          // Reserve via ProductsService using transaction manager to be transaction-safe:
+          await this.productsService.reserveStock(
+            item.productId,
+            item.quantity,
+            orderId,
+            manager,
+          );
         } else if (item.livestockId) {
-          await this.livestockService.reserveListing(item.livestockId, true);
+          await this.livestockService.reserveListing(
+            item.livestockId,
+            true,
+            manager,
+          );
         }
       }
 
@@ -109,7 +123,10 @@ export class OrdersService {
           orderId: savedOrder.id,
           totalPrice: savedOrder.totalPrice,
           deliveryAddress: savedOrder.deliveryAddress,
-          items: orderItems.map((oi) => ({ name: oi.name, quantity: oi.quantity })),
+          items: orderItems.map((oi) => ({
+            name: oi.name,
+            quantity: oi.quantity,
+          })),
         });
       } catch (err) {
         console.warn('Failed to queue checkout background job', err);
@@ -141,10 +158,18 @@ export class OrdersService {
     return order;
   }
 
-  async getOrders(page?: number, limit?: number, status?: OrderStatus): Promise<Order[] | PaginatedResult<Order>> {
+  async getOrders(
+    page?: number,
+    limit?: number,
+    status?: OrderStatus,
+  ): Promise<Order[] | PaginatedResult<Order>> {
     const where: any = status ? { status } : {};
     if (!page && !limit) {
-      return this.orderRepository.find({ where, relations: { items: true }, order: { createdAt: 'DESC' } });
+      return this.orderRepository.find({
+        where,
+        relations: { items: true },
+        order: { createdAt: 'DESC' },
+      });
     }
 
     const currentPage = page && page > 0 ? page : 1;
@@ -162,33 +187,63 @@ export class OrdersService {
   }
 
   async updateStatus(id: string, status: OrderStatus): Promise<Order> {
-    const order = await this.orderRepository.findOne({ where: { id }, relations: { items: true } });
-    if (!order) {
-      throw new NotFoundException('Order not found');
-    }
+    return this.dataSource.transaction(async (manager) => {
+      const orderRepo = manager.getRepository(Order);
+      const order = await orderRepo.findOne({
+        where: { id },
+        relations: { items: true },
+      });
+      if (!order) {
+        throw new NotFoundException('Order not found');
+      }
 
-    // Implement ledger commit/release on state transition
-    if (status === OrderStatus.COMPLETED && order.status !== OrderStatus.COMPLETED) {
-      // Commit stock in inventory ledger for products, mark livestock as sold
-      for (const item of order.items) {
-        if (item.productId) {
-          await this.productsService.commitStock(item.productId, item.quantity, order.id);
-        } else if (item.livestockId) {
-          await this.livestockService.markSold(item.livestockId, true);
+      // Implement ledger commit/release on state transition
+      if (
+        status === OrderStatus.COMPLETED &&
+        order.status !== OrderStatus.COMPLETED
+      ) {
+        // Commit stock in inventory ledger for products, mark livestock as sold
+        for (const item of order.items) {
+          if (item.productId) {
+            await this.productsService.commitStock(
+              item.productId,
+              item.quantity,
+              order.id,
+              manager,
+            );
+          } else if (item.livestockId) {
+            await this.livestockService.markSold(
+              item.livestockId,
+              true,
+              manager,
+            );
+          }
+        }
+      } else if (
+        status === OrderStatus.CANCELLED &&
+        order.status !== OrderStatus.CANCELLED
+      ) {
+        // Release stock in inventory ledger, release livestock reservation
+        for (const item of order.items) {
+          if (item.productId) {
+            await this.productsService.releaseStock(
+              item.productId,
+              item.quantity,
+              order.id,
+              manager,
+            );
+          } else if (item.livestockId) {
+            await this.livestockService.reserveListing(
+              item.livestockId,
+              false,
+              manager,
+            );
+          }
         }
       }
-    } else if (status === OrderStatus.CANCELLED && order.status !== OrderStatus.CANCELLED) {
-      // Release stock in inventory ledger, release livestock reservation
-      for (const item of order.items) {
-        if (item.productId) {
-          await this.productsService.releaseStock(item.productId, item.quantity, order.id);
-        } else if (item.livestockId) {
-          await this.livestockService.reserveListing(item.livestockId, false);
-        }
-      }
-    }
 
-    order.status = status;
-    return this.orderRepository.save(order);
+      order.status = status;
+      return orderRepo.save(order);
+    });
   }
 }
