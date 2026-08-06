@@ -1,34 +1,22 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import {
-  IsEmail,
-  IsEnum,
-  IsOptional,
-  IsString,
-  MinLength,
-} from 'class-validator';
+import { ApiProperty } from '@nestjs/swagger';
+import { IsEnum, IsNotEmpty, IsString, MinLength } from 'class-validator';
 import { UserRole } from '../../users/user.entity';
+import { IsPhoneOrEmail } from '../../common/validators/is-phone-or-email.validator';
 
 export class RegisterDto {
-  @ApiPropertyOptional({ description: 'Full name', example: 'Abdul Kader' })
-  @IsOptional()
+  @ApiProperty({ description: 'Full name', example: 'Abdul Kader' })
+  @IsNotEmpty()
   @IsString()
-  name?: string;
+  name: string;
 
-  @ApiPropertyOptional({
-    description: 'Phone number (either phone or email is required)',
+  @ApiProperty({
+    description: 'Phone number or email address',
     example: '+8801XXXXXXXXX',
   })
-  @IsOptional()
+  @IsNotEmpty()
   @IsString()
-  phone?: string;
-
-  @ApiPropertyOptional({
-    description: 'Email address',
-    example: 'hello@example.com',
-  })
-  @IsOptional()
-  @IsEmail()
-  email?: string;
+  @IsPhoneOrEmail()
+  identifier: string;
 
   @ApiProperty({
     description: 'Password (min 8 characters)',

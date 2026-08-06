@@ -54,8 +54,7 @@ export default function SignUpScreen() {
     try {
       await register({
         name,
-        phone: mode === 'phone' ? phone : undefined,
-        email: mode === 'email' ? email : undefined,
+        identifier,
         password,
         role: isDoctor ? 'doctor' : 'user',
       }).unwrap();
