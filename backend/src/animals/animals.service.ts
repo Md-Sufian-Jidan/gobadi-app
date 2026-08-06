@@ -1,4 +1,8 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { ILike, Repository } from 'typeorm';
 import { Animal } from './animal.entity';
@@ -70,7 +74,7 @@ export class AnimalsService {
       userId,
     });
     if (!animal) {
-      throw new BadRequestException('Animal not found');
+      throw new NotFoundException('Animal not found');
     }
     return animal;
   }
@@ -112,7 +116,7 @@ export class AnimalsService {
       userId,
     });
     if (!animal) {
-      throw new BadRequestException('Animal not found');
+      throw new NotFoundException('Animal not found');
     }
     return animal;
   }

@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { ILike, Repository } from 'typeorm';
 import { Doctor } from './doctor.entity';
@@ -74,7 +74,7 @@ export class DoctorsService {
       id: typeof id === 'string' ? parseInt(id, 10) : id,
     });
     if (!doctor) {
-      throw new BadRequestException('Doctor not found');
+      throw new NotFoundException('Doctor not found');
     }
     return doctor;
   }
@@ -111,6 +111,7 @@ export class DoctorsService {
 
   async getAvailability(doctorId: string | number): Promise<Availability[]> {
     const id = typeof doctorId === 'string' ? parseInt(doctorId, 10) : doctorId;
+    await this.getDoctorById(id);
     return this.availabilityRepository.find({
       where: { doctorId: id },
       order: { dayOfWeek: 'ASC' },

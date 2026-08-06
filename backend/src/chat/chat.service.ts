@@ -1,4 +1,9 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ChatMessage, MessageStatus } from './chat-message.entity';
@@ -83,7 +88,7 @@ export class ChatService {
       id: messageId,
     });
     if (!message) {
-      throw new BadRequestException('Message not found');
+      throw new NotFoundException('Message not found');
     }
     const isParticipant = await this.conversationService.isParticipant(
       message.conversationId,
@@ -91,7 +96,7 @@ export class ChatService {
       role,
     );
     if (!isParticipant) {
-      throw new BadRequestException('Not a participant in this conversation');
+      throw new ForbiddenException('Not a participant in this conversation');
     }
 
     await this.chatMessageRepository.update(messageId, {

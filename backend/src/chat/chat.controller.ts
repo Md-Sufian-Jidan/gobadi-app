@@ -2,7 +2,9 @@ import {
   BadRequestException,
   Body,
   Controller,
+  ForbiddenException,
   Get,
+  NotFoundException,
   Param,
   Patch,
   Post,
@@ -184,13 +186,18 @@ export class ChatController {
   ): Promise<number> {
     if (conversationIdParam) {
       const conversationId = parseInt(conversationIdParam, 10);
+      const conversation =
+        await this.conversationService.findById(conversationId);
+      if (!conversation) {
+        throw new NotFoundException('Conversation not found');
+      }
       const isParticipant = await this.conversationService.isParticipant(
         conversationId,
         user.sub,
         user.role,
       );
       if (!isParticipant) {
-        throw new BadRequestException('Not a participant in this conversation');
+        throw new ForbiddenException('Not a participant in this conversation');
       }
       return conversationId;
     }

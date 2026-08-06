@@ -52,7 +52,7 @@ export class AuthService {
     private readonly mailQueue: Queue,
     @InjectRepository(RefreshToken)
     private readonly refreshTokenRepository: Repository<RefreshToken>,
-  ) { }
+  ) {}
 
   private toPublicUser(user: User): Partial<User> {
     return {
@@ -133,10 +133,19 @@ export class AuthService {
       return { success: true };
     }
     const tokenHash = this.hashToken(rawRefreshToken);
-    await this.refreshTokenRepository.update(
-      { tokenHash },
-      { revokedAt: new Date() },
-    );
+    const existing = await this.refreshTokenRepository.findOneBy({
+      tokenHash,
+    });
+    if (
+      !existing ||
+      existing.revokedAt ||
+      existing.expiresAt.getTime() < Date.now()
+    ) {
+      throw new UnauthorizedException('Invalid or expired refresh token');
+    }
+    await this.refreshTokenRepository.update(existing.id, {
+      revokedAt: new Date(),
+    });
     return { success: true };
   }
 
@@ -226,26 +235,19 @@ export class AuthService {
     }
 
     if (!savedRecord) {
-      return {
-        verified: false,
-        message: 'OTP has expired or does not exist. Please request a new one.',
-      };
+      throw new BadRequestException(
+        'OTP has expired or does not exist. Please request a new one.',
+      );
     }
 
     if (savedRecord.code !== code) {
-      return {
-        verified: false,
-        message: 'Invalid OTP code. Please try again.',
-      };
+      throw new BadRequestException('Invalid OTP code. Please try again.');
     }
 
     // Defense in depth: if the caller specified what it expected this OTP to be
     // for, reject a mismatch rather than trusting the stored purpose blindly.
     if (savedRecord.purpose !== purpose) {
-      return {
-        verified: false,
-        message: 'Invalid OTP code. Please try again.',
-      };
+      throw new BadRequestException('Invalid OTP code. Please try again.');
     }
 
     if (savedRecord.purpose === 'reset') {
@@ -253,10 +255,7 @@ export class AuthService {
         (await this.usersService.findByPhone(phone)) ??
         (await this.usersService.findByEmail(phone));
       if (!user) {
-        return {
-          verified: false,
-          message: 'No account found for this identifier.',
-        };
+        throw new BadRequestException('No account found for this identifier.');
       }
       const resetToken = await this.jwtService.signAsync(
         { sub: user.id, purpose: 'password-reset' } satisfies ResetTokenPayload,
@@ -274,10 +273,7 @@ export class AuthService {
         (await this.usersService.findByPhone(phone)) ??
         (await this.usersService.findByEmail(phone));
       if (!user) {
-        return {
-          verified: false,
-          message: 'No account found for this identifier.',
-        };
+        throw new BadRequestException('No account found for this identifier.');
       }
       await this.usersService.markVerified(user.id);
       if (user.role === UserRole.DOCTOR) {
@@ -308,49 +304,28 @@ export class AuthService {
   async register(
     dto: RegisterDto,
   ): Promise<{ success: boolean; message: string }> {
-    if (!dto.phone && !dto.email) {
-      throw new BadRequestException(
-        'Either a phone number or an email address is required.',
+    const isEmail = dto.identifier.includes('@');
+    const existing = isEmail
+      ? await this.usersService.findByEmail(dto.identifier)
+      : await this.usersService.findByPhone(dto.identifier);
+    if (existing) {
+      throw new ConflictException(
+        isEmail
+          ? 'An account with this email already exists.'
+          : 'An account with this phone number already exists.',
       );
-    }
-
-    if (dto.phone) {
-      const existingByPhone = await this.usersService.findByPhone(dto.phone);
-      if (existingByPhone) {
-        throw new ConflictException(
-          'An account with this phone number already exists.',
-        );
-      }
-    }
-    if (dto.email) {
-      const existingByEmail = await this.usersService.findByEmail(dto.email);
-      if (existingByEmail) {
-        throw new ConflictException(
-          'An account with this email already exists.',
-        );
-      }
     }
 
     const passwordHash = await bcrypt.hash(dto.password, 10);
     await this.usersService.createWithPassword({
       name: dto.name,
-      phone: dto.phone,
-      email: dto.email,
+      phone: isEmail ? undefined : dto.identifier,
+      email: isEmail ? dto.identifier : undefined,
       role: dto.role,
       passwordHash,
     });
 
-    // The OTP identifier is whichever of phone/email the user registered
-    // with — sendOtp/verifyOtp already treat this generically (see the
-    // email-branch check inside sendOtp and the phone-or-email lookup above).
-    // When both are provided, still email the code even though phone is the
-    // primary identifier (there's no SMS gateway yet, so phone-only signups
-    // still rely on the dev-mode OTP echoed in the response).
-    await this.sendOtp(
-      dto.phone ?? dto.email!,
-      'verify',
-      dto.phone ? dto.email : undefined,
-    );
+    await this.sendOtp(dto.identifier, 'verify');
 
     return {
       success: true,
