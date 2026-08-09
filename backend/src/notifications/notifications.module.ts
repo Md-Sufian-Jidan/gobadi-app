@@ -1,18 +1,29 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Notification } from './notification.entity';
+import { PushToken } from './push-token.entity';
 import { NotificationsService } from './notifications.service';
 import { NotificationsController } from './notifications.controller';
+import { NotificationsProcessor } from './notifications.processor';
+import { ExpoPushProvider } from './providers/expo-push.provider';
+import { PUSH_PROVIDER } from './push-provider.interface';
 import { BullModule } from '@nestjs/bullmq';
+import { UsersModule } from '../users/users.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Notification]),
+    TypeOrmModule.forFeature([Notification, PushToken]),
     BullModule.registerQueue({
-      name: 'mail-queue',
+      name: 'notifications-queue',
     }),
+    UsersModule,
   ],
-  providers: [NotificationsService],
+  providers: [
+    NotificationsService,
+    NotificationsProcessor,
+    ExpoPushProvider,
+    { provide: PUSH_PROVIDER, useExisting: ExpoPushProvider },
+  ],
   controllers: [NotificationsController],
   exports: [NotificationsService, TypeOrmModule],
 })

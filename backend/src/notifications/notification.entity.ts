@@ -19,6 +19,8 @@ export enum NotificationType {
   PRESCRIPTION_READY = 'prescription_ready',
   PROMOTION = 'promotion',
   SYSTEM = 'system',
+  MESSAGE = 'message',
+  REFERRAL = 'referral',
 }
 
 @Entity('notifications')

@@ -4,6 +4,8 @@ import { Repository } from 'typeorm';
 import { Delivery, DeliveryStatus } from './delivery.entity';
 import { UpdateDeliveryDto } from './dto/update-delivery.dto';
 import { Order, OrderStatus } from '../orders/order.entity';
+import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationType } from '../notifications/notification.entity';
 
 @Injectable()
 export class DeliveryService {
@@ -12,6 +14,7 @@ export class DeliveryService {
     private readonly deliveryRepository: Repository<Delivery>,
     @InjectRepository(Order)
     private readonly orderRepository: Repository<Order>,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   async createDelivery(orderId: string, courierName: string): Promise<Delivery> {
@@ -80,6 +83,18 @@ export class DeliveryService {
 
     if (targetOrderStatus) {
       await this.orderRepository.update(orderId, { status: targetOrderStatus });
+    }
+
+    const order = await this.orderRepository.findOneBy({ id: orderId });
+    if (order) {
+      await this.notificationsService.createNotification(
+        order.userId,
+        'Delivery update',
+        `Your order is now ${dto.status} (tracking: ${delivery.trackingNumber}).`,
+        NotificationType.DELIVERY,
+        'Order',
+        order.id,
+      );
     }
 
     return saved;

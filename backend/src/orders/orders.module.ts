@@ -9,6 +9,7 @@ import { AddressesModule } from '../addresses/addresses.module';
 import { ProductsModule } from '../products/products.module';
 import { LivestockModule } from '../livestock/livestock.module';
 import { BullModule } from '@nestjs/bullmq';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { BullModule } from '@nestjs/bullmq';
     AddressesModule,
     ProductsModule,
     LivestockModule,
+    NotificationsModule,
   ],
   providers: [OrdersService],
   controllers: [OrdersController],

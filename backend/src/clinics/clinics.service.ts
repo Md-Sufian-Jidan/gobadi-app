@@ -7,6 +7,8 @@ import { Doctor } from '../doctors/doctor.entity';
 import { RedisService } from '../redis/redis.service';
 import { MeilisearchService } from '../meilisearch/meilisearch.service';
 import { PaginatedResult } from '../common/paginated-result.interface';
+import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationType } from '../notifications/notification.entity';
 
 const CLINICS_INDEX = 'clinics';
 
@@ -19,6 +21,7 @@ export class ClinicsService {
     private readonly doctorRepository: Repository<Doctor>,
     private readonly redisService: RedisService,
     private readonly meilisearchService: MeilisearchService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   private getItemCacheKey(id: number): string {
@@ -138,6 +141,17 @@ export class ClinicsService {
       rating: updated.rating,
       isVerified: updated.isVerified,
     });
+
+    await this.notificationsService.createNotification(
+      updated.userId,
+      updated.isVerified ? 'Clinic verified' : 'Clinic verification rejected',
+      updated.isVerified
+        ? 'Your clinic has been verified.'
+        : 'Your clinic verification was rejected.',
+      NotificationType.SYSTEM,
+      'Clinic',
+      String(updated.id),
+    );
 
     return updated;
   }

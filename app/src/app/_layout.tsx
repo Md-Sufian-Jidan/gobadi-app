@@ -1,5 +1,6 @@
-import { DarkTheme, DefaultTheme, ThemeProvider, Stack } from 'expo-router';
+import { DarkTheme, DefaultTheme, ThemeProvider, Stack, useRouter } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
+import * as Notifications from 'expo-notifications';
 import { useColorScheme } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useEffect } from 'react';
@@ -9,20 +10,31 @@ import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import { store, bootstrapAuth } from '@/store/store';
 import type { RootState } from '@/store/store';
 import { socketManager } from '@/lib/socket-manager';
+import { registerForPushNotifications, unregisterPushNotifications } from '@/lib/push-notifications';
 import { ErrorBoundary } from '@/components/error-boundary';
 
 SplashScreen.preventAutoHideAsync();
 
 function RootNavigator() {
   const { user, isBootstrapping } = useSelector((state: RootState) => state.auth);
+  const router = useRouter();
 
   useEffect(() => {
     if (user) {
       socketManager.connect();
+      registerForPushNotifications();
     } else {
       socketManager.disconnect();
+      unregisterPushNotifications();
     }
   }, [user]);
+
+  useEffect(() => {
+    const subscription = Notifications.addNotificationResponseReceivedListener(() => {
+      router.push('/notifications');
+    });
+    return () => subscription.remove();
+  }, [router]);
 
   if (isBootstrapping) {
     return null;

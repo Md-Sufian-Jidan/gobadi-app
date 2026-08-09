@@ -5,12 +5,14 @@ import { LivestockService } from './livestock.service';
 import { LivestockController } from './livestock.controller';
 import { RedisModule } from '../redis/redis.module';
 import { MeilisearchModule } from '../meilisearch/meilisearch.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Livestock]),
     RedisModule,
     MeilisearchModule,
+    NotificationsModule,
   ],
   providers: [LivestockService],
   controllers: [LivestockController],

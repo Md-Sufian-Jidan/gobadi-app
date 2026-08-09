@@ -16,6 +16,53 @@ import { LivestockService } from '../livestock/livestock.service';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { PaginatedResult } from '../common/paginated-result.interface';
+import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationType } from '../notifications/notification.entity';
+
+const ORDER_STATUS_MESSAGES: Partial<
+  Record<OrderStatus, { title: string; body: string }>
+> = {
+  [OrderStatus.CONFIRMED]: {
+    title: 'Order confirmed',
+    body: 'Your order has been confirmed.',
+  },
+  [OrderStatus.PREPARING]: {
+    title: 'Order being prepared',
+    body: 'Your order is being prepared.',
+  },
+  [OrderStatus.PACKED]: {
+    title: 'Order packed',
+    body: 'Your order has been packed.',
+  },
+  [OrderStatus.SHIPPED]: {
+    title: 'Order shipped',
+    body: 'Your order has shipped.',
+  },
+  [OrderStatus.DELIVERED]: {
+    title: 'Order delivered',
+    body: 'Your order has been delivered.',
+  },
+  [OrderStatus.COMPLETED]: {
+    title: 'Order complete',
+    body: 'Your order is complete. Thank you for shopping with Gobadi!',
+  },
+  [OrderStatus.CANCELLED]: {
+    title: 'Order cancelled',
+    body: 'Your order was cancelled.',
+  },
+  [OrderStatus.REFUNDED]: {
+    title: 'Order refunded',
+    body: 'Your payment was refunded.',
+  },
+  [OrderStatus.RETURNED]: {
+    title: 'Order returned',
+    body: 'Your order was returned.',
+  },
+  [OrderStatus.FAILED]: {
+    title: 'Order failed',
+    body: 'There was a problem with your order.',
+  },
+};
 
 @Injectable()
 export class OrdersService {
@@ -31,6 +78,7 @@ export class OrdersService {
     private readonly dataSource: DataSource,
     @InjectQueue('order-queue')
     private readonly orderQueue: Queue,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   async placeOrder(userId: number, dto: CreateOrderDto): Promise<Order> {
@@ -52,7 +100,7 @@ export class OrdersService {
 
     const orderId = `GBD-${Math.floor(100000 + Math.random() * 900000)}`;
 
-    return this.dataSource.transaction(async (manager) => {
+    const savedOrder = await this.dataSource.transaction(async (manager) => {
       // 1. Reserve stock in ledger for products and reserve livestock
       for (const item of cart.items) {
         if (item.productId) {
@@ -134,6 +182,17 @@ export class OrdersService {
 
       return savedOrder;
     });
+
+    await this.notificationsService.createNotification(
+      userId,
+      'Order placed',
+      `Your order ${savedOrder.id} has been placed and is awaiting confirmation.`,
+      NotificationType.ORDER,
+      'Order',
+      savedOrder.id,
+    );
+
+    return savedOrder;
   }
 
   async getMyOrders(userId: number): Promise<Order[]> {
@@ -187,7 +246,9 @@ export class OrdersService {
   }
 
   async updateStatus(id: string, status: OrderStatus): Promise<Order> {
-    return this.dataSource.transaction(async (manager) => {
+    const soldListings: { name: string; sellerId: number }[] = [];
+
+    const savedOrder = await this.dataSource.transaction(async (manager) => {
       const orderRepo = manager.getRepository(Order);
       const order = await orderRepo.findOne({
         where: { id },
@@ -212,11 +273,12 @@ export class OrdersService {
               manager,
             );
           } else if (item.livestockId) {
-            await this.livestockService.markSold(
+            const sold = await this.livestockService.markSold(
               item.livestockId,
               true,
               manager,
             );
+            soldListings.push({ name: sold.species, sellerId: sold.sellerId });
           }
         }
       } else if (
@@ -245,5 +307,27 @@ export class OrdersService {
       order.status = status;
       return orderRepo.save(order);
     });
+
+    const message = ORDER_STATUS_MESSAGES[status];
+    if (message) {
+      await this.notificationsService.createNotification(
+        savedOrder.userId,
+        message.title,
+        message.body,
+        NotificationType.ORDER,
+        'Order',
+        savedOrder.id,
+      );
+    }
+    for (const listing of soldListings) {
+      await this.notificationsService.createNotification(
+        listing.sellerId,
+        'Listing sold',
+        `Your listing '${listing.name}' has sold.`,
+        NotificationType.ORDER,
+      );
+    }
+
+    return savedOrder;
   }
 }

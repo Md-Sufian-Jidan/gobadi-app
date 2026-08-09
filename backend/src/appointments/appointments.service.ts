@@ -17,6 +17,8 @@ import {
   parseSlotDateTime,
   subMinutes,
 } from './utils/slot-time.util';
+import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationType } from '../notifications/notification.entity';
 
 const RESCHEDULE_CANCEL_BUFFER_MS = 2 * 60 * 60 * 1000; // 2 hours
 
@@ -33,6 +35,7 @@ export class AppointmentsService {
     private readonly dataSource: DataSource,
     private readonly doctorsService: DoctorsService,
     private readonly usersService: UsersService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   async bookAppointment(
@@ -44,7 +47,29 @@ export class AppointmentsService {
     serviceId?: number,
   ): Promise<Appointment> {
     const startAt = parseSlotDateTime(date, time);
-    return this.assertNoConflictAndBook(doctorId, patientId, startAt, { clinicId, serviceId });
+    const appointment = await this.assertNoConflictAndBook(doctorId, patientId, startAt, { clinicId, serviceId });
+
+    await this.notificationsService.createNotification(
+      patientId,
+      'Appointment booked',
+      'Your appointment is booked and confirmed.',
+      NotificationType.BOOKING,
+      'Appointment',
+      String(appointment.id),
+    );
+    const doctor = await this.doctorsService.getDoctorById(doctorId);
+    if (doctor.userId) {
+      await this.notificationsService.createNotification(
+        doctor.userId,
+        'New appointment',
+        'You have a new appointment booked.',
+        NotificationType.BOOKING,
+        'Appointment',
+        String(appointment.id),
+      );
+    }
+
+    return appointment;
   }
 
   async listAvailableSlots(
@@ -192,6 +217,15 @@ export class AppointmentsService {
       rescheduledAt: new Date(),
     });
 
+    await this.notificationsService.createNotification(
+      appointment.patientId,
+      'Appointment rescheduled',
+      'Your appointment was rescheduled.',
+      NotificationType.BOOKING,
+      'Appointment',
+      String(rebooked.id),
+    );
+
     return this.appointmentRepository.findOneByOrFail({ id: rebooked.id });
   }
 
@@ -210,7 +244,32 @@ export class AppointmentsService {
     appointment.status = AppointmentStatus.CANCELLED;
     appointment.cancelledAt = new Date();
     appointment.cancelledByUserId = requesterId;
-    return this.appointmentRepository.save(appointment);
+    const saved = await this.appointmentRepository.save(appointment);
+
+    if (requesterId === saved.patientId) {
+      const doctor = await this.doctorsService.getDoctorById(saved.doctorId);
+      if (doctor.userId) {
+        await this.notificationsService.createNotification(
+          doctor.userId,
+          'Appointment cancelled',
+          'Your appointment was cancelled.',
+          NotificationType.BOOKING,
+          'Appointment',
+          String(saved.id),
+        );
+      }
+    } else {
+      await this.notificationsService.createNotification(
+        saved.patientId,
+        'Appointment cancelled',
+        'Your appointment was cancelled.',
+        NotificationType.BOOKING,
+        'Appointment',
+        String(saved.id),
+      );
+    }
+
+    return saved;
   }
 
   async completeAppointment(
@@ -228,7 +287,18 @@ export class AppointmentsService {
       throw new NotFoundException('Appointment not found');
     }
     appointment.status = AppointmentStatus.COMPLETED;
-    return this.appointmentRepository.save(appointment);
+    const saved = await this.appointmentRepository.save(appointment);
+
+    await this.notificationsService.createNotification(
+      saved.patientId,
+      'Appointment complete',
+      'Your appointment is complete — leave a review!',
+      NotificationType.BOOKING,
+      'Appointment',
+      String(saved.id),
+    );
+
+    return saved;
   }
 
   private async getOwnedAppointment(

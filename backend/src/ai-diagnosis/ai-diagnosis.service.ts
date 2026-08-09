@@ -4,6 +4,8 @@ import { Repository } from 'typeorm';
 import { AiDiagnosis } from './ai-diagnosis.entity';
 import { CreateAiDiagnosisDto } from './dto/create-ai-diagnosis.dto';
 import { Doctor } from '../doctors/doctor.entity';
+import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationType } from '../notifications/notification.entity';
 
 @Injectable()
 export class AiDiagnosisService {
@@ -12,6 +14,7 @@ export class AiDiagnosisService {
     private readonly aiDiagnosisRepository: Repository<AiDiagnosis>,
     @InjectRepository(Doctor)
     private readonly doctorRepository: Repository<Doctor>,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   async analyze(userId: number, dto: CreateAiDiagnosisDto): Promise<AiDiagnosis> {
@@ -86,7 +89,18 @@ export class AiDiagnosisService {
       recommendedDoctorIds,
     });
 
-    return this.aiDiagnosisRepository.save(diagnosis);
+    const saved = await this.aiDiagnosisRepository.save(diagnosis);
+
+    await this.notificationsService.createNotification(
+      userId,
+      'AI diagnosis ready',
+      `Your AI diagnosis is ready: ${analysisResult}.`,
+      NotificationType.AI_READY,
+      'AiDiagnosis',
+      String(saved.id),
+    );
+
+    return saved;
   }
 
   async getHistory(userId: number): Promise<AiDiagnosis[]> {

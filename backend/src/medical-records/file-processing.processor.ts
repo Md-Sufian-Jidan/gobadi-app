@@ -3,6 +3,8 @@ import { Logger } from '@nestjs/common';
 import { Job } from 'bullmq';
 import { MedicalRecordsService } from './medical-records.service';
 import { ChatGateway } from '../chat/chat.gateway';
+import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationType } from '../notifications/notification.entity';
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -15,6 +17,7 @@ export class FileProcessingProcessor extends WorkerHost {
   constructor(
     private readonly medicalRecordsService: MedicalRecordsService,
     private readonly chatGateway: ChatGateway,
+    private readonly notificationsService: NotificationsService,
   ) {
     super();
   }
@@ -47,6 +50,14 @@ export class FileProcessingProcessor extends WorkerHost {
           status: 'FAILED',
         },
       );
+      await this.notificationsService.createNotification(
+        attachment.uploadedByUserId,
+        'Document processing failed',
+        "We couldn't process your uploaded document.",
+        NotificationType.SYSTEM,
+        'Attachment',
+        String(attachmentId),
+      );
       return { success: false, attachmentId };
     }
 
@@ -58,6 +69,14 @@ export class FileProcessingProcessor extends WorkerHost {
         id: attachmentId,
         status: 'READY',
       },
+    );
+    await this.notificationsService.createNotification(
+      attachment.uploadedByUserId,
+      'Document ready',
+      'Your document is ready to view.',
+      NotificationType.PRESCRIPTION_READY,
+      'Attachment',
+      String(attachmentId),
     );
 
     return { success: true, attachmentId };

@@ -162,6 +162,14 @@ export class UsersService {
     return { data, page, limit, total };
   }
 
+  async findAllIds(role?: UserRole): Promise<number[]> {
+    const users = await this.userRepository.find({
+      where: role ? { role } : {},
+      select: { id: true },
+    });
+    return users.map((u) => u.id);
+  }
+
   async updateRole(id: number, role: UserRole): Promise<User> {
     const user = await this.userRepository.findOneBy({ id });
     if (!user) {

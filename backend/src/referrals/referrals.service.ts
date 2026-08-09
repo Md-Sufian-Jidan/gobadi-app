@@ -9,6 +9,8 @@ import { InjectQueue } from '@nestjs/bullmq';
 import { DataSource, Repository } from 'typeorm';
 import { Queue } from 'bullmq';
 import { Referral, PayoutStatus } from './referral.entity';
+import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationType } from '../notifications/notification.entity';
 export { Referral } from './referral.entity';
 
 const REFERRAL_REWARD_AMOUNT = 100;
@@ -21,6 +23,7 @@ export class ReferralsService {
     private readonly dataSource: DataSource,
     @InjectQueue('referrals-queue')
     private readonly referralsQueue: Queue,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   async getOrCreateForUser(userId: number): Promise<Referral> {
@@ -115,7 +118,16 @@ export class ReferralsService {
     referral.totalEarned += payoutAmount;
     referral.payoutStatus =
       referral.pendingAmount > 0 ? PayoutStatus.PENDING : PayoutStatus.PAID;
-    return this.referralRepository.save(referral);
+    const saved = await this.referralRepository.save(referral);
+
+    await this.notificationsService.createNotification(
+      saved.userId,
+      'Referral payout approved',
+      `Your referral payout of ৳${payoutAmount} was approved.`,
+      NotificationType.REFERRAL,
+    );
+
+    return saved;
   }
 
   private async generateUniqueCode(): Promise<string> {

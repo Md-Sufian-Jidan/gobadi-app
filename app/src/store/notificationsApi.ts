@@ -49,6 +49,20 @@ export const notificationsApi = createApi({
       }),
       invalidatesTags: [{ type: 'Notification', id: 'LIST' }],
     }),
+    registerPushToken: builder.mutation<{ success: boolean }, { token: string; deviceId?: string }>({
+      query: (body) => ({
+        url: '/notifications/push-token',
+        method: 'POST',
+        body,
+      }),
+    }),
+    unregisterPushToken: builder.mutation<{ success: boolean }, { token: string }>({
+      query: (body) => ({
+        url: '/notifications/push-token',
+        method: 'DELETE',
+        body,
+      }),
+    }),
   }),
 });
 
@@ -56,4 +70,6 @@ export const {
   useGetNotificationsQuery,
   useMarkNotificationReadMutation,
   useMarkAllNotificationsReadMutation,
+  useRegisterPushTokenMutation,
+  useUnregisterPushTokenMutation,
 } = notificationsApi;

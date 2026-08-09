@@ -27,6 +27,8 @@ const TYPE_ICONS: Record<string, string> = {
   prescription_ready: '💊',
   promotion: '🏷️',
   system: '🔔',
+  message: '💬',
+  referral: '🎁',
 };
 
 export default function NotificationsScreen() {

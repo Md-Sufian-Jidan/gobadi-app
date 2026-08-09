@@ -11,6 +11,8 @@ import {
   Appointment,
   AppointmentStatus,
 } from '../appointments/appointment.entity';
+import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationType } from '../notifications/notification.entity';
 
 @Injectable()
 export class PaymentsService {
@@ -21,6 +23,7 @@ export class PaymentsService {
     private readonly orderRepository: Repository<Order>,
     @InjectRepository(Appointment)
     private readonly appointmentRepository: Repository<Appointment>,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   async createIntent(
@@ -65,94 +68,154 @@ export class PaymentsService {
     transactionId: string,
     gatewayTxId?: string,
   ): Promise<Transaction> {
-    return this.transactionRepository.manager.transaction(async (manager) => {
-      const txRepo = manager.getRepository(Transaction);
-      const orderRepo = manager.getRepository(Order);
-      const appointmentRepo = manager.getRepository(Appointment);
+    let notifyOrder: Order | null = null;
+    let notifyBooking: Appointment | null = null;
 
-      const tx = await txRepo.findOneBy({ id: transactionId });
-      if (!tx) {
-        throw new NotFoundException('Transaction not found');
-      }
+    const savedTx = await this.transactionRepository.manager.transaction(
+      async (manager) => {
+        const txRepo = manager.getRepository(Transaction);
+        const orderRepo = manager.getRepository(Order);
+        const appointmentRepo = manager.getRepository(Appointment);
 
-      if (tx.status === PaymentStatus.SUCCESSFUL) {
-        return tx;
-      }
-
-      tx.status = PaymentStatus.SUCCESSFUL;
-      tx.gatewayTransactionId =
-        gatewayTxId || `SIM-TX-${Math.floor(100000 + Math.random() * 900000)}`;
-      tx.auditTrail.push({
-        status: PaymentStatus.SUCCESSFUL,
-        timestamp: new Date(),
-        message: 'Payment succeeded via gateway simulator',
-      });
-
-      const savedTx = await txRepo.save(tx);
-
-      if (tx.orderId) {
-        const order = await orderRepo.findOneBy({ id: tx.orderId });
-        if (order) {
-          order.paymentStatus = 'successful';
-          order.status = OrderStatus.CONFIRMED;
-          order.transactionId = savedTx.gatewayTransactionId;
-          await orderRepo.save(order);
+        const tx = await txRepo.findOneBy({ id: transactionId });
+        if (!tx) {
+          throw new NotFoundException('Transaction not found');
         }
-      } else if (tx.bookingId) {
-        const booking = await appointmentRepo.findOneBy({ id: tx.bookingId });
-        if (booking) {
-          booking.paymentStatus = 'PAID';
-          booking.status = AppointmentStatus.CONFIRMED;
-          booking.paymentTransactionId = savedTx.gatewayTransactionId;
-          await appointmentRepo.save(booking);
-        }
-      }
 
-      return savedTx;
-    });
+        if (tx.status === PaymentStatus.SUCCESSFUL) {
+          return tx;
+        }
+
+        tx.status = PaymentStatus.SUCCESSFUL;
+        tx.gatewayTransactionId =
+          gatewayTxId || `SIM-TX-${Math.floor(100000 + Math.random() * 900000)}`;
+        tx.auditTrail.push({
+          status: PaymentStatus.SUCCESSFUL,
+          timestamp: new Date(),
+          message: 'Payment succeeded via gateway simulator',
+        });
+
+        const saved = await txRepo.save(tx);
+
+        if (tx.orderId) {
+          const order = await orderRepo.findOneBy({ id: tx.orderId });
+          if (order) {
+            order.paymentStatus = 'successful';
+            order.status = OrderStatus.CONFIRMED;
+            order.transactionId = saved.gatewayTransactionId;
+            notifyOrder = await orderRepo.save(order);
+          }
+        } else if (tx.bookingId) {
+          const booking = await appointmentRepo.findOneBy({ id: tx.bookingId });
+          if (booking) {
+            booking.paymentStatus = 'PAID';
+            booking.status = AppointmentStatus.CONFIRMED;
+            booking.paymentTransactionId = saved.gatewayTransactionId;
+            notifyBooking = await appointmentRepo.save(booking);
+          }
+        }
+
+        return saved;
+      },
+    );
+
+    if (notifyOrder) {
+      const order: Order = notifyOrder;
+      await this.notificationsService.createNotification(
+        order.userId,
+        'Payment received',
+        `Payment received for order ${order.id}.`,
+        NotificationType.PAYMENT,
+        'Order',
+        order.id,
+      );
+    }
+    if (notifyBooking) {
+      const booking: Appointment = notifyBooking;
+      await this.notificationsService.createNotification(
+        booking.patientId,
+        'Payment confirmed',
+        'Payment confirmed for your appointment.',
+        NotificationType.PAYMENT,
+        'Appointment',
+        String(booking.id),
+      );
+    }
+
+    return savedTx;
   }
 
   async simulateFail(transactionId: string): Promise<Transaction> {
-    return this.transactionRepository.manager.transaction(async (manager) => {
-      const txRepo = manager.getRepository(Transaction);
-      const orderRepo = manager.getRepository(Order);
-      const appointmentRepo = manager.getRepository(Appointment);
+    let notifyOrder: Order | null = null;
+    let notifyBooking: Appointment | null = null;
 
-      const tx = await txRepo.findOneBy({ id: transactionId });
-      if (!tx) {
-        throw new NotFoundException('Transaction not found');
-      }
+    const savedTx = await this.transactionRepository.manager.transaction(
+      async (manager) => {
+        const txRepo = manager.getRepository(Transaction);
+        const orderRepo = manager.getRepository(Order);
+        const appointmentRepo = manager.getRepository(Appointment);
 
-      if (tx.status === PaymentStatus.FAILED) {
-        return tx;
-      }
-
-      tx.status = PaymentStatus.FAILED;
-      tx.auditTrail.push({
-        status: PaymentStatus.FAILED,
-        timestamp: new Date(),
-        message: 'Payment failed via gateway simulator',
-      });
-
-      const savedTx = await txRepo.save(tx);
-
-      if (tx.orderId) {
-        const order = await orderRepo.findOneBy({ id: tx.orderId });
-        if (order) {
-          order.paymentStatus = 'failed';
-          order.status = OrderStatus.FAILED;
-          await orderRepo.save(order);
+        const tx = await txRepo.findOneBy({ id: transactionId });
+        if (!tx) {
+          throw new NotFoundException('Transaction not found');
         }
-      } else if (tx.bookingId) {
-        const booking = await appointmentRepo.findOneBy({ id: tx.bookingId });
-        if (booking) {
-          booking.paymentStatus = 'FAILED';
-          booking.status = AppointmentStatus.CANCELLED;
-          await appointmentRepo.save(booking);
-        }
-      }
 
-      return savedTx;
-    });
+        if (tx.status === PaymentStatus.FAILED) {
+          return tx;
+        }
+
+        tx.status = PaymentStatus.FAILED;
+        tx.auditTrail.push({
+          status: PaymentStatus.FAILED,
+          timestamp: new Date(),
+          message: 'Payment failed via gateway simulator',
+        });
+
+        const saved = await txRepo.save(tx);
+
+        if (tx.orderId) {
+          const order = await orderRepo.findOneBy({ id: tx.orderId });
+          if (order) {
+            order.paymentStatus = 'failed';
+            order.status = OrderStatus.FAILED;
+            notifyOrder = await orderRepo.save(order);
+          }
+        } else if (tx.bookingId) {
+          const booking = await appointmentRepo.findOneBy({ id: tx.bookingId });
+          if (booking) {
+            booking.paymentStatus = 'FAILED';
+            booking.status = AppointmentStatus.CANCELLED;
+            notifyBooking = await appointmentRepo.save(booking);
+          }
+        }
+
+        return saved;
+      },
+    );
+
+    if (notifyOrder) {
+      const order: Order = notifyOrder;
+      await this.notificationsService.createNotification(
+        order.userId,
+        'Payment failed',
+        `Payment failed for order ${order.id}.`,
+        NotificationType.PAYMENT,
+        'Order',
+        order.id,
+      );
+    }
+    if (notifyBooking) {
+      const booking: Appointment = notifyBooking;
+      await this.notificationsService.createNotification(
+        booking.patientId,
+        'Payment failed',
+        'Payment failed — your appointment was cancelled.',
+        NotificationType.PAYMENT,
+        'Appointment',
+        String(booking.id),
+      );
+    }
+
+    return savedTx;
   }
 }

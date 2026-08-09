@@ -7,6 +7,7 @@ import { DoctorsModule } from '../doctors/doctors.module';
 import { ChatModule } from '../chat/chat.module';
 import { UsersModule } from '../users/users.module';
 import { ServicesModule } from '../services/services.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { ServicesModule } from '../services/services.module';
     ChatModule,
     UsersModule,
     ServicesModule,
+    NotificationsModule,
   ],
   controllers: [AppointmentsController],
   providers: [AppointmentsService],

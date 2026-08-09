@@ -1,17 +1,24 @@
 import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { FindOptionsWhere, Repository } from 'typeorm';
 import { Notification, NotificationType } from './notification.entity';
+import { PushToken } from './push-token.entity';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
+import { UsersService } from '../users/users.service';
+import { UserRole } from '../users/user.entity';
+import { PaginatedResult } from '../common/paginated-result.interface';
 
 @Injectable()
 export class NotificationsService {
   constructor(
     @InjectRepository(Notification)
     private readonly notificationRepository: Repository<Notification>,
-    @InjectQueue('mail-queue')
-    private readonly mailQueue: Queue,
+    @InjectRepository(PushToken)
+    private readonly pushTokenRepository: Repository<PushToken>,
+    @InjectQueue('notifications-queue')
+    private readonly notificationsQueue: Queue,
+    private readonly usersService: UsersService,
   ) {}
 
   async createNotification(
@@ -34,9 +41,8 @@ export class NotificationsService {
 
     const saved = await this.notificationRepository.save(notification);
 
-    // Queue asynchronous background tasks (like push notifications, SMS alerts, or email receipts)
     try {
-      await this.mailQueue.add('send-notification-alert', {
+      await this.notificationsQueue.add('send-push', {
         userId,
         notificationId: saved.id,
         title: saved.title,
@@ -44,7 +50,7 @@ export class NotificationsService {
         type: saved.type,
       });
     } catch (err) {
-      console.warn('Failed to push notification email job to queue', err);
+      console.warn('Failed to queue push notification job', err);
     }
 
     return saved;
@@ -72,5 +78,107 @@ export class NotificationsService {
 
   async markAllAsRead(userId: number): Promise<void> {
     await this.notificationRepository.update({ userId, isRead: false }, { isRead: true });
+  }
+
+  async registerPushToken(
+    userId: number,
+    token: string,
+    deviceId?: string,
+  ): Promise<PushToken> {
+    const existing = await this.pushTokenRepository.findOneBy({ token });
+    if (existing) {
+      existing.userId = userId;
+      existing.deviceId = deviceId;
+      return this.pushTokenRepository.save(existing);
+    }
+    const pushToken = this.pushTokenRepository.create({ userId, token, deviceId });
+    return this.pushTokenRepository.save(pushToken);
+  }
+
+  async unregisterPushToken(userId: number, token: string): Promise<void> {
+    await this.pushTokenRepository.delete({ userId, token });
+  }
+
+  /** Persists one Notification per recipient and enqueues push delivery for each. */
+  async sendToUsers(
+    userIds: number[],
+    title: string,
+    body: string,
+    type: NotificationType = NotificationType.SYSTEM,
+    referenceType?: string,
+    referenceId?: string,
+  ): Promise<{ count: number }> {
+    const rows = userIds.map((userId) =>
+      this.notificationRepository.create({
+        userId,
+        title,
+        body,
+        type,
+        referenceType,
+        referenceId,
+        isRead: false,
+      }),
+    );
+    const saved = await this.notificationRepository.save(rows);
+
+    await Promise.all(
+      saved.map((notification) =>
+        this.notificationsQueue.add('send-push', {
+          userId: notification.userId,
+          notificationId: notification.id,
+          title: notification.title,
+          body: notification.body,
+          type: notification.type,
+        }),
+      ),
+    );
+
+    return { count: saved.length };
+  }
+
+  /**
+   * Resolves the target audience and enqueues a single 'broadcast' job that
+   * does the per-user row creation + push fan-out inside the worker, so the
+   * admin request that triggered this returns immediately regardless of
+   * audience size.
+   */
+  async broadcastToRole(
+    title: string,
+    body: string,
+    type: NotificationType = NotificationType.SYSTEM,
+    role?: UserRole,
+  ): Promise<{ queued: boolean }> {
+    const userIds = await this.usersService.findAllIds(role);
+    if (userIds.length === 0) {
+      return { queued: false };
+    }
+
+    await this.notificationsQueue.add('broadcast', {
+      userIds,
+      title,
+      body,
+      type,
+    });
+
+    return { queued: true };
+  }
+
+  async findAllPaginated(
+    page: number,
+    limit: number,
+    type?: NotificationType,
+    userId?: number,
+  ): Promise<PaginatedResult<Notification>> {
+    const where: FindOptionsWhere<Notification> = {};
+    if (type) where.type = type;
+    if (userId) where.userId = userId;
+
+    const [data, total] = await this.notificationRepository.findAndCount({
+      where,
+      order: { createdAt: 'DESC' },
+      skip: (page - 1) * limit,
+      take: limit,
+    });
+    return { data, page, limit, total };
   }
 }

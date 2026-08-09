@@ -7,6 +7,8 @@ import { Order, OrderStatus } from '../orders/order.entity';
 import { Appointment, AppointmentStatus } from '../appointments/appointment.entity';
 import { Doctor } from '../doctors/doctor.entity';
 import { Clinic } from '../clinics/clinic.entity';
+import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationType } from '../notifications/notification.entity';
 
 @Injectable()
 export class ReviewsService {
@@ -21,6 +23,7 @@ export class ReviewsService {
     private readonly doctorRepository: Repository<Doctor>,
     @InjectRepository(Clinic)
     private readonly clinicRepository: Repository<Clinic>,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   async create(userId: number, dto: CreateReviewDto): Promise<Review> {
@@ -76,8 +79,34 @@ export class ReviewsService {
     // Recalculate average ratings for doctors and clinics
     if (dto.targetType === ReviewTargetType.DOCTOR) {
       await this.recalculateDoctorRating(parseInt(dto.targetId, 10));
+      const doctor = await this.doctorRepository.findOneBy({
+        id: parseInt(dto.targetId, 10),
+      });
+      if (doctor?.userId) {
+        await this.notificationsService.createNotification(
+          doctor.userId,
+          'New review',
+          `You received a new ${dto.rating}-star review.`,
+          NotificationType.SYSTEM,
+          'Doctor',
+          dto.targetId,
+        );
+      }
     } else if (dto.targetType === ReviewTargetType.CLINIC) {
       await this.recalculateClinicRating(parseInt(dto.targetId, 10));
+      const clinic = await this.clinicRepository.findOneBy({
+        id: parseInt(dto.targetId, 10),
+      });
+      if (clinic) {
+        await this.notificationsService.createNotification(
+          clinic.userId,
+          'New review',
+          `You received a new ${dto.rating}-star review.`,
+          NotificationType.SYSTEM,
+          'Clinic',
+          dto.targetId,
+        );
+      }
     }
 
     return saved;

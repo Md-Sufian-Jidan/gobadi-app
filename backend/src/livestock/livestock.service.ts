@@ -11,6 +11,8 @@ import { UpdateLivestockDto } from './dto/update-livestock.dto';
 import { RedisService } from '../redis/redis.service';
 import { MeilisearchService } from '../meilisearch/meilisearch.service';
 import { PaginatedResult } from '../common/paginated-result.interface';
+import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationType } from '../notifications/notification.entity';
 
 const LIVESTOCK_INDEX = 'livestock';
 
@@ -21,6 +23,7 @@ export class LivestockService {
     private readonly livestockRepository: Repository<Livestock>,
     private readonly redisService: RedisService,
     private readonly meilisearchService: MeilisearchService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   private getFeaturedCacheKey(): string {
@@ -192,6 +195,17 @@ export class LivestockService {
 
     await this.invalidateCache(id);
     await this.syncToSearch(updated);
+
+    await this.notificationsService.createNotification(
+      updated.sellerId,
+      updated.isVerified ? 'Listing verified' : 'Listing verification rejected',
+      updated.isVerified
+        ? 'Your listing has been verified.'
+        : 'Your listing verification was rejected.',
+      NotificationType.SYSTEM,
+      'Livestock',
+      String(updated.id),
+    );
 
     return updated;
   }

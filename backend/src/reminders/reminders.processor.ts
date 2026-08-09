@@ -11,6 +11,8 @@ import {
 import { Doctor } from '../doctors/doctor.entity';
 import { User } from '../users/user.entity';
 import { ChatGateway } from '../chat/chat.gateway';
+import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationType } from '../notifications/notification.entity';
 
 interface ReminderWindow {
   label: '24h' | '1h';
@@ -48,6 +50,7 @@ export class RemindersProcessor extends WorkerHost {
     @InjectQueue('mail-queue')
     private readonly mailQueue: Queue,
     private readonly chatGateway: ChatGateway,
+    private readonly notificationsService: NotificationsService,
   ) {
     super();
   }
@@ -119,6 +122,14 @@ export class RemindersProcessor extends WorkerHost {
       startAt: appointment.startAt,
       windowLabel,
     });
+    await this.notificationsService.createNotification(
+      appointment.patientId,
+      'Appointment reminder',
+      `Your appointment with ${doctor?.name || 'your doctor'} is in ${windowLabel}.`,
+      NotificationType.REMINDER,
+      'Appointment',
+      String(appointment.id),
+    );
 
     if (doctor?.userId) {
       this.chatGateway.notifyUser(doctor.userId, 'appointmentReminder', {
@@ -126,6 +137,14 @@ export class RemindersProcessor extends WorkerHost {
         startAt: appointment.startAt,
         windowLabel,
       });
+      await this.notificationsService.createNotification(
+        doctor.userId,
+        'Appointment reminder',
+        `Your appointment with ${patient?.name || 'your patient'} is in ${windowLabel}.`,
+        NotificationType.REMINDER,
+        'Appointment',
+        String(appointment.id),
+      );
     }
   }
 }

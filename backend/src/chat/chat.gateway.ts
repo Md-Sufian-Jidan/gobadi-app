@@ -15,6 +15,8 @@ import { ChatService } from './chat.service';
 import { ConversationService } from './conversation.service';
 import { JwtPayload } from '../auth/jwt-payload.interface';
 import { getRequiredJwtSecret } from '../auth/jwt-secret.util';
+import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationType } from '../notifications/notification.entity';
 
 @WebSocketGateway({
   cors: {
@@ -33,6 +35,7 @@ export class ChatGateway
     private readonly chatService: ChatService,
     private readonly conversationService: ConversationService,
     private readonly jwtService: JwtService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   afterInit() {
@@ -117,6 +120,25 @@ export class ChatGateway
     );
     this.notifyConversation(data.conversationId, 'messageReceived', savedMsg);
     await this.notifyConversationParticipants(data.conversationId, savedMsg);
+
+    const conversation = await this.conversationService.findById(data.conversationId);
+    if (conversation) {
+      const recipientId =
+        conversation.patientId === user.sub
+          ? conversation.doctorUserId
+          : conversation.patientId;
+      if (recipientId) {
+        await this.notificationsService.createNotification(
+          recipientId,
+          'New message',
+          data.text.length > 120 ? `${data.text.slice(0, 120)}…` : data.text,
+          NotificationType.MESSAGE,
+          'Conversation',
+          String(data.conversationId),
+        );
+      }
+    }
+
     return savedMsg;
   }
 

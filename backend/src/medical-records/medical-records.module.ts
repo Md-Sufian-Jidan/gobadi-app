@@ -8,6 +8,7 @@ import { FileProcessingProcessor } from './file-processing.processor';
 import { Attachment } from './attachment.entity';
 import { CloudinaryModule } from '../cloudinary/cloudinary.module';
 import { ChatModule } from '../chat/chat.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { ChatModule } from '../chat/chat.module';
     MulterModule.register({ limits: { fileSize: 20 * 1024 * 1024 } }),
     CloudinaryModule,
     ChatModule,
+    NotificationsModule,
   ],
   controllers: [MedicalRecordsController],
   providers: [MedicalRecordsService, FileProcessingProcessor],
