@@ -9,6 +9,12 @@ import {
 } from 'typeorm';
 import { User } from '../users/user.entity';
 
+export enum AiDiagnosisStatus {
+  PENDING = 'PENDING',
+  READY = 'READY',
+  FAILED = 'FAILED',
+}
+
 @Entity('ai_diagnoses')
 export class AiDiagnosis {
   @PrimaryGeneratedColumn()
@@ -28,14 +34,24 @@ export class AiDiagnosis {
   @Column('text', { array: true, default: '{}' })
   symptoms: string[];
 
-  @Column('text')
-  analysisResult: string;
+  @Column({
+    type: 'enum',
+    enum: AiDiagnosisStatus,
+    default: AiDiagnosisStatus.PENDING,
+  })
+  status: AiDiagnosisStatus;
 
-  @Column('float')
-  confidenceScore: number;
+  @Column({ nullable: true })
+  failureReason?: string;
 
-  @Column('jsonb', { nullable: true })
-  recommendations?: Record<string, any>;
+  @Column('text', { nullable: true })
+  analysisResult?: string;
+
+  @Column('float', { nullable: true })
+  confidenceScore?: number;
+
+  @Column('text', { array: true, default: '{}' })
+  recommendations: string[];
 
   @Column('int', { array: true, default: '{}' })
   recommendedDoctorIds: number[];

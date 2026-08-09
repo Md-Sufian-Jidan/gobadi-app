@@ -2,13 +2,17 @@ import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 import { API_URL } from '@/constants/api';
 import type { RootState } from './store';
 
+export type AiDiagnosisStatus = 'PENDING' | 'READY' | 'FAILED';
+
 export interface AiDiagnosis {
   id: number;
   userId: number;
   images: string[];
   symptoms: string[];
-  analysisResult: string;
-  confidenceScore: number;
+  status: AiDiagnosisStatus;
+  failureReason?: string;
+  analysisResult?: string;
+  confidenceScore?: number;
   recommendations: string[];
   recommendedDoctorIds: number[];
   createdAt: string;
@@ -32,6 +36,17 @@ export const aiDiagnosisApi = createApi({
       query: () => '/ai-diagnosis/history',
       providesTags: [{ type: 'AiDiagnosis', id: 'LIST' }],
     }),
+    getDiagnosisById: builder.query<AiDiagnosis, number>({
+      query: (id) => `/ai-diagnosis/${id}`,
+      providesTags: (result, error, id) => [{ type: 'AiDiagnosis', id }],
+    }),
+    uploadDiagnosisImage: builder.mutation<{ url: string }, FormData>({
+      query: (formData) => ({
+        url: '/ai-diagnosis/upload-image',
+        method: 'POST',
+        body: formData,
+      }),
+    }),
     analyzeSymptoms: builder.mutation<AiDiagnosis, { symptoms: string[]; images?: string[] }>({
       query: (body) => ({
         url: '/ai-diagnosis/analyze',
@@ -45,5 +60,7 @@ export const aiDiagnosisApi = createApi({
 
 export const {
   useGetDiagnosisHistoryQuery,
+  useGetDiagnosisByIdQuery,
+  useUploadDiagnosisImageMutation,
   useAnalyzeSymptomsMutation,
 } = aiDiagnosisApi;

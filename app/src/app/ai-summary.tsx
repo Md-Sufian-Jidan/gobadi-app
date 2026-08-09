@@ -17,7 +17,8 @@ export default function AiSummaryScreen() {
   const { data: history } = useGetDiagnosisHistoryQuery();
   const diagnosis = history?.find((d) => String(d.id) === id) ?? history?.[0];
 
-  const confidencePct = diagnosis ? Math.round(diagnosis.confidenceScore * 100) : null;
+  const confidencePct =
+    diagnosis?.confidenceScore != null ? Math.round(diagnosis.confidenceScore * 100) : null;
 
   return (
     <SafeAreaView style={styles.container}>

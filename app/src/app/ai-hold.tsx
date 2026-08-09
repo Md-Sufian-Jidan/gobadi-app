@@ -9,18 +9,26 @@ import {
   Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 
-import { useAnalyzeSymptomsMutation } from '@/store/aiDiagnosisApi';
+import { useAnalyzeSymptomsMutation, useGetDiagnosisByIdQuery } from '@/store/aiDiagnosisApi';
 
 const { width, height } = Dimensions.get('window');
 
 export default function AiHoldScreen() {
   const router = useRouter();
+  const { imageUrl, symptoms: symptomsParam } = useLocalSearchParams<{ imageUrl?: string; symptoms?: string }>();
   const [scanState, setScanState] = useState<'holding' | 'scanning' | 'done'>('holding');
   const [progress] = useState(new Animated.Value(0));
   const [modalY] = useState(new Animated.Value(height));
-  const [analyzeSymptoms, { data: diagnosis, error }] = useAnalyzeSymptomsMutation();
+  const [analyzeSymptoms, { error: submitError }] = useAnalyzeSymptomsMutation();
+  const [pendingId, setPendingId] = useState<number | null>(null);
+
+  const { data: diagnosis, error: pollError } = useGetDiagnosisByIdQuery(pendingId as number, {
+    skip: pendingId === null,
+    pollingInterval: 2000,
+  });
+  const error = submitError || pollError || diagnosis?.status === 'FAILED';
 
   useEffect(() => {
     // Trigger the scanner line animation while the analysis request runs
@@ -30,22 +38,35 @@ export default function AiHoldScreen() {
       useNativeDriver: true,
     }).start();
 
-    analyzeSymptoms({ symptoms: ['visual_scan'] })
+    let symptoms: string[] = [];
+    try {
+      symptoms = symptomsParam ? JSON.parse(symptomsParam) : [];
+    } catch {
+      symptoms = [];
+    }
+
+    analyzeSymptoms({ symptoms, images: imageUrl ? [imageUrl] : [] })
       .unwrap()
-      .then(() => {
-        setScanState('done');
-        Animated.spring(modalY, {
-          toValue: 0,
-          tension: 50,
-          friction: 8,
-          useNativeDriver: true,
-        }).start();
+      .then((created) => {
+        setPendingId(created.id);
       })
       .catch(() => {
         // Surfaced via `error` below; leave the scan line running so the
         // user isn't stuck on a silently-frozen screen.
       });
   }, []);
+
+  useEffect(() => {
+    if (diagnosis && diagnosis.status !== 'PENDING' && scanState !== 'done') {
+      setScanState('done');
+      Animated.spring(modalY, {
+        toValue: 0,
+        tension: 50,
+        friction: 8,
+        useNativeDriver: true,
+      }).start();
+    }
+  }, [diagnosis, scanState]);
 
   // Scan line animation interpolation
   const scanLineY = progress.interpolate({
@@ -126,7 +147,7 @@ export default function AiHoldScreen() {
             </View>
             <View style={styles.matchBadge}>
               <Text style={styles.matchBadgeText}>
-                {diagnosis ? `${Math.round(diagnosis.confidenceScore * 100)}% ✅` : '—'}
+                {diagnosis?.confidenceScore != null ? `${Math.round(diagnosis.confidenceScore * 100)}% ✅` : '—'}
               </Text>
             </View>
           </View>
@@ -150,7 +171,7 @@ export default function AiHoldScreen() {
           {/* Details Summary Action button */}
           <TouchableOpacity
             style={styles.summaryButton}
-            disabled={!diagnosis}
+            disabled={!diagnosis || diagnosis.status !== 'READY'}
             onPress={() => router.replace({ pathname: '/ai-summary', params: { id: String(diagnosis!.id) } })}
             activeOpacity={0.85}
           >
