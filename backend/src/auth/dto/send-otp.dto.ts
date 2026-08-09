@@ -1,6 +1,7 @@
 import { ApiPropertyOptional, ApiProperty } from '@nestjs/swagger';
 import { IsIn, IsNotEmpty, IsOptional, IsString } from 'class-validator';
 import type { OtpPurpose } from '../otp-purpose.type';
+import { IsPhoneOrEmail } from '../../common/validators/is-phone-or-email.validator';
 
 export class SendOtpDto {
   @ApiProperty({
@@ -9,6 +10,7 @@ export class SendOtpDto {
   })
   @IsString()
   @IsNotEmpty()
+  @IsPhoneOrEmail()
   phone: string;
 
   @ApiPropertyOptional({

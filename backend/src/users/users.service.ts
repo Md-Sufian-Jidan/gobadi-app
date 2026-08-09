@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   NotFoundException,
@@ -9,7 +10,7 @@ import { User, UserRole } from './user.entity';
 import { PaginatedResult } from '../common/paginated-result.interface';
 
 interface CreateWithPasswordInput {
-  name?: string;
+  name: string;
   phone?: string;
   email?: string;
   role: UserRole;
@@ -58,6 +59,11 @@ export class UsersService {
     userId: number,
     data: { name?: string; email?: string },
   ): Promise<User> {
+    if (data.name === undefined && data.email === undefined) {
+      throw new BadRequestException(
+        'At least one of name or email must be provided.',
+      );
+    }
     const user = await this.userRepository.findOneBy({ id: userId });
     if (!user) {
       throw new NotFoundException('User not found');

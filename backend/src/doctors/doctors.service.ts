@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { ILike, Repository } from 'typeorm';
 import { Doctor } from './doctor.entity';
@@ -74,7 +74,7 @@ export class DoctorsService {
       id: typeof id === 'string' ? parseInt(id, 10) : id,
     });
     if (!doctor) {
-      throw new BadRequestException('Doctor not found');
+      throw new NotFoundException('Doctor not found');
     }
     return doctor;
   }
@@ -83,8 +83,35 @@ export class DoctorsService {
     return this.doctorRepository.findOneBy({ userId });
   }
 
+  /**
+   * Creates the minimal, unverified profile row a self-registered doctor
+   * needs so doctor-only endpoints (e.g. GET /doctors/me) resolve. The
+   * doctor fills in specialty/experience/bio/etc. later; isVerified stays
+   * false until an admin reviews the account.
+   */
+  async createProfileForUser(user: {
+    id: number;
+    name?: string;
+  }): Promise<Doctor> {
+    const existing = await this.getDoctorByUserId(user.id);
+    if (existing) {
+      return existing;
+    }
+    const doctor = this.doctorRepository.create({
+      userId: user.id,
+      name: user.name ?? 'New Doctor',
+      specialty: 'General',
+      experience: '0 Years',
+      avatar: '',
+      bio: '',
+      isVerified: false,
+    });
+    return this.doctorRepository.save(doctor);
+  }
+
   async getAvailability(doctorId: string | number): Promise<Availability[]> {
     const id = typeof doctorId === 'string' ? parseInt(doctorId, 10) : doctorId;
+    await this.getDoctorById(id);
     return this.availabilityRepository.find({
       where: { doctorId: id },
       order: { dayOfWeek: 'ASC' },

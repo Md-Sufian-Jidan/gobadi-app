@@ -17,6 +17,7 @@ import {
 } from '@nestjs/swagger';
 import { CartService, CartSummary } from './cart.service';
 import { AddCartItemDto } from './dto/add-cart-item.dto';
+import { UpdateCartItemDto } from './dto/update-cart-item.dto';
 import { CartItem } from './cart-item.entity';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
@@ -53,7 +54,7 @@ export class CartController {
   async updateItem(
     @Param('id') id: string,
     @CurrentUser() user: JwtPayload,
-    @Body() body: { quantity: number },
+    @Body() body: UpdateCartItemDto,
   ): Promise<CartItem> {
     return this.cartService.updateItem(parseInt(id, 10), user.sub, body.quantity);
   }

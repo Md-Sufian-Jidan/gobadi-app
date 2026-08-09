@@ -51,8 +51,14 @@ export class AppointmentsService {
     doctorId: number,
     dateStr: string,
   ): Promise<string[]> {
-    const availability = await this.doctorsService.getAvailability(doctorId);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+      throw new BadRequestException('date must be in YYYY-MM-DD format');
+    }
     const targetDate = new Date(`${dateStr}T00:00:00`);
+    if (Number.isNaN(targetDate.getTime())) {
+      throw new BadRequestException('date must be a valid calendar date');
+    }
+    const availability = await this.doctorsService.getAvailability(doctorId);
     const dayOfWeek = targetDate.getDay();
     const windows = availability.filter(
       (w) => w.isActive && w.dayOfWeek === dayOfWeek,
