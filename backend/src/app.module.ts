@@ -103,7 +103,9 @@ import { NotificationsModule } from './notifications/notifications.module';
     AppService,
     {
       provide: APP_GUARD,
-      useClass: ThrottlerGuard,
+      useClass: process.env.SKIP_THROTTLE === 'true' 
+        ? class MockThrottlerGuard { canActivate() { return true; } } 
+        : ThrottlerGuard,
     },
   ],
 })

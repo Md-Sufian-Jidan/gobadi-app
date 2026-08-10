@@ -223,14 +223,12 @@ export class AuthService {
       const raw = await this.redisService.get(`otp:${phone}`);
       if (raw) {
         savedRecord = JSON.parse(raw) as OtpRecord;
-        await this.redisService.del(`otp:${phone}`);
       }
     } catch {
       // Fallback lookup
       const entry = this.otpMemoryFallback.get(phone);
       if (entry && entry.expiresAt > Date.now()) {
         savedRecord = entry.record;
-        this.otpMemoryFallback.delete(phone);
       }
     }
 
@@ -249,6 +247,16 @@ export class AuthService {
     if (savedRecord.purpose !== purpose) {
       throw new BadRequestException('Invalid OTP code. Please try again.');
     }
+
+    // Only consume the OTP once it has actually been verified — deleting it
+    // on every attempt let a single mistyped code lock the user out of the
+    // still-valid one until they requested a brand new OTP.
+    try {
+      await this.redisService.del(`otp:${phone}`);
+    } catch {
+      // ignore; memory fallback cleared below
+    }
+    this.otpMemoryFallback.delete(phone);
 
     if (savedRecord.purpose === 'reset') {
       const user =

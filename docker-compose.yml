@@ -16,6 +16,7 @@ services:
       REDIS_PORT: 6379
       MEILISEARCH_HOST: http://meilisearch:7700
       MEILISEARCH_API_KEY: dev-master-key
+      SKIP_THROTTLE: 'true'
     ports:
       - '3000:3000'
     volumes:

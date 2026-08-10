@@ -1,0 +1,52 @@
+<testsuites id="" name="" tests="19" failures="0" skipped="0" errors="0" time="0.967736">
+<testsuite name="auth.spec.ts" timestamp="2026-08-10T13:39:35.413Z" hostname="" tests="7" failures="0" skipped="0" time="1.443" errors="0">
+<testcase name="Authentication &amp; System Health API Tests › GET / health &amp; root endpoints" classname="auth.spec.ts" time="0.073">
+</testcase>
+<testcase name="Authentication &amp; System Health API Tests › POST /auth/register - happy path user registration &amp; verification" classname="auth.spec.ts" time="0.144">
+</testcase>
+<testcase name="Authentication &amp; System Health API Tests › POST /auth/register - boundary: conflict on duplicate identifier" classname="auth.spec.ts" time="0.124">
+</testcase>
+<testcase name="Authentication &amp; System Health API Tests › POST /auth/register - inputs validation negative test cases" classname="auth.spec.ts" time="0.042">
+</testcase>
+<testcase name="Authentication &amp; System Health API Tests › POST /auth/login &amp; sessions controls" classname="auth.spec.ts" time="0.322">
+</testcase>
+<testcase name="Authentication &amp; System Health API Tests › POST /auth/forgot-password &amp; reset-password recovery flow" classname="auth.spec.ts" time="0.205">
+</testcase>
+<testcase name="Authentication &amp; System Health API Tests › POST /auth/oauth - OAuth integrations failure validation" classname="auth.spec.ts" time="0.533">
+</testcase>
+</testsuite>
+<testsuite name="doctors-appointments.spec.ts" timestamp="2026-08-10T13:39:35.413Z" hostname="" tests="1" failures="0" skipped="0" time="0.201" errors="0">
+<testcase name="Doctors &amp; Appointments API Tests › Doctor lifecycle: registration, availability, slots listing, booking &amp; cancellation" classname="doctors-appointments.spec.ts" time="0.201">
+</testcase>
+</testsuite>
+<testsuite name="livestock-animals.spec.ts" timestamp="2026-08-10T13:39:35.413Z" hostname="" tests="2" failures="0" skipped="0" time="0.218" errors="0">
+<testcase name="Animals &amp; Livestock API Tests › Livestock Registry CRUD Operations &amp; validation boundaries" classname="livestock-animals.spec.ts" time="0.146">
+</testcase>
+<testcase name="Animals &amp; Livestock API Tests › POST /animals - validation failures on invalid input data" classname="livestock-animals.spec.ts" time="0.072">
+</testcase>
+</testsuite>
+<testsuite name="orders-cart.spec.ts" timestamp="2026-08-10T13:39:35.413Z" hostname="" tests="1" failures="0" skipped="0" time="0.246" errors="0">
+<testcase name="Cart &amp; Orders API Tests › Cart additions, checkout, order placement and fulfillment status lifecycle" classname="orders-cart.spec.ts" time="0.246">
+</testcase>
+</testsuite>
+<testsuite name="other-modules.spec.ts" timestamp="2026-08-10T13:39:35.413Z" hostname="" tests="4" failures="0" skipped="0" time="0.419" errors="0">
+<testcase name="Secondary Modules API Tests › Chat System - patient/doctor exchange and status updates" classname="other-modules.spec.ts" time="0.234">
+</testcase>
+<testcase name="Secondary Modules API Tests › Services catalog query &amp; management" classname="other-modules.spec.ts" time="0.017">
+</testcase>
+<testcase name="Secondary Modules API Tests › Weather service querying" classname="other-modules.spec.ts" time="0.083">
+</testcase>
+<testcase name="Secondary Modules API Tests › Alerts, Tasks, and Referrals modules validations" classname="other-modules.spec.ts" time="0.085">
+</testcase>
+</testsuite>
+<testsuite name="users.spec.ts" timestamp="2026-08-10T13:39:35.413Z" hostname="" tests="4" failures="0" skipped="0" time="0.211" errors="0">
+<testcase name="Users API Tests › GET /users/me - reject unauthorized request" classname="users.spec.ts" time="0.003">
+</testcase>
+<testcase name="Users API Tests › GET /users/me - fetch profile after authentication" classname="users.spec.ts" time="0.064">
+</testcase>
+<testcase name="Users API Tests › PATCH /users/me - update profile details successfully" classname="users.spec.ts" time="0.078">
+</testcase>
+<testcase name="Users API Tests › PATCH /users/me - invalid email input verification" classname="users.spec.ts" time="0.066">
+</testcase>
+</testsuite>
+</testsuites>
