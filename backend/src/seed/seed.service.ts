@@ -106,9 +106,39 @@ export class SeedService implements OnModuleInit {
 
   private async backfillDemoLoginCredentials(): Promise<void> {
     const passwordHash = await bcrypt.hash(SEED_PASSWORD, 10);
-    const demoAccounts = [
-      { phone: '+8801700000001', email: 'doctor@gobadi.test' },
-      { phone: '+8801800000001', email: 'patient@gobadi.test' },
+    // Covers both: (a) rows from an older seed run that predate a field, and
+    // (b) roles (clinic/admin) added to seedUsers() after this database's
+    // initial "if count === 0" seed already ran, so they were never created.
+    const demoAccounts: Array<{
+      phone: string;
+      email: string;
+      role: UserRole;
+      name: string;
+    }> = [
+      {
+        phone: '+8801700000001',
+        email: 'doctor@gobadi.test',
+        role: UserRole.DOCTOR,
+        name: 'Dr. Michael Wilson',
+      },
+      {
+        phone: '+8801800000001',
+        email: 'patient@gobadi.test',
+        role: UserRole.USER,
+        name: 'Test Farmer Patient',
+      },
+      {
+        phone: '+8801800000002',
+        email: 'clinic@gobadi.test',
+        role: UserRole.CLINIC,
+        name: 'Savar Clinic Manager',
+      },
+      {
+        phone: '+8801900000001',
+        email: 'admin@gobadi.test',
+        role: UserRole.ADMIN,
+        name: 'Admin Supervisor',
+      },
     ];
     let backfilled = false;
     for (const account of demoAccounts) {
@@ -117,9 +147,20 @@ export class SeedService implements OnModuleInit {
         .addSelect('user.password')
         .where('user.phone = :phone', { phone: account.phone })
         .getOne();
-      if (user && !user.password) {
+      if (!user) {
+        await this.userRepository.save({
+          phone: account.phone,
+          email: account.email,
+          role: account.role,
+          name: account.name,
+          password: passwordHash,
+          verified: true,
+        });
+        backfilled = true;
+      } else if (!user.password || user.role !== account.role) {
         await this.userRepository.update(user.id, {
           email: user.email ?? account.email,
+          role: account.role,
           password: passwordHash,
           verified: true,
         });
@@ -128,7 +169,8 @@ export class SeedService implements OnModuleInit {
     }
     if (backfilled) {
       this.logger.log(
-        `Backfilled login credentials — doctor@gobadi.test / patient@gobadi.test, password: ${SEED_PASSWORD}`,
+        `Backfilled demo login credentials for doctor@gobadi.test, patient@gobadi.test, ` +
+          `clinic@gobadi.test, admin@gobadi.test — password: ${SEED_PASSWORD}`,
       );
     }
   }
