@@ -37,9 +37,15 @@ export default function AnimalsListScreen() {
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>My Animals</Text>
-        <TouchableOpacity style={styles.notificationButton} activeOpacity={0.8}>
-          <Text style={styles.bellIcon}>🔔</Text>
-        </TouchableOpacity>
+        <View style={styles.headerRightControls}>
+          <TouchableOpacity style={styles.langBadge} activeOpacity={0.8}>
+            <Text style={styles.langGlobe}>🌐</Text>
+            <Text style={styles.langText}>EN</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.notificationButton} activeOpacity={0.8}>
+            <Text style={styles.bellIcon}>🔔</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Search Input */}
@@ -134,14 +140,14 @@ export default function AnimalsListScreen() {
               </View>
 
               <Text style={styles.cardDesc} numberOfLines={1}>
-                {item.color || 'cream'} colored coat and characteristics
+                {item.color ? `${item.color} colored coat and characteristics` : 'cream-colored coat and tuft of blond hair'}
               </Text>
 
-              {/* Specs Grid */}
-              <View style={styles.specsContainer}>
+              {/* Specs Row */}
+              <View style={styles.specsRow}>
                 <View style={styles.specItem}>
                   <Text style={styles.specLabel}>Species</Text>
-                  <Text style={styles.specValue}>{item.breed.split(' ')[0]}</Text>
+                  <Text style={styles.specValue}>{item.breed}</Text>
                 </View>
                 <View style={styles.specItem}>
                   <Text style={styles.specLabel}>Age</Text>
@@ -163,7 +169,9 @@ export default function AnimalsListScreen() {
         activeOpacity={0.85}
         onPress={() => router.push('/add-animal')}
       >
-        <Text style={styles.fabIcon}>＋</Text>
+        <View style={styles.fabPlusCircle}>
+          <Text style={styles.fabPlusSign}>+</Text>
+        </View>
         <Text style={styles.fabText}>Add Animal</Text>
       </TouchableOpacity>
     </SafeAreaView>
@@ -188,10 +196,34 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#1A1817',
   },
+  headerRightControls: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  langBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E6E1DC',
+    borderRadius: 18,
+    paddingHorizontal: 12,
+    height: 38,
+    gap: 4,
+  },
+  langGlobe: {
+    fontSize: 14,
+  },
+  langText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#BD632F',
+  },
   notificationButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 40,
+    height: 40,
+    borderRadius: 12,
     backgroundColor: '#BD632F',
     justifyContent: 'center',
     alignItems: 'center',
@@ -283,26 +315,28 @@ const styles = StyleSheet.create({
   },
   card: {
     flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: '#FFFFFF',
-    borderRadius: 20,
+    borderRadius: 24,
     marginBottom: 16,
-    overflow: 'hidden',
+    padding: 14,
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.03,
     shadowRadius: 8,
     elevation: 2,
     borderWidth: 1,
-    borderColor: '#F0EAE1',
+    borderColor: '#E6E1DC',
   },
   cardImage: {
-    width: 100,
-    height: 120,
+    width: 84,
+    height: 84,
+    borderRadius: 16,
   },
   cardContent: {
     flex: 1,
-    padding: 12,
-    justifyContent: 'space-between',
+    marginLeft: 14,
+    justifyContent: 'center',
   },
   cardHeader: {
     flexDirection: 'row',
@@ -310,84 +344,93 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   cardName: {
-    fontSize: 15,
+    fontSize: 18,
     fontWeight: '700',
     color: '#1A1817',
     flex: 1,
     marginRight: 8,
   },
   statusBadge: {
-    borderRadius: 12,
-    paddingHorizontal: 8,
+    borderRadius: 14,
+    paddingHorizontal: 12,
     paddingVertical: 4,
   },
   statusHealthy: {
-    backgroundColor: '#E8F5E9',
+    backgroundColor: '#EEF4E3',
   },
   statusTreatment: {
     backgroundColor: '#FFF3E0',
   },
   statusText: {
-    fontSize: 10,
-    fontWeight: '700',
+    fontSize: 12,
+    fontWeight: '600',
   },
   statusTextHealthy: {
-    color: '#2E7D32',
+    color: '#608030',
   },
   statusTextTreatment: {
     color: '#E65100',
   },
   cardDesc: {
-    fontSize: 12,
+    fontSize: 12.5,
     color: '#7C7672',
-    marginVertical: 4,
+    marginTop: 4,
+    marginBottom: 10,
   },
-  specsContainer: {
+  specsRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    backgroundColor: '#FAF9F6',
-    borderRadius: 8,
-    padding: 8,
+    alignItems: 'center',
   },
   specItem: {
     alignItems: 'flex-start',
   },
   specLabel: {
-    fontSize: 9,
-    color: '#9C9690',
-    marginBottom: 2,
+    fontSize: 12,
+    color: '#BD7D5B',
+    fontWeight: '500',
   },
   specValue: {
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: '700',
     color: '#1A1817',
+    marginTop: 2,
   },
   fab: {
     position: 'absolute',
-    bottom: 90, // Positioned right above the main bottom navigation bar
+    bottom: 85,
     alignSelf: 'center',
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#BD632F',
     borderRadius: 28,
-    height: 56,
-    paddingHorizontal: 24,
+    height: 52,
+    paddingHorizontal: 20,
     shadowColor: '#BD632F',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.25,
     shadowRadius: 8,
-    elevation: 5,
+    elevation: 6,
     zIndex: 99,
   },
-  fabIcon: {
-    color: '#FFFFFF',
-    fontSize: 20,
+  fabPlusCircle: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#FFFFFF',
+    justifyContent: 'center',
+    alignItems: 'center',
     marginRight: 8,
+  },
+  fabPlusSign: {
+    color: '#BD632F',
+    fontSize: 18,
     fontWeight: '700',
+    lineHeight: 20,
   },
   fabText: {
     color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 15,
+    fontWeight: '700',
   },
 });

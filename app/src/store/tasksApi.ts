@@ -70,6 +70,13 @@ export const tasksApi = createApi({
         { type: 'Task', id: 'LIST' },
       ],
     }),
+    updateTask: builder.mutation<Task, { id: number; title: string; detail?: string; scheduledTime?: string }>({
+      query: ({ id, ...body }) => ({ url: `/tasks/${id}`, method: 'PUT', body }),
+      invalidatesTags: (_result, _error, { id }) => [
+        { type: 'Task', id },
+        { type: 'Task', id: 'LIST' },
+      ],
+    }),
   }),
 });
 
@@ -78,4 +85,5 @@ export const {
   useCreateTaskMutation,
   useToggleTaskMutation,
   useDeleteTaskMutation,
+  useUpdateTaskMutation,
 } = tasksApi;

@@ -18,6 +18,7 @@ import { useGetTasksQuery, useToggleTaskMutation } from '@/store/tasksApi';
 import { useGetWeatherQuery } from '@/store/weatherApi';
 import { useGetAlertsQuery, useActOnAlertMutation } from '@/store/alertsApi';
 import { useGetMyReferralQuery, useClaimReferralMutation } from '@/store/referralsApi';
+import Svg, { Path } from 'react-native-svg';
 import { EmptyState } from '@/components/ui/empty-state';
 import { RowSkeleton, AlertCardSkeleton, SkeletonBox } from '@/components/ui/skeleton';
 
@@ -131,7 +132,7 @@ export default function HomeDashboard() {
         {/* Farm Weather Card */}
         <View style={styles.weatherCard}>
           <View style={styles.weatherCardHeader}>
-            <Text style={styles.weatherLocation}>📍 Farm Weather{weather ? ` - ${weather.location}` : ''}</Text>
+            <Text style={styles.weatherLocation}>📍 Farm Weather{weather?.location ? ` - ${weather.location}` : ' - Munshiganj'}</Text>
             <Image
               source={require('@/assets/images/farm_barn.png')}
               style={styles.barnImage}
@@ -154,13 +155,17 @@ export default function HomeDashboard() {
             </View>
           ) : (
             <>
-              <View style={styles.tempContainer}>
-                <Text style={styles.tempText}>
-                  {weather ? Math.round(weather.temperature) : '--'} <Text style={styles.tempUnit}>°C</Text>
-                </Text>
+              <View style={styles.tempRow}>
+                <View style={styles.tempMainContainer}>
+                  <Text style={styles.tempPlus}>+</Text>
+                  <Text style={styles.tempText}>
+                    {weather ? Math.round(weather.temperature) : '35'}
+                  </Text>
+                  <Text style={styles.tempUnit}>°C</Text>
+                </View>
                 <View style={styles.hiLowContainer}>
-                  <Text style={styles.hiLowText}>H: <Text style={styles.hiText}>{weather ? Math.round(weather.highTemp) : '--'}°C</Text></Text>
-                  <Text style={styles.hiLowText}>L: <Text style={styles.lowText}>{weather ? Math.round(weather.lowTemp) : '--'}°C</Text></Text>
+                  <Text style={styles.hiLowText}>H: <Text style={styles.hiText}>{weather ? Math.round(weather.highTemp) : '35'}°C</Text></Text>
+                  <Text style={styles.hiLowText}>L: <Text style={styles.lowText}>{weather ? Math.round(weather.lowTemp) : '15'}°C</Text></Text>
                 </View>
               </View>
 
@@ -170,7 +175,7 @@ export default function HomeDashboard() {
               <View style={styles.metricsGrid}>
                 <View style={styles.metricItem}>
                   <Text style={styles.metricLabel}>Humidity</Text>
-                  <Text style={styles.metricValue}>{weather ? `${weather.humidityPercentage}%` : '--'}</Text>
+                  <Text style={styles.metricValue}>{weather ? `${weather.humidityPercentage}%` : '40%'}</Text>
                 </View>
                 <View style={styles.metricItem}>
                   <Text style={styles.metricLabel}>Precipitation</Text>
@@ -188,16 +193,28 @@ export default function HomeDashboard() {
 
               {/* Sunrise / Sunset Arc */}
               <View style={styles.arcContainer}>
-                <View style={styles.arcLine} />
-                <Text style={styles.sunIcon}>☀️</Text>
+                <View style={styles.svgArcWrapper}>
+                  <Svg height="40" width="100%" viewBox="0 0 280 40">
+                    <Path
+                      d="M 10 35 Q 140 2 270 35"
+                      fill="none"
+                      stroke="#D6CEC5"
+                      strokeWidth="1.5"
+                      strokeDasharray="4 4"
+                    />
+                  </Svg>
+                  <View style={styles.sunIconWrapper}>
+                    <Text style={styles.sunIcon}>☀️</Text>
+                  </View>
+                </View>
                 <View style={styles.arcLabels}>
                   <View>
-                    <Text style={styles.arcTime}>{weather ? formatClockTime(weather.sunriseTime) : '--'}</Text>
-                    <Text style={styles.arcType}>Sunrise</Text>
+                    <Text style={styles.arcTime}>{weather ? formatClockTime(weather.sunriseTime) : '5:25 am'}</Text>
+                    <Text style={styles.arcTypeSunrise}>Sunrise</Text>
                   </View>
                   <View style={{ alignItems: 'flex-end' }}>
-                    <Text style={styles.arcTime}>{weather ? formatClockTime(weather.sunsetTime) : '--'}</Text>
-                    <Text style={[styles.arcType, { color: '#4A6FA5' }]}>Sunset</Text>
+                    <Text style={styles.arcTime}>{weather ? formatClockTime(weather.sunsetTime) : '6:53 pm'}</Text>
+                    <Text style={styles.arcTypeSunset}>Sunset</Text>
                   </View>
                 </View>
               </View>
@@ -230,7 +247,10 @@ export default function HomeDashboard() {
             animals.map((item, idx) => (
               <TouchableOpacity
                 key={idx}
-                style={[styles.listItem, idx === animals.length - 1 && { borderBottomWidth: 0 }]}
+                style={[
+                  styles.listItem,
+                  idx < animals.length - 1 && styles.listItemBorderDashed,
+                ]}
                 activeOpacity={0.7}
                 onPress={() => router.push({
                   pathname: '/my-animal-detail',
@@ -253,7 +273,7 @@ export default function HomeDashboard() {
         </View>
 
         {/* Today's Task Section */}
-        <Text style={[styles.sectionTitle, { marginTop: 24, marginBottom: 16, marginLeft:24 }]}>Today's Task</Text>
+        <Text style={[styles.sectionTitle, { marginTop: 24, marginBottom: 16, marginLeft: 24 }]}>Today's Task</Text>
 
         <View style={styles.listCard}>
           {isTasksLoading ? (
@@ -544,29 +564,44 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     marginTop: -10,
   },
-  tempContainer: {
+  tempRow: {
     flexDirection: 'row',
-    alignItems: 'flex-end',
-    marginTop: -20,
-    marginBottom: 16,
+    alignItems: 'center',
+    marginTop: -16,
+    marginBottom: 14,
+  },
+  tempMainContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  tempPlus: {
+    fontSize: 40,
+    fontWeight: '300',
+    color: '#1A1817',
+    marginRight: 2,
+    lineHeight: 52,
   },
   tempText: {
-    fontSize: 48,
-    fontWeight: '700',
+    fontSize: 52,
+    fontWeight: '600',
     color: '#1A1817',
+    lineHeight: 56,
   },
   tempUnit: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: '400',
+    color: '#1A1817',
+    marginTop: 4,
+    marginLeft: 2,
   },
   hiLowContainer: {
     marginLeft: 16,
-    marginBottom: 8,
+    justifyContent: 'center',
   },
   hiLowText: {
     fontSize: 12,
-    color: '#7C7672',
-    fontWeight: '500',
+    color: '#BD632F',
+    fontWeight: '600',
     lineHeight: 18,
   },
   hiText: {
@@ -579,21 +614,23 @@ const styles = StyleSheet.create({
   },
   weatherDivider: {
     height: 1,
-    backgroundColor: '#F0EAE1',
-    marginVertical: 12,
+    borderWidth: 1,
+    borderColor: '#E6E1DC',
     borderStyle: 'dashed',
+    marginVertical: 12,
   },
   metricsGrid: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 20,
+    marginBottom: 16,
   },
   metricItem: {
-    alignItems: 'center',
+    alignItems: 'flex-start',
   },
   metricLabel: {
-    fontSize: 11,
-    color: '#9C9690',
+    fontSize: 12,
+    color: '#BD7D5B',
+    fontWeight: '500',
     marginBottom: 4,
   },
   metricValue: {
@@ -602,26 +639,22 @@ const styles = StyleSheet.create({
     color: '#1A1817',
   },
   arcContainer: {
-    marginTop: 10,
-    alignItems: 'center',
+    marginTop: 8,
     position: 'relative',
-    height: 60,
+    height: 65,
     width: '100%',
   },
-  arcLine: {
-    position: 'absolute',
-    top: 15,
-    width: '80%',
+  svgArcWrapper: {
+    position: 'relative',
+    width: '100%',
     height: 40,
-    borderRadius: 40,
-    borderWidth: 1,
-    borderColor: '#E6E1DC',
-    borderStyle: 'dashed',
   },
-  sunIcon: {
+  sunIconWrapper: {
     position: 'absolute',
     right: '25%',
-    top: 2,
+    top: -2,
+  },
+  sunIcon: {
     fontSize: 18,
   },
   arcLabels: {
@@ -632,13 +665,19 @@ const styles = StyleSheet.create({
     bottom: 0,
   },
   arcTime: {
-    fontSize: 11,
+    fontSize: 12,
     color: '#1A1817',
     fontWeight: '600',
   },
-  arcType: {
-    fontSize: 11,
+  arcTypeSunrise: {
+    fontSize: 12,
     color: '#BD632F',
+    fontWeight: '700',
+    marginTop: 2,
+  },
+  arcTypeSunset: {
+    fontSize: 12,
+    color: '#4A6FA5',
     fontWeight: '700',
     marginTop: 2,
   },
@@ -677,8 +716,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 16,
     paddingHorizontal: 20,
+    borderBottomWidth: 0,
+  },
+  listItemBorderDashed: {
     borderBottomWidth: 1,
-    borderBottomColor: '#F0EAE1',
+    borderBottomColor: '#E6E1DC',
+    borderStyle: 'dashed',
   },
   listItemLeft: {
     flexDirection: 'row',

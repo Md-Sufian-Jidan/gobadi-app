@@ -85,9 +85,17 @@ function RootNavigator() {
       <Stack.Screen name="booking-bkash-number" />
       <Stack.Screen name="edit-profile" />
       <Stack.Screen name="my-task" />
+      <Stack.Screen name="add-task" />
+      <Stack.Screen name="edit-task" />
       <Stack.Screen name="my-orders" />
       <Stack.Screen name="medical-records" />
       <Stack.Screen name="add-listing" />
+      <Stack.Screen name="refer-earn" />
+      <Stack.Screen name="help-support" />
+      <Stack.Screen name="faqs" />
+      <Stack.Screen name="contact-support" />
+      <Stack.Screen name="report-issues" />
+      <Stack.Screen name="subscription" />
     </Stack>
   );
 }

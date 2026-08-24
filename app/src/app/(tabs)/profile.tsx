@@ -10,6 +10,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useDispatch, useSelector } from 'react-redux';
+import { Ionicons } from '@expo/vector-icons';
 
 import { logout } from '@/store/authApi';
 import { useGetAnimalsQuery } from '@/store/animalsApi';
@@ -40,15 +41,20 @@ export default function ProfileScreen() {
   const { data: animals = [] } = useGetAnimalsQuery();
   const stats = countByBreed(animals);
 
-  const menuItems = [
-    { id: '1', label: 'My Task', icon: '📈', route: '/my-task' },
-    { id: '2', label: 'My Orders', icon: '📦', route: '/my-orders' },
-    { id: '3', label: 'Medical Records', icon: '🩺', route: '/medical-records' },
-    { id: '4', label: 'Notification', icon: '🔔', route: null },
-    { id: '5', label: 'Language', icon: '🔤', route: null },
-    { id: '6', label: 'Refer & Earn', icon: '🎁', route: null },
-    { id: '7', label: 'Help Support', icon: '🎧', route: null },
-  ];
+  const menuItems: Array<{
+    id: string;
+    label: string;
+    icon: keyof typeof Ionicons.glyphMap;
+    route: any;
+  }> = [
+      { id: '1', label: 'My Task', icon: 'calendar-outline', route: '/my-task' },
+      { id: '2', label: 'Notification', icon: 'notifications-outline', route: '/notifications' },
+      { id: '3', label: 'Language', icon: 'language-outline', route: null },
+      { id: '4', label: 'Refer & Earn', icon: 'gift-outline', route: '/refer-earn' },
+      { id: '5', label: 'Help & Support', icon: 'headset-outline', route: '/help-support' },
+      { id: '6', label: 'My Orders', icon: 'cube-outline', route: '/my-orders' },
+      { id: '7', label: 'Medical Records', icon: 'medical-outline', route: '/medical-records' },
+    ];
 
   return (
     <SafeAreaView style={styles.container}>
@@ -74,55 +80,71 @@ export default function ProfileScreen() {
               onPress={() => router.push('/edit-profile')}
               activeOpacity={0.8}
             >
-              <Text style={styles.editText}>Edit ✏️</Text>
+              <Text style={styles.editText}>Edit</Text>
+              <Ionicons name="pencil-outline" size={13} color="#1A1817" style={{ marginLeft: 3 }} />
             </TouchableOpacity>
           </View>
 
-          <View style={styles.divider} />
+          <View style={styles.dashedDivider} />
 
-          {/* Stats Cards */}
+          {/* Stats Boxes */}
           <View style={styles.statsRow}>
             <View style={[styles.statBox, styles.statBoxBlue]}>
-              <Text style={[styles.statNumber, styles.statNumberBlue]}>{String(stats.cow).padStart(2, '0')}</Text>
+              <Text style={[styles.statNumber, styles.statNumberBlue]}>
+                {String(stats.cow || 0).padStart(2, '0')}
+              </Text>
               <Text style={styles.statLabel}>Cow</Text>
             </View>
             <View style={[styles.statBox, styles.statBoxOrange]}>
-              <Text style={[styles.statNumber, styles.statNumberOrange]}>{String(stats.goat).padStart(2, '0')}</Text>
+              <Text style={[styles.statNumber, styles.statNumberOrange]}>
+                {String(stats.goat || 0).padStart(2, '0')}
+              </Text>
               <Text style={styles.statLabel}>Goat</Text>
             </View>
             <View style={[styles.statBox, styles.statBoxPink]}>
-              <Text style={[styles.statNumber, styles.statNumberPink]}>{String(stats.buffalo).padStart(2, '0')}</Text>
+              <Text style={[styles.statNumber, styles.statNumberPink]}>
+                {String(stats.buffalo || 0).padStart(2, '0')}
+              </Text>
               <Text style={styles.statLabel}>Buffalo</Text>
             </View>
           </View>
         </View>
 
-        {/* Subscription Plan Card */}
-        <TouchableOpacity style={styles.planCard} activeOpacity={0.9}>
+        {/* Current Plan Card */}
+        <TouchableOpacity
+          style={styles.planCard}
+          onPress={() => router.push('/subscription')}
+          activeOpacity={0.85}
+        >
           <View style={styles.planDetails}>
             <Text style={styles.planLabel}>Current Plan</Text>
             <Text style={styles.planCost}>$99.00</Text>
-            <Text style={styles.planBilling}>Next Billing : Oct 15, 2026</Text>
+            <Text style={styles.planBilling}>
+              Next Billing : <Text style={{ fontWeight: '700' }}>Oct 15, 2026</Text>
+            </Text>
           </View>
-          <Text style={styles.planChevron}>❯</Text>
+          <Ionicons name="chevron-forward" size={20} color="#7C7672" />
         </TouchableOpacity>
 
-        {/* Menu List */}
-        <View style={styles.menuList}>
-          {menuItems.map((item) => (
+        {/* Menu Items List */}
+        <View style={styles.menuContainer}>
+          {menuItems.map((item, idx) => (
             <TouchableOpacity
               key={item.id}
-              style={styles.menuItem}
+              style={[
+                styles.menuItemRow,
+                idx < menuItems.length - 1 && styles.menuItemDashedBorder,
+              ]}
               onPress={() => item.route && router.push(item.route as any)}
               activeOpacity={0.7}
             >
               <View style={styles.menuItemLeft}>
-                <View style={styles.menuIconContainer}>
-                  <Text style={styles.menuIcon}>{item.icon}</Text>
+                <View style={styles.menuIconCircle}>
+                  <Ionicons name={item.icon} size={20} color="#BD632F" />
                 </View>
                 <Text style={styles.menuLabel}>{item.label}</Text>
               </View>
-              <Text style={styles.menuChevron}>❯</Text>
+              <Ionicons name="chevron-forward" size={20} color="#9C9690" />
             </TouchableOpacity>
           ))}
         </View>
@@ -136,6 +158,7 @@ export default function ProfileScreen() {
           }}
           activeOpacity={0.8}
         >
+          <Ionicons name="log-out-outline" size={18} color="#E53935" style={{ marginRight: 6 }} />
           <Text style={styles.signOutText}>Sign Out</Text>
         </TouchableOpacity>
       </ScrollView>
@@ -150,7 +173,7 @@ const styles = StyleSheet.create({
   },
   scrollContainer: {
     paddingHorizontal: 24,
-    paddingTop: 24,
+    paddingTop: 20,
     paddingBottom: 110,
   },
   headerTitle: {
@@ -161,25 +184,25 @@ const styles = StyleSheet.create({
   },
   userCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 28,
+    borderRadius: 24,
     padding: 20,
     borderWidth: 1,
     borderColor: '#E6E1DC',
     shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.02,
-    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.03,
+    shadowRadius: 8,
     elevation: 2,
-    marginBottom: 20,
+    marginBottom: 16,
   },
   userInfoRow: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   avatar: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
     marginRight: 14,
   },
   userDetails: {
@@ -189,28 +212,30 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
     color: '#1A1817',
-    marginBottom: 4,
+    marginBottom: 2,
   },
   userSubtitle: {
     fontSize: 12,
-    color: '#9C9690',
+    color: '#7C7672',
   },
   editButton: {
-    backgroundColor: '#FAF9F6',
-    borderWidth: 1,
-    borderColor: '#E6E1DC',
-    borderRadius: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F5F2EC',
+    borderRadius: 12,
     paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingVertical: 7,
   },
   editText: {
     fontSize: 12,
     fontWeight: '700',
     color: '#1A1817',
   },
-  divider: {
-    height: 1.5,
-    backgroundColor: '#FAF9F6',
+  dashedDivider: {
+    height: 1,
+    borderWidth: 1,
+    borderColor: '#E6E1DC',
+    borderStyle: 'dashed',
     marginVertical: 16,
   },
   statsRow: {
@@ -220,21 +245,21 @@ const styles = StyleSheet.create({
   statBox: {
     flex: 1,
     borderRadius: 16,
-    borderWidth: 1.5,
+    borderWidth: 1,
     paddingVertical: 12,
     alignItems: 'center',
   },
   statBoxBlue: {
-    backgroundColor: '#F3F6FF',
-    borderColor: '#D4E2FF',
+    backgroundColor: '#EDF4FE',
+    borderColor: '#B8D4FC',
   },
   statBoxOrange: {
-    backgroundColor: '#FFF7F3',
-    borderColor: '#FFE3D4',
+    backgroundColor: '#FFF2EB',
+    borderColor: '#FCD2C1',
   },
   statBoxPink: {
-    backgroundColor: '#FFF2F6',
-    borderColor: '#FFD4E2',
+    backgroundColor: '#FFF0F5',
+    borderColor: '#FCCCDD',
   },
   statNumber: {
     fontSize: 18,
@@ -242,37 +267,42 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   statNumberBlue: {
-    color: '#1976D2',
+    color: '#2B6CB0',
   },
   statNumberOrange: {
     color: '#BD632F',
   },
   statNumberPink: {
-    color: '#D81B60',
+    color: '#D53F8C',
   },
   statLabel: {
-    fontSize: 11,
-    fontWeight: '600',
+    fontSize: 12,
+    fontWeight: '500',
     color: '#7C7672',
   },
   planCard: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#F2F6FC',
+    backgroundColor: '#FFFFFF',
     borderRadius: 24,
     borderWidth: 1,
-    borderColor: '#D2E2FA',
-    padding: 20,
+    borderColor: '#E6E1DC',
+    padding: 18,
     marginBottom: 20,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.03,
+    shadowRadius: 8,
+    elevation: 2,
   },
   planDetails: {
     flex: 1,
   },
   planLabel: {
     fontSize: 12,
-    fontWeight: '600',
-    color: '#657786',
+    fontWeight: '500',
+    color: '#7C7672',
     marginBottom: 4,
   },
   planCost: {
@@ -283,65 +313,54 @@ const styles = StyleSheet.create({
   },
   planBilling: {
     fontSize: 11,
-    color: '#657786',
+    color: '#7C7672',
     fontWeight: '500',
   },
-  planChevron: {
-    fontSize: 14,
-    color: '#BD632F',
-    fontWeight: '700',
-  },
-  menuList: {
-    gap: 12,
+  menuContainer: {
     marginBottom: 24,
   },
-  menuItem: {
+  menuItemRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E6E1DC',
-    borderRadius: 20,
-    padding: 16,
+    paddingVertical: 14,
+  },
+  menuItemDashedBorder: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#E6E1DC',
+    borderStyle: 'dashed',
   },
   menuItemLeft: {
     flexDirection: 'row',
     alignItems: 'center',
   },
-  menuIconContainer: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    backgroundColor: '#FFF8F4',
+  menuIconCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#FFF2EB',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
-  },
-  menuIcon: {
-    fontSize: 16,
+    marginRight: 14,
   },
   menuLabel: {
-    fontSize: 14,
-    fontWeight: '700',
+    fontSize: 15,
+    fontWeight: '600',
     color: '#1A1817',
   },
-  menuChevron: {
-    fontSize: 12,
-    color: '#9C9690',
-  },
   signOutButton: {
+    flexDirection: 'row',
     borderWidth: 1.5,
     borderColor: '#E53935',
-    height: 52,
-    borderRadius: 26,
+    height: 48,
+    borderRadius: 24,
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 10,
+    marginTop: 4,
   },
   signOutText: {
     color: '#E53935',
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '700',
   },
 });
