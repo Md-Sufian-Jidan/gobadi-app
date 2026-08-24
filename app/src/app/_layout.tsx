@@ -80,10 +80,13 @@ function RootNavigator() {
       <Stack.Screen name="cart" />
       <Stack.Screen name="wishlist" />
       <Stack.Screen name="notifications" />
+      <Stack.Screen name="notification-preferences" />
       <Stack.Screen name="book-animal" />
       <Stack.Screen name="booking-payment" />
       <Stack.Screen name="booking-bkash-number" />
       <Stack.Screen name="edit-profile" />
+      <Stack.Screen name="profile-details" />
+      <Stack.Screen name="profile-edit" />
       <Stack.Screen name="my-task" />
       <Stack.Screen name="add-task" />
       <Stack.Screen name="edit-task" />
@@ -97,6 +100,14 @@ function RootNavigator() {
       <Stack.Screen name="report-issues" />
       <Stack.Screen name="subscription" />
       <Stack.Screen name="select-language" />
+      <Stack.Screen name="wallet" />
+      <Stack.Screen name="payment-methods" />
+      <Stack.Screen name="add-payment-method" />
+      <Stack.Screen name="otp-verification" />
+      <Stack.Screen name="schedule" />
+      <Stack.Screen name="calendar-settings" />
+      <Stack.Screen name="working-hours" />
+      <Stack.Screen name="block-time-off" />
     </Stack>
   );
 }

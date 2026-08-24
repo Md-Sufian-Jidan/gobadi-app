@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useRequireDoctor } from '@/hooks/use-require-doctor';
 import {
   StyleSheet,
   View,
@@ -38,6 +39,8 @@ function defaultRows(): DayRow[] {
 
 export default function DoctorAvailabilityScreen() {
   const { data: profile, isLoading: isProfileLoading } = useGetMyDoctorProfileQuery();
+  const isDoctor = useRequireDoctor();
+  if (!isDoctor) return null;
   const { data: availability, isLoading: isAvailabilityLoading } = useGetAvailabilityQuery(
     profile?.id ?? 0,
     { skip: !profile?.id },

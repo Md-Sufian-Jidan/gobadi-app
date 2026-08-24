@@ -141,14 +141,14 @@ export default function AppTabs() {
         headerShown: false,
       }}
       tabBar={(props) => <CustomTabBar {...props} />}
-    >
+    >  
       <Tabs.Screen name="index" options={{ href: isDoctor ? null : undefined }} />
       <Tabs.Screen name="animals" options={{ href: isDoctor ? null : undefined }} />
       <Tabs.Screen name="doctors" options={{ href: isDoctor ? null : undefined }} />
       <Tabs.Screen name="market" options={{ href: isDoctor ? null : undefined }} />
       <Tabs.Screen name="doctor-home" options={{ href: isDoctor ? undefined : null }} />
       <Tabs.Screen name="doctor-bookings" options={{ href: isDoctor ? undefined : null }} />
-      <Tabs.Screen name="doctor-availability" options={{ href: isDoctor ? undefined : null }} />
+      <Tabs.Screen name="doctor-availability" options={{ href: null }} />
       <Tabs.Screen name="doctor-messages" options={{ href: isDoctor ? undefined : null }} />
       <Tabs.Screen name="profile" />
     </Tabs>

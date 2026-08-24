@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   StyleSheet,
   View,
@@ -6,448 +6,451 @@ import {
   TextInput,
   TouchableOpacity,
   FlatList,
-  Image,
+  ScrollView,
   KeyboardAvoidingView,
   Platform,
-  Modal,
-  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import * as ImagePicker from 'expo-image-picker';
-import {
-  useGetMessagesQuery,
-  useSendMessageMutation,
-  useSendAttachmentMessageMutation,
-} from '@/store/chatApi';
-import { useChatSocket } from '@/hooks/use-chat-socket';
+import { Ionicons } from '@expo/vector-icons';
+import PrescriptionBottomSheet from '@/components/PrescriptionBottomSheet';
+
+type ConsultationState = 'idle' | 'active' | 'ended' | 'prescription_sent';
+
+interface ChatMessage {
+  id: string;
+  sender: 'patient' | 'doctor';
+  text: string;
+  time: string;
+  isPrescription?: boolean;
+  prescriptionDate?: string;
+  prescriptionSize?: string;
+}
+
+const MOCK_MESSAGES: ChatMessage[] = [
+  { id: '1', sender: 'patient', text: 'Assalamualaikum dr.  My cow is sick for 3 days and not eating at all.', time: '09:55' },
+  { id: '2', sender: 'doctor', text: 'Walaikumassalam, I have noted the issue. I will check during consultation', time: '09:55' },
+];
+
+const CONSULTATION_MESSAGES: ChatMessage[] = [
+  { id: '1', sender: 'patient', text: 'My cattle is been sick for almost 3 days straight and not eating anything at all.', time: '09:55' },
+  { id: '2', sender: 'doctor', text: 'What was the temperature?', time: '09:55' },
+];
+
+const ENDED_MESSAGES: ChatMessage[] = [
+  { id: '1', sender: 'patient', text: 'My cattle is been sick for almost 3 days straight and not eating anything at all.', time: '09:55' },
+  { id: '2', sender: 'doctor', text: 'What was the temperature?', time: '09:55' },
+];
+
+const PRESCRIPTION_MESSAGES: ChatMessage[] = [
+  { id: '1', sender: 'patient', text: 'My cattle is been sick for almost 3 days straight and not eating anything at all.', time: '09:55' },
+  { id: '2', sender: 'doctor', text: 'What was the temperature?', time: '09:55' },
+  { id: '3', sender: 'doctor', text: '', time: '09:55', isPrescription: true, prescriptionDate: '18 Aug 2026', prescriptionSize: '420 KB' },
+];
+
+function formatTimeRemaining(seconds: number): string {
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+}
 
 export default function ChatScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
-  const conversationId = params.conversationId ? Number(params.conversationId) : undefined;
-  const { data: dbMessages = [] } = useGetMessagesQuery(conversationId);
-  const [sendMessage] = useSendMessageMutation();
-  const [sendAttachmentMessage] = useSendAttachmentMessageMutation();
+  const [consultationState, setConsultationState] = useState<ConsultationState>('idle');
   const [inputText, setInputText] = useState('');
-  const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
-  const { isOtherUserTyping, emitTyping } = useChatSocket(conversationId);
+  const [remainingTime, setRemainingTime] = useState(14 * 60 + 28);
+  const flatListRef = useRef<FlatList>(null);
+  const [showPrescriptionSheet, setShowPrescriptionSheet] = useState(false);
 
-  const messages = useMemo(
-    () =>
-      [...dbMessages]
-        .reverse()
-        .map((m) => ({
-          id: String(m.id),
-          sender: m.sender,
-          text: m.text,
-          time: m.time,
-          attachmentUrl: m.attachmentUrl,
-          attachmentType: m.attachmentType,
-          avatar: m.sender === 'user'
-            ? require('@/assets/images/doctor_avatar.png')
-            : require('@/assets/images/doctor.png'),
-        })),
-    [dbMessages],
-  );
+  const messages = consultationState === 'prescription_sent'
+    ? PRESCRIPTION_MESSAGES
+    : consultationState === 'ended'
+    ? ENDED_MESSAGES
+    : consultationState === 'active'
+    ? CONSULTATION_MESSAGES
+    : MOCK_MESSAGES;
 
-  const handleChangeText = (text: string) => {
-    setInputText(text);
-    emitTyping(text.length > 0);
+  const handleStartConsultation = () => {
+    setConsultationState('active');
   };
 
-  const handleSendMessage = async () => {
+  const handleEndConsultation = () => {
+    setConsultationState('ended');
+  };
+
+  const handleSendPrescription = () => {
+    setShowPrescriptionSheet(true);
+  };
+
+  const handlePrescriptionSent = () => {
+    setConsultationState('prescription_sent');
+  };
+
+  const handleBackToChat = () => {
+    setConsultationState('ended');
+  };
+
+  const handleSendMessage = () => {
     if (!inputText.trim()) return;
-    const textToSend = inputText;
     setInputText('');
-    emitTyping(false);
-    try {
-      await sendMessage({ text: textToSend, conversationId }).unwrap();
-    } catch (err) {
-      console.log('Error sending message to API:', err);
-    }
   };
 
-  const handlePickAttachment = async () => {
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) return;
+  const renderMessage = ({ item }: { item: ChatMessage }) => {
+    const isDoctor = item.sender === 'doctor';
 
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      quality: 0.8,
-    });
-    if (result.canceled || !result.assets?.[0]) return;
-
-    const asset = result.assets[0];
-    const name = asset.uri.split('/').pop() ?? `photo-${Date.now()}.jpg`;
-    const type = asset.mimeType ?? 'image/jpeg';
-
-    try {
-      await sendAttachmentMessage({
-        conversationId,
-        file: { uri: asset.uri, name, type },
-      }).unwrap();
-    } catch (err) {
-      console.log('Error sending attachment to API:', err);
+    if (item.isPrescription) {
+      return (
+        <View style={styles.messageRowRight}>
+          <View style={styles.prescriptionBubble}>
+            <View style={styles.prescriptionHeader}>
+              <Ionicons name="document-text" size={18} color="#FFFFFF" />
+              <Text style={styles.prescriptionTitle}>Prescription - {item.prescriptionDate}</Text>
+            </View>
+            <Text style={styles.prescriptionMeta}>
+              {item.prescriptionDate} · PDF · {item.prescriptionSize}
+            </Text>
+            <View style={styles.prescriptionFooter}>
+              <Text style={styles.prescriptionTime}>{item.time}</Text>
+              <TouchableOpacity activeOpacity={0.7}>
+                <Ionicons name="download-outline" size={18} color="#FFFFFF" />
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      );
     }
+
+    return (
+      <View style={isDoctor ? styles.messageRowRight : styles.messageRowLeft}>
+        {!isDoctor && (
+          <View style={styles.patientAvatar}>
+            <Text style={styles.patientAvatarEmoji}>🐄</Text>
+          </View>
+        )}
+        <View style={isDoctor ? styles.doctorBubble : styles.patientBubble}>
+          <Text style={isDoctor ? styles.doctorBubbleText : styles.patientBubbleText}>
+            {item.text}
+          </Text>
+          <Text style={isDoctor ? styles.doctorTimeText : styles.patientTimeText}>
+            {item.time}
+          </Text>
+        </View>
+      </View>
+    );
   };
 
+  // ─── Consultation Ended Full Page (Image 6) ───
+  if (consultationState === 'ended' && params.fullPage === 'true') {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} activeOpacity={0.7}>
+            <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Consultation Ended</Text>
+          <View style={{ width: 40 }} />
+        </View>
+
+        <ScrollView contentContainerStyle={styles.endedFullContent}>
+          <View style={styles.endedCheckCircle}>
+            <Ionicons name="checkmark" size={48} color="#FFFFFF" />
+          </View>
+          <Text style={styles.endedTitle}>Consultation ended!</Text>
+          <Text style={styles.endedSubtitle}>Your consultation with Sophia Rodriguez has ended.</Text>
+
+          <View style={styles.consultationInfoCard}>
+            <Text style={styles.consultationInfoTitle}>Consultation Ended</Text>
+            <Text style={styles.consultationInfoSubtitle}>You are now in consultation with Sophia Rodriguez</Text>
+            <Text style={styles.consultationInfoBullet}>•  Start time: 10:00 AM</Text>
+            <Text style={styles.consultationInfoBullet}>•  Max Duration: 30 min</Text>
+            <Text style={styles.consultationInfoRemaining}>•  Remaining time: 30:00</Text>
+          </View>
+
+          <View style={styles.nextStepCard}>
+            <Text style={styles.nextStepTitle}>Next Step</Text>
+            <View style={styles.nextStepOption}>
+              <View style={styles.radioOuter}>
+                <View style={styles.radioInner} />
+              </View>
+              <Text style={styles.nextStepText}>Send prescription, recommendation, note</Text>
+            </View>
+          </View>
+
+          <TouchableOpacity style={styles.sendPrescriptionBtn} onPress={handleSendPrescription} activeOpacity={0.85}>
+            <Text style={styles.sendPrescriptionBtnText}>Send Prescription</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.backToChatBtn} onPress={handleBackToChat} activeOpacity={0.85}>
+            <Text style={styles.backToChatBtnText}>Back to Chat</Text>
+          </TouchableOpacity>
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
+
+  // ─── Main Chat View ───
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <View style={styles.headerLeft}>
-          <TouchableOpacity
-            style={styles.circleButton}
-            onPress={() => router.back()}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.buttonText}>←</Text>
-          </TouchableOpacity>
-
-          {/* Doctor Info Row */}
-          <View style={styles.doctorHeaderCol}>
-            <View style={styles.avatarWrapper}>
-              <Image source={require('@/assets/images/doctor.png')} style={styles.doctorAvatar} />
-              <View style={styles.activeDot} />
-            </View>
-            <Text style={styles.doctorName}>Dr. David Patel</Text>
-          </View>
-        </View>
-
-        <TouchableOpacity style={styles.circleButton} activeOpacity={0.8}>
-          <Text style={styles.menuIcon}>⋮</Text>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} activeOpacity={0.7}>
+          <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
         </TouchableOpacity>
+        <Text style={styles.headerTitle}>Donald Tramp</Text>
+        <View style={styles.headerActions}>
+          <TouchableOpacity style={styles.headerActionBtn} activeOpacity={0.7}>
+            <Ionicons name="call" size={18} color="#1A1817" />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.headerActionBtn}
+            activeOpacity={0.7}
+            onPress={() => router.push('/video-call')}
+          >
+            <Ionicons name="videocam" size={18} color="#1A1817" />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.headerActionBtn} activeOpacity={0.7}>
+            <Ionicons name="ellipsis-vertical" size={18} color="#1A1817" />
+          </TouchableOpacity>
+        </View>
       </View>
 
-      {/* Message Area */}
-      <FlatList
-        data={messages}
-        inverted
-        keyExtractor={(msg) => msg.id}
-        contentContainerStyle={styles.chatScroll}
-        showsVerticalScrollIndicator={false}
-        ListHeaderComponent={
-          isOtherUserTyping ? (
-            <View style={[styles.messageRow, styles.doctorRow]}>
-              <View style={[styles.bubble, styles.doctorBubble]}>
-                <Text style={[styles.bubbleText, styles.doctorText]}>typing…</Text>
-              </View>
+      {/* Upcoming Appointment Banner (idle & active states) */}
+      {(consultationState === 'idle' || consultationState === 'active') && (
+        <View style={styles.upcomingBanner}>
+          <View style={styles.upcomingBannerLeft}>
+            <View style={styles.upcomingBannerAvatar}>
+              <Text style={styles.upcomingBannerEmoji}>🐄</Text>
             </View>
-          ) : null
-        }
-        renderItem={({ item: msg }) => {
-          const isDoctor = msg.sender === 'doctor';
-          return (
-            <View style={[styles.messageRow, isDoctor ? styles.doctorRow : styles.userRow]}>
-              {/* User Avatar on the left for user messages */}
-              {!isDoctor && (
-                <Image source={msg.avatar} style={styles.bubbleAvatarLeft} />
-              )}
-
-              {/* Message Bubble */}
-              <View style={[styles.bubble, isDoctor ? styles.doctorBubble : styles.userBubble]}>
-                {msg.attachmentUrl && msg.attachmentType === 'image' && (
-                  <TouchableOpacity onPress={() => setPreviewImageUrl(msg.attachmentUrl!)}>
-                    <Image source={{ uri: msg.attachmentUrl }} style={styles.attachmentImage} />
-                  </TouchableOpacity>
-                )}
-                {msg.attachmentUrl && msg.attachmentType === 'document' && (
-                  <TouchableOpacity
-                    style={styles.documentChip}
-                    onPress={() => Linking.openURL(msg.attachmentUrl!)}
-                  >
-                    <Text
-                      style={[
-                        styles.documentChipText,
-                        isDoctor ? styles.doctorText : styles.userText,
-                      ]}
-                    >
-                      📄 Document
-                    </Text>
-                  </TouchableOpacity>
-                )}
-                {!!msg.text && (
-                  <Text style={[styles.bubbleText, isDoctor ? styles.doctorText : styles.userText]}>
-                    {msg.text}
-                  </Text>
-                )}
-                <Text style={[styles.timeText, isDoctor ? styles.doctorTime : styles.userTime]}>
-                  {msg.time}
-                </Text>
-              </View>
-
-              {/* Doctor Avatar on the right for doctor messages */}
-              {isDoctor && (
-                <Image source={msg.avatar} style={styles.bubbleAvatarRight} />
-              )}
+            <View>
+              <Text style={styles.upcomingBannerTime}>10:00 AM · Today</Text>
+              <Text style={styles.upcomingBannerName}>Donald Tramp</Text>
             </View>
-          );
-        }}
-      />
-
-      {/* Input controls */}
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={20}
-      >
-        <View style={styles.inputBar}>
-          <TouchableOpacity
-            style={styles.attachButton}
-            onPress={handlePickAttachment}
-            activeOpacity={0.85}
-          >
-            <Text style={styles.attachIcon}>📎</Text>
-          </TouchableOpacity>
-          <TextInput
-            style={styles.textInput}
-            placeholder="Type a message..."
-            placeholderTextColor="#A39E99"
-            value={inputText}
-            onChangeText={handleChangeText}
-          />
-          <TouchableOpacity
-            style={styles.micButton}
-            onPress={handleSendMessage}
-            activeOpacity={0.85}
-          >
-            <Text style={styles.micIcon}>🎙️</Text>
+          </View>
+          <TouchableOpacity style={styles.upcomingBannerJoin} activeOpacity={0.85}>
+            <Text style={styles.upcomingBannerJoinText}>Join</Text>
           </TouchableOpacity>
         </View>
-      </KeyboardAvoidingView>
+      )}
 
-      <Modal visible={!!previewImageUrl} transparent animationType="fade">
-        <TouchableOpacity
-          style={styles.imagePreviewOverlay}
-          activeOpacity={1}
-          onPress={() => setPreviewImageUrl(null)}
-        >
-          {previewImageUrl && (
-            <Image source={{ uri: previewImageUrl }} style={styles.imagePreviewFull} resizeMode="contain" />
+      {/* Consultation Started Banner (active state) */}
+      {consultationState === 'active' && (
+        <View style={styles.consultationBanner}>
+          <Text style={styles.consultationBannerTitle}>Consultation started</Text>
+          <Text style={styles.consultationBannerDesc}>You are now in consultation with Sophia Rodriguez</Text>
+          <Text style={styles.consultationBannerBullet}>•  Start time: 10:00 AM</Text>
+          <Text style={styles.consultationBannerBullet}>•  Max Duration: 30 min</Text>
+          <Text style={styles.consultationBannerRemaining}>•  Remaining time: {formatTimeRemaining(remainingTime)}</Text>
+          <TouchableOpacity style={styles.endConsultationBtn} onPress={handleEndConsultation} activeOpacity={0.85}>
+            <Text style={styles.endConsultationBtnText}>End Consultation</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {/* Consultation Ended Banner (ended & prescription_sent states) */}
+      {(consultationState === 'ended' || consultationState === 'prescription_sent') && (
+        <View style={styles.consultationBanner}>
+          <Text style={styles.consultationBannerEndedTitle}>Consultation ended!</Text>
+          <Text style={styles.consultationBannerDesc}>You are now in consultation with Sophia Rodriguez</Text>
+          <Text style={styles.consultationBannerBullet}>•  Start time: 10:00 AM</Text>
+          <Text style={styles.consultationBannerBullet}>•  Max Duration: 30 min</Text>
+          <Text style={styles.consultationBannerRemaining}>•  Remaining time: {formatTimeRemaining(remainingTime)}</Text>
+        </View>
+      )}
+
+      {/* Next Step Card (ended & prescription_sent states) */}
+      {(consultationState === 'ended' || consultationState === 'prescription_sent') && (
+        <View style={styles.nextStepInline}>
+          <Text style={styles.nextStepInlineTitle}>Next Step</Text>
+          <View style={styles.nextStepInlineOption}>
+            {consultationState === 'prescription_sent' ? (
+              <Ionicons name="checkmark-circle" size={20} color="#4CAF50" />
+            ) : (
+              <View style={styles.radioOuter}>
+                <View style={styles.radioInner} />
+              </View>
+            )}
+            <Text style={styles.nextStepInlineText}>Send prescription, recommendation, note</Text>
+          </View>
+          {consultationState === 'ended' && (
+            <TouchableOpacity style={styles.sendPrescriptionInlineBtn} onPress={handleSendPrescription} activeOpacity={0.85}>
+              <Text style={styles.sendPrescriptionInlineBtnText}>Send Prescription</Text>
+            </TouchableOpacity>
           )}
-        </TouchableOpacity>
-      </Modal>
+        </View>
+      )}
+
+      {/* Messages */}
+      <FlatList
+        ref={flatListRef}
+        data={messages}
+        keyExtractor={(item) => item.id}
+        renderItem={renderMessage}
+        contentContainerStyle={styles.messagesList}
+        showsVerticalScrollIndicator={false}
+        ListHeaderComponent={
+          <View style={styles.dateSeparator}>
+            <Text style={styles.dateSeparatorText}>Today</Text>
+          </View>
+        }
+      />
+
+      {/* Quick Actions (active state) */}
+      {consultationState === 'active' && (
+        <View style={styles.quickActionsContainer}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.quickActions}>
+            <TouchableOpacity style={styles.quickActionBtn} activeOpacity={0.8} onPress={() => setShowPrescriptionSheet(true)}>
+              <Text style={styles.quickActionText}>Send prescription</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.quickActionBtn} activeOpacity={0.8}>
+              <Text style={styles.quickActionText}>Send recommendation</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.quickActionBtn} activeOpacity={0.8}>
+              <Ionicons name="chevron-down" size={16} color="#7C7672" />
+            </TouchableOpacity>
+          </ScrollView>
+        </View>
+      )}
+
+      {/* Start Consultation Button (idle state) */}
+      {consultationState === 'idle' && (
+        <View style={styles.startConsultationContainer}>
+          <TouchableOpacity style={styles.startConsultationBtn} onPress={handleStartConsultation} activeOpacity={0.85}>
+            <Text style={styles.startConsultationBtnText}>Start Consultation</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {/* Input Bar */}
+      {consultationState !== 'idle' && (
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          keyboardVerticalOffset={0}
+        >
+          <View style={styles.inputBar}>
+            <TextInput
+              style={styles.textInput}
+              placeholder="Type a message..."
+              placeholderTextColor="#A39E99"
+              value={inputText}
+              onChangeText={setInputText}
+            />
+            <TouchableOpacity style={styles.plusBtn} activeOpacity={0.8}>
+              <Ionicons name="add" size={22} color="#BD632F" />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.micBtn} activeOpacity={0.8}>
+              <Ionicons name="mic" size={18} color="#FFFFFF" />
+            </TouchableOpacity>
+          </View>
+        </KeyboardAvoidingView>
+      )}
+
+      {/* Prescription Bottom Sheet */}
+      <PrescriptionBottomSheet
+        visible={showPrescriptionSheet}
+        onClose={() => setShowPrescriptionSheet(false)}
+        onSend={handlePrescriptionSent}
+      />
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#FAF9F6',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 24,
-    paddingTop: 16,
-    paddingBottom: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: '#FAF9F6',
-    backgroundColor: '#FAF9F6',
-  },
-  headerLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  circleButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: '#BD632F',
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#BD632F',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  buttonText: {
-    color: '#FFFFFF',
-    fontSize: 18,
-    fontWeight: '700',
-  },
-  menuIcon: {
-    color: '#FFFFFF',
-    fontSize: 20,
-    fontWeight: '700',
-  },
-  doctorHeaderCol: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginLeft: 14,
-  },
-  avatarWrapper: {
-    position: 'relative',
-    marginRight: 10,
-  },
-  doctorAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-  },
-  activeDot: {
-    position: 'absolute',
-    bottom: 0,
-    right: 0,
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: '#00FF66',
-    borderWidth: 1.5,
-    borderColor: '#FAF9F6',
-  },
-  doctorName: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#1A1817',
-  },
-  chatScroll: {
-    paddingHorizontal: 24,
-    paddingTop: 24,
-    paddingBottom: 120,
-  },
-  messageRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    marginBottom: 20,
-    maxWidth: '85%',
-  },
-  doctorRow: {
-    alignSelf: 'flex-start',
-  },
-  userRow: {
-    alignSelf: 'flex-end',
-  },
-  bubble: {
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    position: 'relative',
-  },
-  doctorBubble: {
-    backgroundColor: '#BD632F',
-    borderBottomLeftRadius: 4,
-    marginRight: 8,
-  },
-  userBubble: {
-    backgroundColor: '#FFF8F4',
-    borderBottomRightRadius: 4,
-    marginLeft: 8,
-    borderWidth: 1,
-    borderColor: '#E6E1DC',
-  },
-  bubbleText: {
-    fontSize: 14,
-    lineHeight: 18,
-  },
-  doctorText: {
-    color: '#FFFFFF',
-  },
-  userText: {
-    color: '#1A1817',
-  },
-  timeText: {
-    fontSize: 10,
-    marginTop: 6,
-  },
-  doctorTime: {
-    color: 'rgba(255, 255, 255, 0.7)',
-  },
-  userTime: {
-    color: '#9C9690',
-  },
-  bubbleAvatarLeft: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    borderWidth: 1.5,
-    borderColor: '#FFFFFF',
-  },
-  bubbleAvatarRight: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    borderWidth: 1.5,
-    borderColor: '#FFFFFF',
-  },
-  inputBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E6E1DC',
-    borderRadius: 28,
-    height: 56,
-    paddingHorizontal: 16,
-    marginHorizontal: 24,
-    position: 'absolute',
-    bottom: 24,
-    left: 0,
-    right: 0,
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.03,
-    shadowRadius: 6,
-    elevation: 3,
-  },
-  textInput: {
-    flex: 1,
-    height: '100%',
-    fontSize: 15,
-    color: '#1A1817',
-  },
-  micButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: '#BD632F',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  micIcon: {
-    fontSize: 16,
-    color: '#FFFFFF',
-  },
-  attachButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 4,
-  },
-  attachIcon: {
-    fontSize: 18,
-  },
-  attachmentImage: {
-    width: 200,
-    height: 150,
-    borderRadius: 12,
-    marginBottom: 6,
-  },
-  documentChip: {
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    borderRadius: 12,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    marginBottom: 6,
-  },
-  documentChipText: {
-    fontSize: 13,
-    color: '#FFFFFF',
-    fontWeight: '600',
-  },
-  imagePreviewOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.9)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  imagePreviewFull: {
-    width: '100%',
-    height: '80%',
-  },
+  container: { flex: 1, backgroundColor: '#FAF9F6' },
+
+  // Header
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 4, paddingBottom: 12 },
+  backBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#BD632F', justifyContent: 'center', alignItems: 'center' },
+  headerTitle: { fontSize: 18, fontWeight: '800', color: '#1A1817' },
+  headerActions: { flexDirection: 'row', gap: 4 },
+  headerActionBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#FFF2EB', justifyContent: 'center', alignItems: 'center' },
+
+  // Upcoming Banner
+  upcomingBanner: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#E6D5C3', marginHorizontal: 20, borderRadius: 16, padding: 12, marginBottom: 12 },
+  upcomingBannerLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  upcomingBannerAvatar: { width: 44, height: 44, borderRadius: 12, backgroundColor: '#D4C4B0', justifyContent: 'center', alignItems: 'center' },
+  upcomingBannerEmoji: { fontSize: 24 },
+  upcomingBannerTime: { fontSize: 11, fontWeight: '600', color: '#BD632F' },
+  upcomingBannerName: { fontSize: 15, fontWeight: '800', color: '#1A1817' },
+  upcomingBannerJoin: { backgroundColor: '#BD632F', borderRadius: 16, paddingHorizontal: 16, paddingVertical: 8 },
+  upcomingBannerJoinText: { color: '#FFFFFF', fontSize: 13, fontWeight: '700' },
+
+  // Consultation Banner
+  consultationBanner: { backgroundColor: '#FFFFFF', marginHorizontal: 20, borderRadius: 16, borderWidth: 1, borderColor: '#E6E1DC', padding: 16, marginBottom: 12 },
+  consultationBannerTitle: { fontSize: 16, fontWeight: '800', color: '#1A1817', marginBottom: 4 },
+  consultationBannerEndedTitle: { fontSize: 16, fontWeight: '800', color: '#E53935', marginBottom: 4 },
+  consultationBannerDesc: { fontSize: 13, fontWeight: '500', color: '#7C7672', marginBottom: 8 },
+  consultationBannerBullet: { fontSize: 13, fontWeight: '500', color: '#1A1817', lineHeight: 20 },
+  consultationBannerRemaining: { fontSize: 13, fontWeight: '600', color: '#BD632F', lineHeight: 20 },
+  endConsultationBtn: { backgroundColor: '#E6E1DC', borderRadius: 20, paddingVertical: 10, alignItems: 'center', marginTop: 12 },
+  endConsultationBtnText: { color: '#FFFFFF', fontSize: 14, fontWeight: '700' },
+
+  // Next Step (inline)
+  nextStepInline: { backgroundColor: '#FFFFFF', marginHorizontal: 20, borderRadius: 16, borderWidth: 1, borderColor: '#E6E1DC', padding: 16, marginBottom: 12 },
+  nextStepInlineTitle: { fontSize: 15, fontWeight: '800', color: '#1A1817', marginBottom: 8 },
+  nextStepInlineOption: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  nextStepInlineText: { fontSize: 13, fontWeight: '500', color: '#7C7672', flex: 1 },
+  sendPrescriptionInlineBtn: { backgroundColor: '#BD632F', borderRadius: 20, paddingVertical: 12, alignItems: 'center', marginTop: 12 },
+  sendPrescriptionInlineBtnText: { color: '#FFFFFF', fontSize: 14, fontWeight: '700' },
+  radioOuter: { width: 20, height: 20, borderRadius: 10, borderWidth: 2, borderColor: '#E6E1DC', justifyContent: 'center', alignItems: 'center' },
+  radioInner: { width: 10, height: 10, borderRadius: 5, backgroundColor: 'transparent' },
+
+  // Messages
+  messagesList: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 12 },
+  dateSeparator: { alignSelf: 'center', backgroundColor: '#FFFFFF', borderRadius: 20, borderWidth: 1, borderColor: '#E6E1DC', paddingHorizontal: 16, paddingVertical: 6, marginVertical: 12 },
+  dateSeparatorText: { fontSize: 12, fontWeight: '600', color: '#9C9690' },
+  messageRowLeft: { flexDirection: 'row', alignItems: 'flex-end', marginBottom: 16, maxWidth: '85%' },
+  messageRowRight: { flexDirection: 'row', justifyContent: 'flex-end', marginBottom: 16, maxWidth: '85%', alignSelf: 'flex-end' },
+  patientAvatar: { width: 32, height: 32, borderRadius: 16, backgroundColor: '#E8D5C4', justifyContent: 'center', alignItems: 'center', marginRight: 8 },
+  patientAvatarEmoji: { fontSize: 16 },
+  patientBubble: { backgroundColor: '#F5EDE6', borderRadius: 18, borderBottomLeftRadius: 4, paddingHorizontal: 14, paddingVertical: 10, maxWidth: '100%' },
+  patientBubbleText: { fontSize: 14, fontWeight: '500', color: '#1A1817', lineHeight: 19 },
+  patientTimeText: { fontSize: 10, fontWeight: '500', color: '#9C9690', marginTop: 4, alignSelf: 'flex-end' },
+  doctorBubble: { backgroundColor: '#BD632F', borderRadius: 18, borderBottomRightRadius: 4, paddingHorizontal: 14, paddingVertical: 10, maxWidth: '100%' },
+  doctorBubbleText: { fontSize: 14, fontWeight: '500', color: '#FFFFFF', lineHeight: 19 },
+  doctorTimeText: { fontSize: 10, fontWeight: '500', color: 'rgba(255,255,255,0.7)', marginTop: 4, alignSelf: 'flex-end' },
+
+  // Prescription Message
+  prescriptionBubble: { backgroundColor: '#BD632F', borderRadius: 18, borderBottomRightRadius: 4, paddingHorizontal: 14, paddingVertical: 12, maxWidth: '100%', minWidth: 220 },
+  prescriptionHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 },
+  prescriptionTitle: { fontSize: 14, fontWeight: '700', color: '#FFFFFF' },
+  prescriptionMeta: { fontSize: 11, fontWeight: '500', color: 'rgba(255,255,255,0.7)', marginBottom: 4 },
+  prescriptionFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  prescriptionTime: { fontSize: 10, fontWeight: '500', color: 'rgba(255,255,255,0.7)' },
+
+  // Quick Actions
+  quickActionsContainer: { paddingHorizontal: 20, paddingBottom: 8 },
+  quickActions: { flexDirection: 'row', gap: 8 },
+  quickActionBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFFFFF', borderRadius: 20, borderWidth: 1, borderColor: '#E6E1DC', paddingHorizontal: 14, paddingVertical: 8, gap: 4 },
+  quickActionText: { fontSize: 13, fontWeight: '600', color: '#7C7672' },
+
+  // Start Consultation
+  startConsultationContainer: { paddingHorizontal: 20, paddingBottom: 16 },
+  startConsultationBtn: { backgroundColor: '#BD632F', borderRadius: 26, paddingVertical: 16, alignItems: 'center' },
+  startConsultationBtnText: { color: '#FFFFFF', fontSize: 16, fontWeight: '700' },
+
+  // Input Bar
+  inputBar: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFFFFF', borderRadius: 28, borderWidth: 1, borderColor: '#E6E1DC', height: 52, paddingHorizontal: 16, marginHorizontal: 20, marginBottom: 12, gap: 8 },
+  textInput: { flex: 1, fontSize: 14, color: '#1A1817', height: '100%' },
+  plusBtn: { width: 32, height: 32, borderRadius: 16, borderWidth: 1.5, borderColor: '#BD632F', justifyContent: 'center', alignItems: 'center' },
+  micBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#BD632F', justifyContent: 'center', alignItems: 'center' },
+
+  // Ended Full Page
+  endedFullContent: { paddingHorizontal: 20, paddingBottom: 40, alignItems: 'center' },
+  endedCheckCircle: { width: 80, height: 80, borderRadius: 40, backgroundColor: '#4CAF50', justifyContent: 'center', alignItems: 'center', marginTop: 40, marginBottom: 20 },
+  endedTitle: { fontSize: 22, fontWeight: '800', color: '#1A1817', marginBottom: 8 },
+  endedSubtitle: { fontSize: 14, fontWeight: '500', color: '#7C7672', textAlign: 'center', marginBottom: 24 },
+  consultationInfoCard: { backgroundColor: '#FFFFFF', borderRadius: 16, borderWidth: 1, borderColor: '#E6E1DC', padding: 16, width: '100%', marginBottom: 16 },
+  consultationInfoTitle: { fontSize: 15, fontWeight: '800', color: '#1A1817', marginBottom: 4 },
+  consultationInfoSubtitle: { fontSize: 13, fontWeight: '500', color: '#7C7672', marginBottom: 8 },
+  consultationInfoBullet: { fontSize: 13, fontWeight: '500', color: '#1A1817', lineHeight: 20 },
+  consultationInfoRemaining: { fontSize: 13, fontWeight: '600', color: '#BD632F', lineHeight: 20 },
+  nextStepCard: { backgroundColor: '#FFFFFF', borderRadius: 16, borderWidth: 1, borderColor: '#E6E1DC', padding: 16, width: '100%', marginBottom: 20 },
+  nextStepTitle: { fontSize: 15, fontWeight: '800', color: '#1A1817', marginBottom: 8 },
+  nextStepOption: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  nextStepText: { fontSize: 13, fontWeight: '500', color: '#7C7672', flex: 1 },
+  sendPrescriptionBtn: { backgroundColor: '#BD632F', borderRadius: 26, paddingVertical: 16, alignItems: 'center', width: '100%', marginBottom: 12 },
+  sendPrescriptionBtnText: { color: '#FFFFFF', fontSize: 16, fontWeight: '700' },
+  backToChatBtn: { borderRadius: 26, borderWidth: 1.5, borderColor: '#E6E1DC', paddingVertical: 16, alignItems: 'center', width: '100%' },
+  backToChatBtnText: { color: '#7C7672', fontSize: 16, fontWeight: '600' },
 });

@@ -1,81 +1,403 @@
-import React from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
+import { useRequireDoctor } from '@/hooks/use-require-doctor';
 import {
   StyleSheet,
   View,
   Text,
   TouchableOpacity,
   ScrollView,
-  ActivityIndicator,
-  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import {
   useGetDoctorBookingsQuery,
-  useCompleteBookingMutation,
-  type AppointmentStatus,
+  type DoctorAppointment,
 } from '@/store/doctorPortalApi';
 
-function formatDateTime(iso: string): string {
-  return new Date(iso).toLocaleString(undefined, {
-    weekday: 'short',
-    day: '2-digit',
-    month: 'short',
-    hour: 'numeric',
-    minute: '2-digit',
-  });
+type ViewMode = 'monthly' | 'weekly';
+
+const MONTH_NAMES = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+];
+const DAY_LETTERS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+const DAY_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+function getDaysInMonth(year: number, month: number): number {
+  return new Date(year, month + 1, 0).getDate();
 }
 
-function isActionable(status: AppointmentStatus): boolean {
-  return status === 'CONFIRMED' || status === 'RESCHEDULED' || status === 'PENDING';
+function getFirstDayOfMonth(year: number, month: number): number {
+  return new Date(year, month, 1).getDay();
+}
+
+function formatDateKey(date: Date): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
+function isSameDay(a: Date, b: Date): boolean {
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+}
+
+function getWeekDates(reference: Date): Date[] {
+  const start = new Date(reference);
+  start.setDate(start.getDate() - start.getDay());
+  const dates: Date[] = [];
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(start);
+    d.setDate(start.getDate() + i);
+    dates.push(d);
+  }
+  return dates;
+}
+
+function formatTime(iso: string): string {
+  const d = new Date(iso);
+  return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+}
+
+function MonthlyView({
+  selectedDate,
+  onSelectDate,
+  appointmentDates,
+  stats,
+}: {
+  selectedDate: Date;
+  onSelectDate: (d: Date) => void;
+  appointmentDates: Set<string>;
+  stats: { openDays: number; blockedDays: number; totalAppointments: number };
+}) {
+  const year = selectedDate.getFullYear();
+  const month = selectedDate.getMonth();
+  const daysInMonth = getDaysInMonth(year, month);
+  const firstDay = getFirstDayOfMonth(year, month);
+  const blanks = Array.from({ length: firstDay }, (_, i) => i);
+
+  return (
+    <View>
+      <View style={styles.monthGrid}>
+        <Text style={styles.monthTitle}>{MONTH_NAMES[month]} {year}</Text>
+        <View style={styles.dayHeaderRow}>
+          {DAY_LETTERS.map((d, i) => (
+            <Text key={i} style={styles.dayHeaderText}>{d}</Text>
+          ))}
+        </View>
+        <View style={styles.daysGrid}>
+          {blanks.map((b) => (
+            <View key={`blank-${b}`} style={styles.dayCell} />
+          ))}
+          {Array.from({ length: daysInMonth }, (_, i) => {
+            const day = i + 1;
+            const date = new Date(year, month, day);
+            const key = formatDateKey(date);
+            const hasAppointment = appointmentDates.has(key);
+            const isToday = isSameDay(date, new Date());
+            const isSelected = isSameDay(date, selectedDate);
+
+            return (
+              <TouchableOpacity
+                key={day}
+                style={styles.dayCell}
+                onPress={() => onSelectDate(date)}
+                activeOpacity={0.7}
+              >
+                <View
+                  style={[
+                    styles.dayNumber,
+                    hasAppointment && styles.dayNumberHasAppointment,
+                    isToday && !hasAppointment && styles.dayNumberToday,
+                    isSelected && styles.dayNumberSelected,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.dayNumberText,
+                      hasAppointment && styles.dayNumberTextAppointment,
+                      isToday && !hasAppointment && styles.dayNumberTextToday,
+                      isSelected && styles.dayNumberTextSelected,
+                    ]}
+                  >
+                    {day}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      </View>
+
+      <View style={styles.statsRow}>
+        <View style={styles.statItem}>
+          <Text style={styles.statNumber}>{stats.openDays}</Text>
+          <Text style={styles.statLabel}>Open days</Text>
+        </View>
+        <View style={styles.statDivider} />
+        <View style={styles.statItem}>
+          <Text style={styles.statNumber}>{stats.blockedDays}</Text>
+          <Text style={styles.statLabel}>Blocked days</Text>
+        </View>
+        <View style={styles.statDivider} />
+        <View style={styles.statItem}>
+          <Text style={styles.statNumber}>{stats.totalAppointments}</Text>
+          <Text style={styles.statLabel}>Total appointments</Text>
+        </View>
+      </View>
+    </View>
+  );
+}
+
+function WeeklyView({
+  selectedDate,
+  onSelectDate,
+  bookings,
+}: {
+  selectedDate: Date;
+  onSelectDate: (d: Date) => void;
+  bookings: DoctorAppointment[];
+}) {
+  const weekDates = useMemo(() => getWeekDates(selectedDate), [selectedDate.getTime()]);
+
+  const dayAppointments = useMemo(() => {
+    return bookings
+      .filter((a) => isSameDay(new Date(a.startAt), selectedDate))
+      .sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime());
+  }, [bookings, selectedDate]);
+
+  const now = new Date();
+  const currentHour = now.getHours();
+  const currentMinutes = now.getMinutes();
+  const isToday = isSameDay(selectedDate, now);
+
+  const hours = Array.from({ length: 14 }, (_, i) => i + 7);
+
+  return (
+    <View>
+      <View style={styles.weekStrip}>
+        <View style={styles.weekDayHeader}>
+          {DAY_SHORT.map((d, i) => (
+            <Text key={i} style={styles.weekDayLabel}>{d}</Text>
+          ))}
+        </View>
+        <View style={styles.weekDateRow}>
+          {weekDates.map((date, i) => {
+            const isSelected = isSameDay(date, selectedDate);
+            const isTodayDate = isSameDay(date, new Date());
+            return (
+              <TouchableOpacity
+                key={i}
+                style={[styles.weekDateCell, isSelected && styles.weekDateCellSelected]}
+                onPress={() => onSelectDate(date)}
+                activeOpacity={0.7}
+              >
+                <Text
+                  style={[
+                    styles.weekDateNumber,
+                    isSelected && styles.weekDateNumberSelected,
+                    isTodayDate && !isSelected && styles.weekDateNumberToday,
+                  ]}
+                >
+                  {date.getDate()}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      </View>
+
+      <View style={styles.dayTimeline}>
+        <Text style={styles.dayTimelineHeader}>
+          {DAY_SHORT[selectedDate.getDay()]}, {selectedDate.getDate()} {MONTH_NAMES[selectedDate.getMonth()]}
+          <Text style={styles.appointmentCount}>   {dayAppointments.length} Appointments</Text>
+        </Text>
+
+        {hours.map((hour) => {
+          const hourAppts = dayAppointments.filter((a) => {
+            const d = new Date(a.startAt);
+            return d.getHours() === hour;
+          });
+
+          return (
+            <View key={hour} style={styles.timelineRow}>
+              <View style={styles.timeLabelContainer}>
+                <Text style={styles.timeLabel}>
+                  {String(hour).padStart(2, '0')}:00 {hour < 12 ? 'AM' : 'PM'}
+                </Text>
+              </View>
+              <View style={styles.timeLine}>
+                <View style={styles.timeLineDot} />
+                <View style={styles.timeLineBar} />
+              </View>
+              <View style={styles.timeLineContent}>
+                {hourAppts.map((appt) => (
+                  <View key={appt.id} style={styles.appointmentCard}>
+                    <View style={styles.appointmentAvatar}>
+                      <Ionicons name="paw" size={18} color="#BD632F" />
+                    </View>
+                    <View style={styles.appointmentInfo}>
+                      <Text style={styles.appointmentName}>
+                        {appt.animalName || appt.patientName || `Patient #${appt.patientId}`}
+                      </Text>
+                      {appt.animalSpecies && (
+                        <Text style={styles.appointmentDetail}>
+                          {appt.animalSpecies} · {appt.animalAge || ''}
+                        </Text>
+                      )}
+                      {appt.symptoms && (
+                        <Text style={styles.appointmentSymptoms}>{appt.symptoms}</Text>
+                      )}
+                    </View>
+                  </View>
+                ))}
+              </View>
+            </View>
+          );
+        })}
+
+        {isToday && (
+          <View style={styles.current_time_container}>
+            <View style={styles.current_time_line} />
+            <View style={styles.current_time_dot} />
+            <Text style={styles.current_time_label}>
+              {String(currentHour).padStart(2, '0')}:{String(currentMinutes).padStart(2, '0')}
+            </Text>
+            <View style={styles.current_time_line_right} />
+          </View>
+        )}
+      </View>
+    </View>
+  );
 }
 
 export default function DoctorBookingsScreen() {
-  const { data: bookings, isLoading } = useGetDoctorBookingsQuery();
-  const [completeBooking] = useCompleteBookingMutation();
+  const router = useRouter();
+  const isDoctor = useRequireDoctor();
+  if (!isDoctor) return null;
+  const [viewMode, setViewMode] = useState<ViewMode>('monthly');
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [showAllAppointments, setShowAllAppointments] = useState(false);
 
-  async function handleComplete(id: number) {
-    try {
-      await completeBooking(String(id)).unwrap();
-    } catch (err) {
-      console.log('Error completing booking:', err);
-      Alert.alert('Could not complete', 'Please try again.');
-    }
-  }
+  const { data: bookings = [] } = useGetDoctorBookingsQuery();
+
+  const appointmentDates = useMemo(() => {
+    const dates = new Set<string>();
+    bookings.forEach((b) => {
+      dates.add(formatDateKey(new Date(b.startAt)));
+    });
+    return dates;
+  }, [bookings]);
+
+  const stats = useMemo(() => {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = today.getMonth();
+    const daysInMonth = getDaysInMonth(year, month);
+    const blockedDays = 6;
+    const openDays = daysInMonth - blockedDays;
+    return { openDays, blockedDays, totalAppointments: bookings.length };
+  }, [bookings.length]);
+
+  const upcomingAppointments = useMemo(() => {
+    const now = new Date();
+    return bookings
+      .filter((a) => new Date(a.startAt) >= now)
+      .sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime())
+      .slice(0, showAllAppointments ? 10 : 2);
+  }, [bookings, showAllAppointments]);
+
+  const handleSelectDate = useCallback((date: Date) => {
+    setSelectedDate(date);
+    setViewMode('weekly');
+  }, []);
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>My Bookings</Text>
+        <Text style={styles.headerTitle}>Calendar</Text>
+        <TouchableOpacity
+          style={styles.settingsBtn}
+          onPress={() => router.push('/calendar-settings')}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="settings-outline" size={20} color="#BD632F" />
+        </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
-        {isLoading ? (
-          <ActivityIndicator size="small" color="#BD632F" style={{ marginTop: 30 }} />
-        ) : !bookings || bookings.length === 0 ? (
-          <Text style={styles.emptyText}>No bookings yet.</Text>
-        ) : (
-          bookings.map((booking) => (
-            <View key={booking.id} style={styles.card}>
-              <View style={styles.cardHeader}>
-                <Text style={styles.patientName}>{booking.patientName || `Patient #${booking.patientId}`}</Text>
-                <View style={styles.statusBadge}>
-                  <Text style={styles.statusText}>{booking.status}</Text>
-                </View>
-              </View>
-              <Text style={styles.dateText}>{formatDateTime(booking.startAt)}</Text>
-              {booking.patientPhone ? <Text style={styles.phoneText}>📞 {booking.patientPhone}</Text> : null}
+      <View style={styles.viewToggle}>
+        <TouchableOpacity
+          style={[styles.viewToggleButton, viewMode === 'monthly' && styles.viewToggleButtonActive]}
+          onPress={() => setViewMode('monthly')}
+          activeOpacity={0.8}
+        >
+          <Text style={[styles.viewToggleText, viewMode === 'monthly' && styles.viewToggleTextActive]}>
+            Monthly
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.viewToggleButton, viewMode === 'weekly' && styles.viewToggleButtonActive]}
+          onPress={() => setViewMode('weekly')}
+          activeOpacity={0.8}
+        >
+          <Text style={[styles.viewToggleText, viewMode === 'weekly' && styles.viewToggleTextActive]}>
+            Weekly
+          </Text>
+        </TouchableOpacity>
+      </View>
 
-              {isActionable(booking.status) ? (
-                <TouchableOpacity
-                  style={styles.completeButton}
-                  onPress={() => handleComplete(booking.id)}
-                  activeOpacity={0.85}
-                >
-                  <Text style={styles.completeButtonText}>Mark Complete</Text>
-                </TouchableOpacity>
-              ) : null}
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContainer}>
+        {viewMode === 'monthly' ? (
+          <MonthlyView
+            selectedDate={selectedDate}
+            onSelectDate={handleSelectDate}
+            appointmentDates={appointmentDates}
+            stats={stats}
+          />
+        ) : (
+          <WeeklyView
+            selectedDate={selectedDate}
+            onSelectDate={setSelectedDate}
+            bookings={bookings}
+          />
+        )}
+
+        {viewMode === 'monthly' && (
+          <View style={styles.upcomingSection}>
+            <View style={styles.upcomingHeader}>
+              <Text style={styles.upcomingTitle}>Upcoming appointments</Text>
+              <TouchableOpacity
+                onPress={() => setShowAllAppointments(!showAllAppointments)}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.viewAllText}>
+                  View all {showAllAppointments ? '∧' : '∨'}
+                </Text>
+              </TouchableOpacity>
             </View>
-          ))
+
+            {upcomingAppointments.map((appt) => (
+              <TouchableOpacity key={appt.id} style={styles.upcomingCard} activeOpacity={0.7}>
+                <View style={styles.upcomingAvatar}>
+                  <Ionicons name="paw" size={20} color="#BD632F" />
+                </View>
+                <View style={styles.upcomingInfo}>
+                  <Text style={styles.upcomingDate}>
+                    {new Date(appt.startAt).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })} · {formatTime(appt.startAt)}
+                  </Text>
+                  <Text style={styles.upcomingName}>
+                    {appt.animalName || appt.patientName || `Patient #${appt.patientId}`}
+                    {appt.animalSpecies ? ` (${appt.animalSpecies})` : ''}
+                  </Text>
+                  <Text style={styles.upcomingType}>Physical Consultation</Text>
+                </View>
+                <View style={[styles.statusBadge, appt.status === 'CONFIRMED' ? styles.statusConfirmed : styles.statusPending]}>
+                  <Text style={[styles.statusText, appt.status === 'CONFIRMED' ? styles.statusTextConfirmed : styles.statusTextPending]}>
+                    {appt.status === 'CONFIRMED' ? 'Confirmed' : appt.status}
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={16} color="#9C9690" />
+              </TouchableOpacity>
+            ))}
+          </View>
         )}
       </ScrollView>
     </SafeAreaView>
@@ -83,81 +405,79 @@ export default function DoctorBookingsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#FAF9F6',
-  },
-  header: {
-    paddingHorizontal: 24,
-    paddingTop: 24,
-    marginBottom: 16,
-  },
-  headerTitle: {
-    fontSize: 26,
-    fontWeight: '800',
-    color: '#1A1817',
-  },
-  scrollContainer: {
-    paddingHorizontal: 24,
-    paddingBottom: 110,
-  },
-  emptyText: {
-    fontSize: 13,
-    color: '#9C9690',
-    textAlign: 'center',
-    paddingVertical: 40,
-  },
-  card: {
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E6E1DC',
-    borderRadius: 20,
-    padding: 16,
-    marginBottom: 16,
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 6,
-  },
-  patientName: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#1A1817',
-  },
-  statusBadge: {
-    backgroundColor: '#FFF8F4',
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-  },
-  statusText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#BD632F',
-  },
-  dateText: {
-    fontSize: 13,
-    color: '#7C7672',
-    marginBottom: 2,
-  },
-  phoneText: {
-    fontSize: 12,
-    color: '#9C9690',
-    marginBottom: 12,
-  },
-  completeButton: {
-    backgroundColor: '#BD632F',
-    height: 44,
-    borderRadius: 22,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 10,
-  },
-  completeButtonText: {
-    color: '#FFFFFF',
-    fontSize: 13,
-    fontWeight: '700',
-  },
+  container: { flex: 1, backgroundColor: '#FAF9F6' },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 4, paddingBottom: 12 },
+  headerTitle: { fontSize: 20, fontWeight: '800', color: '#1A1817' },
+  settingsBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#FFF2EB', justifyContent: 'center', alignItems: 'center' },
+  viewToggle: { flexDirection: 'row', marginHorizontal: 20, marginBottom: 12, backgroundColor: '#FFF2EB', borderRadius: 20, padding: 4 },
+  viewToggleButton: { flex: 1, paddingVertical: 12, alignItems: 'center', borderRadius: 16 },
+  viewToggleButtonActive: { backgroundColor: '#FFFFFF', shadowColor: '#000000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 8, elevation: 3 },
+  viewToggleText: { fontSize: 14, fontWeight: '600', color: '#9C9690' },
+  viewToggleTextActive: { color: '#1A1817', fontWeight: '700' },
+  scrollContainer: { paddingHorizontal: 20, paddingBottom: 100 },
+  monthGrid: { marginBottom: 16 },
+  monthTitle: { fontSize: 16, fontWeight: '700', color: '#1A1817', marginBottom: 12 },
+  dayHeaderRow: { flexDirection: 'row', marginBottom: 8 },
+  dayHeaderText: { flex: 1, textAlign: 'center', fontSize: 13, fontWeight: '600', color: '#BD632F' },
+  daysGrid: { flexDirection: 'row', flexWrap: 'wrap' },
+  dayCell: { width: `${100 / 7}%`, alignItems: 'center', paddingVertical: 4 },
+  dayNumber: { width: 36, height: 36, borderRadius: 18, justifyContent: 'center', alignItems: 'center' },
+  dayNumberHasAppointment: { backgroundColor: '#BD632F' },
+  dayNumberToday: { backgroundColor: '#FFF2EB' },
+  dayNumberSelected: { backgroundColor: '#BD632F' },
+  dayNumberText: { fontSize: 14, fontWeight: '500', color: '#1A1817' },
+  dayNumberTextAppointment: { color: '#FFFFFF', fontWeight: '700' },
+  dayNumberTextToday: { color: '#BD632F', fontWeight: '700' },
+  dayNumberTextSelected: { color: '#FFFFFF', fontWeight: '700' },
+  statsRow: { flexDirection: 'row', backgroundColor: '#FFFFFF', borderRadius: 16, borderWidth: 1, borderColor: '#E6E1DC', padding: 16, marginBottom: 20 },
+  statItem: { flex: 1, alignItems: 'center' },
+  statNumber: { fontSize: 22, fontWeight: '800', color: '#1A1817' },
+  statLabel: { fontSize: 12, fontWeight: '500', color: '#9C9690', marginTop: 4 },
+  statDivider: { width: 1, backgroundColor: '#E6E1DC' },
+  weekStrip: { backgroundColor: '#FFFFFF', borderRadius: 16, borderWidth: 1, borderColor: '#E6E1DC', padding: 14, marginBottom: 16 },
+  weekDayHeader: { flexDirection: 'row', marginBottom: 8 },
+  weekDayLabel: { flex: 1, textAlign: 'center', fontSize: 12, fontWeight: '600', color: '#9C9690' },
+  weekDateRow: { flexDirection: 'row' },
+  weekDateCell: { flex: 1, alignItems: 'center', paddingVertical: 6 },
+  weekDateCellSelected: { backgroundColor: '#BD632F', borderRadius: 20 },
+  weekDateNumber: { fontSize: 14, fontWeight: '600', color: '#1A1817' },
+  weekDateNumberSelected: { color: '#FFFFFF', fontWeight: '700' },
+  weekDateNumberToday: { color: '#BD632F', fontWeight: '700' },
+  dayTimeline: { marginTop: 8 },
+  dayTimelineHeader: { fontSize: 16, fontWeight: '700', color: '#1A1817', marginBottom: 16 },
+  appointmentCount: { fontSize: 14, fontWeight: '600', color: '#BD632F' },
+  timelineRow: { flexDirection: 'row', marginBottom: 8 },
+  timeLabelContainer: { width: 70 },
+  timeLabel: { fontSize: 11, fontWeight: '600', color: '#9C9690' },
+  timeLine: { width: 20, alignItems: 'center' },
+  timeLineDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#BD632F', marginTop: 4 },
+  timeLineBar: { width: 2, flex: 1, backgroundColor: '#E6E1DC', marginTop: 4 },
+  timeLineContent: { flex: 1, paddingLeft: 8 },
+  appointmentCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFFFFF', borderRadius: 14, borderWidth: 1, borderColor: '#E6E1DC', padding: 12, marginBottom: 8, gap: 10 },
+  appointmentAvatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#FFF2EB', justifyContent: 'center', alignItems: 'center' },
+  appointmentInfo: { flex: 1 },
+  appointmentName: { fontSize: 14, fontWeight: '700', color: '#1A1817' },
+  appointmentDetail: { fontSize: 12, color: '#9C9690', fontWeight: '500' },
+  appointmentSymptoms: { fontSize: 12, color: '#BD632F', fontWeight: '500', fontStyle: 'italic' },
+  current_time_container: { flexDirection: 'row', alignItems: 'center', marginVertical: 12 },
+  current_time_line: { flex: 1, height: 2, backgroundColor: '#1565C0' },
+  current_time_dot: { width: 10, height: 10, borderRadius: 5, backgroundColor: '#1565C0', marginHorizontal: 8 },
+  current_time_label: { fontSize: 11, fontWeight: '700', color: '#1565C0', marginRight: 8 },
+  current_time_line_right: { flex: 1, height: 2, backgroundColor: '#1565C0' },
+  upcomingSection: { marginTop: 20 },
+  upcomingHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+  upcomingTitle: { fontSize: 16, fontWeight: '700', color: '#1A1817' },
+  viewAllText: { fontSize: 14, fontWeight: '600', color: '#BD632F' },
+  upcomingCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFFFFF', borderRadius: 14, borderWidth: 1, borderColor: '#E6E1DC', padding: 12, marginBottom: 10, gap: 10 },
+  upcomingAvatar: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#FFF2EB', justifyContent: 'center', alignItems: 'center' },
+  upcomingInfo: { flex: 1 },
+  upcomingDate: { fontSize: 11, fontWeight: '500', color: '#9C9690' },
+  upcomingName: { fontSize: 14, fontWeight: '700', color: '#1A1817' },
+  upcomingType: { fontSize: 12, fontWeight: '500', color: '#7C7672' },
+  statusBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10 },
+  statusConfirmed: { backgroundColor: '#E8F5E9' },
+  statusPending: { backgroundColor: '#FFF3E0' },
+  statusText: { fontSize: 11, fontWeight: '600' },
+  statusTextConfirmed: { color: '#2E7D32' },
+  statusTextPending: { color: '#E65100' },
 });
