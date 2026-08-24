@@ -1,4 +1,5 @@
 import React from 'react';
+import { useRequireDoctor } from '@/hooks/use-require-doctor';
 import {
   StyleSheet,
   View,
@@ -28,13 +29,15 @@ function formatBookingTime(iso: string): string {
 
 const QUICK_TILES = [
   { id: 'appointments', label: 'Appointments', icon: 'calendar-outline' as const, route: '/doctor-bookings' },
-  { id: 'schedule', label: 'Schedule', icon: 'time-outline' as const, route: '/doctor-availability' },
-  { id: 'patients', label: 'Patients', icon: 'people-outline' as const, route: '/doctor-bookings' },
-  { id: 'discount', label: 'Apply Discount', icon: 'pricetag-outline' as const, route: '/doctor-bookings' },
+  { id: 'schedule', label: 'Schedule', icon: 'time-outline' as const, route: '/schedule' },
+  { id: 'patients', label: 'Patients', icon: 'people-outline' as const, route: '/patient-details' },
+  { id: 'discount', label: 'Apply Discount', icon: 'pricetag-outline' as const, route: '/apply-discount' },
 ];
 
 export default function DoctorHomeScreen() {
   const router = useRouter();
+  const isDoctor = useRequireDoctor();
+  if (!isDoctor) return null;
   const user = useSelector((state: RootState) => state.auth.user);
 
   const { data: bookings = [], isLoading } = useGetDoctorBookingsQuery();

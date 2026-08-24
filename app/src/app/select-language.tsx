@@ -5,7 +5,6 @@ import {
   Text,
   TouchableOpacity,
   ScrollView,
-  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -15,102 +14,66 @@ interface Language {
   id: string;
   name: string;
   nativeName: string;
-  code: string;
 }
 
 const LANGUAGES: Language[] = [
-  { id: 'en', name: 'English', nativeName: 'English', code: 'EN' },
-  { id: 'bn', name: 'Bangla', nativeName: 'বাংলা', code: 'BN' },
+  { id: 'en', name: 'English', nativeName: 'English' },
+  { id: 'bn', name: 'Bangla', nativeName: 'বাংলা' },
 ];
 
 export default function SelectLanguageScreen() {
   const router = useRouter();
   const [selected, setSelected] = useState('en');
-  const [voiceMode, setVoiceMode] = useState(false);
-
-  function handleUpdate() {
-    const lang = LANGUAGES.find((l) => l.id === selected);
-    Alert.alert('Language Updated', `App language has been set to ${lang?.name}.`, [
-      { text: 'OK', onPress: () => router.back() },
-    ]);
-  }
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backBtn}
-          onPress={() => router.back()}
-          activeOpacity={0.8}
-        >
+        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} activeOpacity={0.7}>
           <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
         </TouchableOpacity>
-
         <Text style={styles.headerTitle}>Select Language</Text>
-
-        <View style={{ width: 42 }} />
+        <View style={{ width: 40 }} />
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
-        {/* Language Options Grid */}
-        <View style={styles.languagesGrid}>
-          {LANGUAGES.map((lang) => {
-            const isSel = lang.id === selected;
-            return (
-              <TouchableOpacity
-                key={lang.id}
-                style={[styles.langCard, isSel && styles.langCardSelected]}
-                onPress={() => setSelected(lang.id)}
-                activeOpacity={0.8}
-              >
-                <View>
-                  <Text style={[styles.langNativeName, isSel && styles.langNativeNameSelected]}>
-                    {lang.nativeName}
-                  </Text>
-                  <Text style={[styles.langName, isSel && styles.langNameSelected]}>
-                    {lang.name}
-                  </Text>
+        {/* Language Cards */}
+        <View style={styles.languageGrid}>
+          {LANGUAGES.map((lang) => (
+            <TouchableOpacity
+              key={lang.id}
+              style={[styles.languageCard, selected === lang.id && styles.languageCardActive]}
+              onPress={() => setSelected(lang.id)}
+              activeOpacity={0.8}
+            >
+              <View style={styles.languageInfo}>
+                <Text style={[styles.languageName, selected === lang.id && styles.languageNameActive]}>
+                  {lang.name}
+                </Text>
+                <Text style={[styles.languageNative, selected === lang.id && styles.languageNativeActive]}>
+                  {lang.nativeName}
+                </Text>
+              </View>
+              {selected === lang.id ? (
+                <View style={styles.checkCircle}>
+                  <Ionicons name="checkmark" size={16} color="#FFFFFF" />
                 </View>
-
-                <View style={[styles.speakerBadge, isSel && styles.speakerBadgeSelected]}>
-                  <Ionicons
-                    name="volume-medium"
-                    size={16}
-                    color={isSel ? '#FFFFFF' : '#9C9690'}
-                  />
-                </View>
-              </TouchableOpacity>
-            );
-          })}
+              ) : (
+                <Ionicons name="volume-high-outline" size={20} color="#9C9690" />
+              )}
+            </TouchableOpacity>
+          ))}
         </View>
 
-        {/* Voice Selection Mode Row */}
-        <TouchableOpacity
-          style={[styles.voiceModeRow, voiceMode && styles.voiceModeRowActive]}
-          onPress={() => setVoiceMode(!voiceMode)}
-          activeOpacity={0.8}
-        >
-          <Text style={[styles.voiceModeText, voiceMode && styles.voiceModeTextActive]}>
-            Voice Selection Mode
-          </Text>
-          <View style={[styles.micCircle, voiceMode && styles.micCircleActive]}>
-            <Ionicons
-              name="mic-outline"
-              size={20}
-              color={voiceMode ? '#BD632F' : '#9C9690'}
-            />
-          </View>
+        {/* Voice Selection Mode */}
+        <TouchableOpacity style={styles.voiceRow} activeOpacity={0.8}>
+          <Text style={styles.voiceText}>Voice Selection Mode</Text>
+          <Ionicons name="mic-outline" size={20} color="#9C9690" />
         </TouchableOpacity>
       </ScrollView>
 
-      {/* Bottom Update Button */}
+      {/* Update Button */}
       <View style={styles.bottomBar}>
-        <TouchableOpacity
-          style={styles.updateBtn}
-          onPress={handleUpdate}
-          activeOpacity={0.85}
-        >
+        <TouchableOpacity style={styles.updateBtn} activeOpacity={0.85}>
           <Text style={styles.updateBtnText}>Update App Language</Text>
         </TouchableOpacity>
       </View>
@@ -119,160 +82,23 @@ export default function SelectLanguageScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#FAF9F6',
-  },
-  scrollContainer: {
-    paddingHorizontal: 24,
-    paddingBottom: 100,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 24,
-    paddingTop: 12,
-    marginBottom: 24,
-  },
-  backBtn: {
-    width: 42,
-    height: 42,
-    borderRadius: 12,
-    backgroundColor: '#BD632F',
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#BD632F',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  headerTitle: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: '#1A1817',
-  },
-  languagesGrid: {
-    flexDirection: 'row',
-    gap: 14,
-    marginBottom: 20,
-  },
-  langCard: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: '#E6E1DC',
-    paddingHorizontal: 16,
-    paddingVertical: 18,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.02,
-    shadowRadius: 6,
-    elevation: 2,
-  },
-  langCardSelected: {
-    borderColor: '#BD632F',
-    borderWidth: 1.5,
-    backgroundColor: '#FFF8F4',
-  },
-  langNativeName: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#1A1817',
-    marginBottom: 2,
-  },
-  langNativeNameSelected: {
-    color: '#BD632F',
-  },
-  langName: {
-    fontSize: 12,
-    color: '#7C7672',
-    fontWeight: '500',
-  },
-  langNameSelected: {
-    color: '#BD7D5B',
-  },
-  speakerBadge: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: '#F5F2EC',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  speakerBadgeSelected: {
-    backgroundColor: '#BD632F',
-  },
-  voiceModeRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: '#E6E1DC',
-    paddingHorizontal: 18,
-    paddingVertical: 16,
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.02,
-    shadowRadius: 6,
-    elevation: 2,
-  },
-  voiceModeRowActive: {
-    borderColor: '#BD632F',
-    borderWidth: 1.5,
-    backgroundColor: '#FFF8F4',
-  },
-  voiceModeText: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#1A1817',
-  },
-  voiceModeTextActive: {
-    color: '#BD632F',
-  },
-  micCircle: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: '#F5F2EC',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  micCircleActive: {
-    backgroundColor: '#FFF2EB',
-  },
-  bottomBar: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    paddingHorizontal: 24,
-    paddingBottom: 32,
-    paddingTop: 16,
-    backgroundColor: '#FAF9F6',
-  },
-  updateBtn: {
-    backgroundColor: '#BD632F',
-    height: 52,
-    borderRadius: 26,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#BD632F',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 6,
-    elevation: 3,
-  },
-  updateBtnText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '700',
-  },
+  container: { flex: 1, backgroundColor: '#FAF9F6' },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 4, paddingBottom: 12 },
+  backBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#BD632F', justifyContent: 'center', alignItems: 'center' },
+  headerTitle: { fontSize: 20, fontWeight: '800', color: '#1A1817' },
+  scrollContainer: { paddingHorizontal: 20, paddingBottom: 100 },
+  languageGrid: { flexDirection: 'row', gap: 12, marginBottom: 16 },
+  languageCard: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#FFFFFF', borderRadius: 16, borderWidth: 1.5, borderColor: '#E6E1DC', padding: 16 },
+  languageCardActive: { borderColor: '#BD632F', backgroundColor: '#FFF8F4' },
+  languageInfo: { flex: 1 },
+  languageName: { fontSize: 16, fontWeight: '700', color: '#1A1817', marginBottom: 2 },
+  languageNameActive: { color: '#BD632F' },
+  languageNative: { fontSize: 12, fontWeight: '500', color: '#9C9690' },
+  languageNativeActive: { color: '#BD632F' },
+  checkCircle: { width: 28, height: 28, borderRadius: 14, backgroundColor: '#BD632F', justifyContent: 'center', alignItems: 'center' },
+  voiceRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#FFFFFF', borderRadius: 16, borderWidth: 1, borderColor: '#E6E1DC', padding: 16 },
+  voiceText: { fontSize: 14, fontWeight: '600', color: '#1A1817' },
+  bottomBar: { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: '#FAF9F6', paddingHorizontal: 20, paddingVertical: 16, paddingBottom: 30 },
+  updateBtn: { backgroundColor: '#BD632F', borderRadius: 26, paddingVertical: 16, alignItems: 'center' },
+  updateBtnText: { color: '#FFFFFF', fontSize: 16, fontWeight: '700' },
 });

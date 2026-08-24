@@ -1,0 +1,444 @@
+import React, { useState } from 'react';
+import { useRequireDoctor } from '@/hooks/use-require-doctor';
+import {
+  StyleSheet,
+  View,
+  Text,
+  TouchableOpacity,
+  ScrollView,
+  Image,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+
+type Tab = 'about' | 'experience' | 'credentials';
+
+export default function ProfileDetailsScreen() {
+  const router = useRouter();
+  const isDoctor = useRequireDoctor();
+  if (!isDoctor) return null;
+  const [activeTab, setActiveTab] = useState<Tab>('about');
+
+  return (
+    <SafeAreaView style={styles.container}>
+      {/* Header */}
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} activeOpacity={0.7}>
+          <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Profile</Text>
+        <View style={{ width: 40 }} />
+      </View>
+
+      <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
+        {/* Doctor Card */}
+        <View style={styles.doctorCard}>
+          <View style={styles.doctorInfoRow}>
+            <View style={styles.avatarContainer}>
+              <View style={styles.avatarPlaceholder}>
+                <Ionicons name="person" size={40} color="#BD632F" />
+              </View>
+              <View style={styles.onlineDot} />
+            </View>
+            <View style={styles.doctorDetails}>
+              <Text style={styles.doctorName}>Dr. David Patel</Text>
+              <Text style={styles.doctorSpecialty}>Veterinary Surgery</Text>
+              <View style={styles.ratingRow}>
+                <Ionicons name="star" size={14} color="#F59E0B" />
+                <Text style={styles.ratingText}>4.8 (141 reviews)</Text>
+              </View>
+              <Text style={styles.doctorLocation}>Cardiology Center, USA</Text>
+            </View>
+          </View>
+          <View style={styles.statsRow}>
+            <View style={styles.statItem}>
+              <Text style={styles.statNumber}>248</Text>
+              <Text style={styles.statLabel}>Patients</Text>
+            </View>
+            <View style={styles.statDivider} />
+            <View style={styles.statItem}>
+              <Text style={styles.statNumber}>423</Text>
+              <Text style={styles.statLabel}>Consultations</Text>
+            </View>
+            <View style={styles.statDivider} />
+            <View style={styles.statItem}>
+              <Text style={styles.statNumber}>1 yrs</Text>
+              <Text style={styles.statLabel}>Years Experience</Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Tabs */}
+        <View style={styles.tabRow}>
+          {(['about', 'experience', 'credentials'] as Tab[]).map((tab) => (
+            <TouchableOpacity
+              key={tab}
+              style={[styles.tab, activeTab === tab && styles.tabActive]}
+              onPress={() => setActiveTab(tab)}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.tabText, activeTab === tab && styles.tabTextActive]}>
+                {tab === 'about' ? 'About' : tab === 'experience' ? 'Experience' : 'Professional Credentials'}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {/* About Tab */}
+        {activeTab === 'about' && (
+          <View>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Personal information</Text>
+              <TouchableOpacity onPress={() => router.push('/profile-edit' as any)} activeOpacity={0.7}>
+                <Ionicons name="pencil-outline" size={20} color="#7C7672" />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.fieldCard}>
+              <Text style={styles.fieldLabel}>Your Name</Text>
+              <View style={styles.fieldValue}>
+                <Text style={styles.fieldText}>Ramesh Kumar</Text>
+                <Ionicons name="mic-outline" size={18} color="#BD632F" />
+              </View>
+            </View>
+
+            <View style={styles.fieldCard}>
+              <Text style={styles.fieldLabel}>Mobile Number</Text>
+              <View style={styles.fieldValue}>
+                <Text style={styles.fieldText}>+91 9988776655</Text>
+                <Ionicons name="checkmark-circle" size={18} color="#4CAF50" />
+              </View>
+            </View>
+
+            <View style={styles.fieldCard}>
+              <Text style={styles.fieldLabel}>Location (Village/District)</Text>
+              <View style={styles.fieldValue}>
+                <Text style={styles.fieldText}>Bhuj Kutch Gujarat 370001</Text>
+                <Ionicons name="location-outline" size={18} color="#BD632F" />
+              </View>
+            </View>
+
+            <Text style={[styles.sectionTitle, { marginTop: 16, marginBottom: 8 }]}>About</Text>
+            <Text style={styles.aboutText}>
+              Hi, I'm Dr. Johnny Williams. I became a doctor to help people. I have been given much and I want to give back. Primary area to help is family medicine, geriatrics...{' '}
+              <Text style={styles.readMore}>Read More</Text>
+            </Text>
+          </View>
+        )}
+
+        {/* Experience Tab */}
+        {activeTab === 'experience' && (
+          <View>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Experiences</Text>
+              <View style={styles.sectionActions}>
+                <TouchableOpacity activeOpacity={0.7}>
+                  <Ionicons name="trash-outline" size={20} color="#E53935" />
+                </TouchableOpacity>
+                <TouchableOpacity activeOpacity={0.7}>
+                  <Ionicons name="pencil-outline" size={20} color="#7C7672" />
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            <View style={styles.experienceCard}>
+              <View style={styles.expHeader}>
+                <View style={styles.expIcon}>
+                  <Ionicons name="business-outline" size={20} color="#BD632F" />
+                </View>
+                <View style={styles.expInfo}>
+                  <Text style={styles.expTitle}>Vet Clinic</Text>
+                  <Text style={styles.expRole}>Senior Veterinary Surgeon</Text>
+                </View>
+              </View>
+              <View style={styles.expMeta}>
+                <View style={styles.expDateBadge}>
+                  <Ionicons name="calendar-outline" size={12} color="#7C7672" />
+                  <Text style={styles.expDateText}>May 2026 - Present</Text>
+                </View>
+                <Text style={styles.expCurrent}>Currently Working Here</Text>
+              </View>
+              <View style={styles.expLocation}>
+                <Ionicons name="location-outline" size={14} color="#9C9690" />
+                <Text style={styles.expLocationText}>Dhanmondi, Dhaka</Text>
+              </View>
+              <Text style={styles.expDescription} numberOfLines={3}>
+                Hi, I'm Dr. Johnny Williams. I became a doctor to help people. I have been given much and I want to give back. Primary area to help is family medicine, geriatrics...
+              </Text>
+              <Text style={styles.readMore}>Read More</Text>
+            </View>
+
+            {/* Qualifications */}
+            <View style={[styles.sectionHeader, { marginTop: 20 }]}>
+              <Text style={styles.sectionTitle}>Qualifications</Text>
+              <View style={styles.sectionActions}>
+                <TouchableOpacity activeOpacity={0.7}>
+                  <Ionicons name="add-circle-outline" size={22} color="#7C7672" />
+                </TouchableOpacity>
+                <TouchableOpacity activeOpacity={0.7}>
+                  <Ionicons name="pencil-outline" size={20} color="#7C7672" />
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            <View style={styles.qualificationCard}>
+              <View style={styles.qualHeader}>
+                <View style={styles.qualLogo}>
+                  <Ionicons name="school-outline" size={24} color="#BD632F" />
+                </View>
+                <View>
+                  <Text style={styles.qualSchool}>Boston University School of Medicine</Text>
+                  <Text style={styles.qualYear}>1985</Text>
+                </View>
+              </View>
+              <View style={styles.qualCertPlaceholder}>
+                <Text style={styles.qualCertText}>Certificate Image</Text>
+              </View>
+            </View>
+
+            {/* Specialization */}
+            <View style={[styles.sectionHeader, { marginTop: 20 }]}>
+              <Text style={styles.sectionTitle}>Specialization</Text>
+              <TouchableOpacity activeOpacity={0.7}>
+                <Ionicons name="pencil-outline" size={20} color="#7C7672" />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.tagsContainer}>
+              {['Livestock Medicine', 'Veterinary Surgery', 'Animal Nutrition'].map((tag) => (
+                <View key={tag} style={styles.tagItem}>
+                  <Ionicons name={tag === 'Livestock Medicine' ? 'medal-outline' : tag === 'Veterinary Surgery' ? 'ribbon-outline' : 'heart-outline'} size={16} color="#BD632F" />
+                  <Text style={styles.tagText}>{tag}</Text>
+                </View>
+              ))}
+              <TouchableOpacity style={styles.addMoreTag} activeOpacity={0.8}>
+                <Ionicons name="add" size={16} color="#BD632F" />
+                <Text style={styles.addMoreTagText}>Add more..</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Patient Reviews */}
+            <View style={[styles.sectionHeader, { marginTop: 20 }]}>
+              <Text style={styles.sectionTitle}>Patient Reviews</Text>
+              <TouchableOpacity activeOpacity={0.7}>
+                <Text style={styles.seeAllText}>See All</Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.reviewsRatingRow}>
+              <Ionicons name="star" size={18} color="#F59E0B" />
+              <Text style={styles.reviewsScore}>4.8</Text>
+              <Text style={styles.reviewsCount}>(124 Reviews)</Text>
+            </View>
+
+            {[
+              { name: 'Sarah J.', time: '2 days ago', stars: 5, text: 'Dr. Ariful was extremely professional and explained everything clearly. I felt very comfortable during the consultation.' },
+              { name: 'Michael R.', time: '5 days ago', stars: 5, text: 'Great experience. The staff was friendly and the doctor took his time to answer all my questions thoroughly.' },
+            ].map((review, i) => (
+              <View key={i} style={styles.reviewCard}>
+                <View style={styles.reviewHeader}>
+                  <View style={styles.reviewAvatar}>
+                    <Ionicons name="person-outline" size={16} color="#9C9690" />
+                  </View>
+                  <View style={styles.reviewInfo}>
+                    <Text style={styles.reviewName}>{review.name}</Text>
+                    <View style={styles.reviewStars}>
+                      {Array.from({ length: review.stars }).map((_, si) => (
+                        <Ionicons key={si} name="star" size={12} color="#F59E0B" />
+                      ))}
+                    </View>
+                  </View>
+                  <Text style={styles.reviewTime}>{review.time}</Text>
+                </View>
+                <Text style={styles.reviewText}>{review.text}</Text>
+              </View>
+            ))}
+          </View>
+        )}
+
+        {/* Credentials Tab */}
+        {activeTab === 'credentials' && (
+          <View>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Professional Credentials</Text>
+              <View style={styles.sectionActions}>
+                <TouchableOpacity activeOpacity={0.7}>
+                  <Ionicons name="trash-outline" size={20} color="#E53935" />
+                </TouchableOpacity>
+                <TouchableOpacity activeOpacity={0.7}>
+                  <Ionicons name="pencil-outline" size={20} color="#7C7672" />
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            <View style={styles.fieldCard}>
+              <Text style={styles.fieldLabel}>Certifications</Text>
+              <View style={styles.fieldValue}>
+                <Text style={styles.fieldText}>Veterinary Surgeon</Text>
+                <Ionicons name="mic-outline" size={18} color="#BD632F" />
+              </View>
+            </View>
+
+            <View style={styles.fieldCard}>
+              <Text style={styles.fieldLabel}>Institute Name</Text>
+              <View style={styles.fieldValue}>
+                <Text style={styles.fieldText}>Gobaadi Veterinary College</Text>
+                <Ionicons name="checkmark-circle" size={18} color="#4CAF50" />
+              </View>
+            </View>
+
+            <View style={styles.fieldCard}>
+              <Text style={styles.fieldLabel}>Location (Village/District)</Text>
+              <View style={styles.fieldValue}>
+                <Text style={styles.fieldText}>Bhuj Kutch Gujarat 370001</Text>
+                <Ionicons name="location-outline" size={18} color="#BD632F" />
+              </View>
+            </View>
+
+            <View style={styles.halfRow}>
+              <View style={styles.halfField}>
+                <Text style={styles.fieldLabel}>Start year</Text>
+                <View style={styles.dropdownField}>
+                  <Text style={styles.fieldText}>August</Text>
+                  <Ionicons name="chevron-down" size={16} color="#9C9690" />
+                </View>
+              </View>
+              <View style={styles.halfField}>
+                <Text style={styles.fieldLabel}>End year</Text>
+                <View style={styles.dropdownField}>
+                  <Text style={styles.fieldText}>2026</Text>
+                  <Ionicons name="chevron-down" size={16} color="#9C9690" />
+                </View>
+              </View>
+            </View>
+
+            <View style={styles.checkboxRow}>
+              <View style={styles.checkbox}>
+                <View style={styles.checkboxInner} />
+              </View>
+              <Text style={styles.checkboxLabel}>I'm currently studying here</Text>
+            </View>
+
+            <Text style={[styles.fieldLabel, { marginTop: 16, marginBottom: 8 }]}>Academic Credentials*</Text>
+            <TouchableOpacity style={styles.uploadArea} activeOpacity={0.7}>
+              <Ionicons name="camera-outline" size={36} color="#D1CCC7" />
+              <Text style={styles.uploadText}>Tap to upload photo</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.addMoreBtn} activeOpacity={0.8}>
+              <Ionicons name="image-outline" size={18} color="#7C7672" />
+              <Text style={styles.addMoreBtnText}>Add More</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: '#FAF9F6' },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 4, paddingBottom: 12 },
+  backBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#BD632F', justifyContent: 'center', alignItems: 'center' },
+  headerTitle: { fontSize: 20, fontWeight: '800', color: '#1A1817' },
+  scrollContainer: { paddingHorizontal: 20, paddingBottom: 40 },
+
+  // Doctor Card
+  doctorCard: { backgroundColor: '#FFFFFF', borderRadius: 20, borderWidth: 1, borderColor: '#E6E1DC', padding: 16, marginBottom: 16 },
+  doctorInfoRow: { flexDirection: 'row', marginBottom: 14 },
+  avatarContainer: { position: 'relative', marginRight: 14 },
+  avatarPlaceholder: { width: 64, height: 64, borderRadius: 32, backgroundColor: '#FFF2EB', justifyContent: 'center', alignItems: 'center' },
+  onlineDot: { position: 'absolute', bottom: 2, right: 2, width: 12, height: 12, borderRadius: 6, backgroundColor: '#4CAF50', borderWidth: 2, borderColor: '#FFFFFF' },
+  doctorDetails: { flex: 1 },
+  doctorName: { fontSize: 16, fontWeight: '800', color: '#1A1817', marginBottom: 2 },
+  doctorSpecialty: { fontSize: 12, fontWeight: '500', color: '#7C7672', marginBottom: 3 },
+  ratingRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 2 },
+  ratingText: { fontSize: 11, fontWeight: '600', color: '#7C7672' },
+  doctorLocation: { fontSize: 11, fontWeight: '500', color: '#9C9690' },
+  statsRow: { flexDirection: 'row', borderTopWidth: 1, borderTopColor: '#F0ECE8', paddingTop: 12 },
+  statItem: { flex: 1, alignItems: 'center' },
+  statNumber: { fontSize: 16, fontWeight: '800', color: '#1A1817', marginBottom: 2 },
+  statLabel: { fontSize: 10, fontWeight: '500', color: '#9C9690' },
+  statDivider: { width: 1, backgroundColor: '#F0ECE8' },
+
+  // Tabs
+  tabRow: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: '#E6E1DC', marginBottom: 16 },
+  tab: { paddingVertical: 10, marginRight: 20 },
+  tabActive: { borderBottomWidth: 2, borderBottomColor: '#1A1817' },
+  tabText: { fontSize: 13, fontWeight: '600', color: '#9C9690' },
+  tabTextActive: { color: '#1A1817', fontWeight: '700' },
+
+  // Sections
+  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+  sectionTitle: { fontSize: 16, fontWeight: '800', color: '#1A1817' },
+  sectionActions: { flexDirection: 'row', gap: 10 },
+
+  // Fields
+  fieldCard: { backgroundColor: '#FFFFFF', borderRadius: 14, borderWidth: 1, borderColor: '#E6E1DC', padding: 14, marginBottom: 10 },
+  fieldLabel: { fontSize: 12, fontWeight: '500', color: '#9C9690', marginBottom: 6 },
+  fieldValue: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  fieldText: { fontSize: 14, fontWeight: '600', color: '#1A1817' },
+
+  // About
+  aboutText: { fontSize: 13, fontWeight: '500', color: '#7C7672', lineHeight: 20 },
+  readMore: { color: '#BD632F', fontWeight: '700' },
+
+  // Experience
+  experienceCard: { backgroundColor: '#FFFFFF', borderRadius: 14, borderWidth: 1, borderColor: '#E6E1DC', padding: 14, marginBottom: 10 },
+  expHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 8 },
+  expIcon: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#FFF2EB', justifyContent: 'center', alignItems: 'center' },
+  expInfo: { flex: 1 },
+  expTitle: { fontSize: 14, fontWeight: '700', color: '#1A1817' },
+  expRole: { fontSize: 12, fontWeight: '500', color: '#7C7672' },
+  expMeta: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 },
+  expDateBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#F5F2EC', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 },
+  expDateText: { fontSize: 11, fontWeight: '500', color: '#7C7672' },
+  expCurrent: { fontSize: 11, fontWeight: '600', color: '#4CAF50' },
+  expLocation: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 6 },
+  expLocationText: { fontSize: 11, fontWeight: '500', color: '#9C9690' },
+  expDescription: { fontSize: 12, fontWeight: '500', color: '#7C7672', lineHeight: 18 },
+
+  // Qualifications
+  qualificationCard: { backgroundColor: '#FFFFFF', borderRadius: 14, borderWidth: 1, borderColor: '#E6E1DC', padding: 14, marginBottom: 10 },
+  qualHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 },
+  qualLogo: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#FFF2EB', justifyContent: 'center', alignItems: 'center' },
+  qualSchool: { fontSize: 13, fontWeight: '700', color: '#1A1817' },
+  qualYear: { fontSize: 11, fontWeight: '500', color: '#9C9690' },
+  qualCertPlaceholder: { backgroundColor: '#F5F2EC', borderRadius: 10, height: 80, justifyContent: 'center', alignItems: 'center' },
+  qualCertText: { fontSize: 12, color: '#9C9690' },
+
+  // Tags
+  tagsContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  tagItem: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFF2EB', borderRadius: 20, paddingHorizontal: 14, paddingVertical: 8, gap: 6 },
+  tagText: { fontSize: 13, fontWeight: '600', color: '#BD632F' },
+  addMoreTag: { flexDirection: 'row', alignItems: 'center', borderRadius: 20, borderWidth: 1.5, borderColor: '#E6E1DC', borderStyle: 'dashed', paddingHorizontal: 14, paddingVertical: 8, gap: 4 },
+  addMoreTagText: { fontSize: 13, fontWeight: '600', color: '#9C9690' },
+
+  // Reviews
+  seeAllText: { fontSize: 13, fontWeight: '600', color: '#BD632F' },
+  reviewsRatingRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 12 },
+  reviewsScore: { fontSize: 16, fontWeight: '800', color: '#1A1817' },
+  reviewsCount: { fontSize: 13, fontWeight: '500', color: '#9C9690' },
+  reviewCard: { backgroundColor: '#FFFFFF', borderRadius: 14, borderWidth: 1, borderColor: '#E6E1DC', padding: 14, marginBottom: 10 },
+  reviewHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
+  reviewAvatar: { width: 32, height: 32, borderRadius: 16, backgroundColor: '#F5F2EC', justifyContent: 'center', alignItems: 'center', marginRight: 8 },
+  reviewInfo: { flex: 1 },
+  reviewName: { fontSize: 13, fontWeight: '700', color: '#1A1817' },
+  reviewStars: { flexDirection: 'row', gap: 1 },
+  reviewTime: { fontSize: 11, fontWeight: '500', color: '#9C9690' },
+  reviewText: { fontSize: 12, fontWeight: '500', color: '#7C7672', lineHeight: 18 },
+
+  // Credentials
+  halfRow: { flexDirection: 'row', gap: 10, marginBottom: 10 },
+  halfField: { flex: 1 },
+  dropdownField: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#FFFFFF', borderRadius: 12, borderWidth: 1, borderColor: '#E6E1DC', paddingHorizontal: 14, height: 44 },
+  checkboxRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 },
+  checkbox: { width: 22, height: 22, borderRadius: 6, borderWidth: 2, borderColor: '#E6E1DC', justifyContent: 'center', alignItems: 'center' },
+  checkboxInner: { width: 12, height: 12, borderRadius: 3, backgroundColor: 'transparent' },
+  checkboxLabel: { fontSize: 13, fontWeight: '500', color: '#1A1817' },
+  uploadArea: { backgroundColor: '#FFFFFF', borderRadius: 14, borderWidth: 1.5, borderColor: '#E6E1DC', borderStyle: 'dashed', height: 120, justifyContent: 'center', alignItems: 'center', marginBottom: 12 },
+  uploadText: { fontSize: 12, fontWeight: '500', color: '#D1CCC7', marginTop: 6 },
+  addMoreBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start' },
+  addMoreBtnText: { fontSize: 13, fontWeight: '600', color: '#7C7672' },
+});

@@ -26,6 +26,12 @@ export interface DoctorAppointment {
   patientId: number;
   patientName?: string;
   patientPhone?: string;
+  animalName?: string;
+  animalSpecies?: string;
+  animalBreed?: string;
+  animalAge?: string;
+  animalImage?: string;
+  symptoms?: string;
   startAt: string;
   endAt: string;
   status: AppointmentStatus;
