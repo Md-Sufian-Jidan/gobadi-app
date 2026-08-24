@@ -3,232 +3,323 @@ import {
   StyleSheet,
   View,
   Text,
-  TextInput,
   TouchableOpacity,
   ScrollView,
-  Image,
+  Modal,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { useSelector } from 'react-redux';
-import type { RootState } from '@/store/store';
-import { useGetAnimalsQuery } from '@/store/animalsApi';
+import { Ionicons } from '@expo/vector-icons';
 import {
   useGetTasksQuery,
-  useCreateTaskMutation,
   useToggleTaskMutation,
   useDeleteTaskMutation,
+  Task,
 } from '@/store/tasksApi';
-import { EmptyState } from '@/components/ui/empty-state';
 import { RowSkeleton } from '@/components/ui/skeleton';
-
-interface AnimalStats {
-  cow: number;
-  goat: number;
-  buffalo: number;
-}
 
 function todayDateKey(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
-function formatTaskTime(scheduledTime: string): string {
-  return new Date(scheduledTime).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-}
-
-function countByBreed(animals: { breed: string }[]): AnimalStats {
-  const stats: AnimalStats = { cow: 0, goat: 0, buffalo: 0 };
-  for (const a of animals) {
-    const breed = a.breed.toLowerCase();
-    if (breed.includes('cow')) stats.cow += 1;
-    else if (breed.includes('goat')) stats.goat += 1;
-    else if (breed.includes('buffalo')) stats.buffalo += 1;
+function formatTaskTime(scheduledTime?: string): string {
+  if (!scheduledTime) return '07:00 PM';
+  try {
+    return new Date(scheduledTime).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  } catch {
+    return '07:00 PM';
   }
-  return stats;
 }
 
 export default function MyTaskScreen() {
   const router = useRouter();
-  const user = useSelector((state: RootState) => state.auth.user);
-
   const { data: tasks = [], isLoading: isTasksLoading } = useGetTasksQuery(todayDateKey());
-  const { data: animals = [] } = useGetAnimalsQuery();
-  const stats = countByBreed(animals);
-
-  const [newTaskTitle, setNewTaskTitle] = useState('');
-  const [createTask] = useCreateTaskMutation();
   const [toggleTaskMutation] = useToggleTaskMutation();
   const [deleteTaskMutation] = useDeleteTaskMutation();
 
-  async function addTask() {
-    const title = newTaskTitle.trim();
-    if (!title) return;
-    setNewTaskTitle('');
+  const [activeFilter, setActiveFilter] = useState<'all' | 'pending' | 'completed'>('all');
+  const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
+
+  const pendingTasks = tasks.filter((t) => !t.isDone);
+  const completedTasks = tasks.filter((t) => t.isDone);
+
+  const filteredTasks =
+    activeFilter === 'pending'
+      ? pendingTasks
+      : activeFilter === 'completed'
+      ? completedTasks
+      : tasks;
+
+  async function handleToggleDone(id: number) {
     try {
-      await createTask({ title, scheduledTime: new Date().toISOString() }).unwrap();
+      await toggleTaskMutation(String(id)).unwrap();
     } catch (err) {
-      console.log('Error creating task:', err);
+      console.log('Error toggling task:', err);
     }
   }
 
-  function toggleTask(id: number) {
-    toggleTaskMutation(String(id));
+  async function confirmDelete() {
+    if (!taskToDelete) return;
+    try {
+      await deleteTaskMutation(String(taskToDelete.id)).unwrap();
+    } catch (err) {
+      console.log('Error deleting task:', err);
+    } finally {
+      setTaskToDelete(null);
+    }
   }
-
-  function deleteTask(id: number) {
-    deleteTaskMutation(String(id));
-  }
-
-  const menuItems = [
-    { id: '1', label: 'My Farm', icon: '📈', route: '/(tabs)' },
-    { id: '2', label: 'Notification', icon: '🔔', route: null },
-    { id: '3', label: 'Language', icon: '🔤', route: null },
-    { id: '4', label: 'Refer & Earn', icon: '🎁', route: null },
-  ];
 
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity
-          style={styles.circleButton}
+          style={styles.headerSquareBtn}
           onPress={() => router.back()}
           activeOpacity={0.8}
         >
-          <Text style={styles.buttonText}>←</Text>
+          <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
         </TouchableOpacity>
 
         <Text style={styles.headerTitle}>My Task</Text>
 
-        <TouchableOpacity style={styles.circleButton} activeOpacity={0.8}>
-          <Text style={styles.buttonText}>📅</Text>
+        <TouchableOpacity
+          style={styles.headerSquareBtn}
+          onPress={() => router.push('/add-task')}
+          activeOpacity={0.8}
+        >
+          <Ionicons name="calendar-outline" size={20} color="#FFFFFF" />
         </TouchableOpacity>
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
-        {/* User Card */}
-        <View style={styles.userCard}>
-          <View style={styles.userInfoRow}>
-            <Image
-              source={require('@/assets/images/user_profile.png')}
-              style={styles.avatar}
-            />
-            <View style={styles.userDetails}>
-              <Text style={styles.userName}>{user?.name || user?.phone || 'Farmer'}</Text>
-              <Text style={styles.userSubtitle} numberOfLines={1}>
-                {user?.phone || ''}
-              </Text>
+        {/* Date & Weather Card */}
+        <View style={styles.dateWeatherCard}>
+          <View style={styles.dateWeatherLeft}>
+            <View style={styles.calendarCircle}>
+              <Ionicons name="calendar-outline" size={18} color="#2B6CB0" />
             </View>
-            <TouchableOpacity
-              style={styles.editButton}
-              onPress={() => router.push('/edit-profile')}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.editText}>Edit ✏️</Text>
-            </TouchableOpacity>
+            <Text style={styles.dateText}>Thursday, 10 Sep 2025</Text>
           </View>
-
-          <View style={styles.divider} />
-
-          {/* Stats Cards */}
-          <View style={styles.statsRow}>
-            <View style={[styles.statBox, styles.statBoxBlue]}>
-              <Text style={[styles.statNumber, styles.statNumberBlue]}>{String(stats.cow).padStart(2, '0')}</Text>
-              <Text style={styles.statLabel}>Cow</Text>
-            </View>
-            <View style={[styles.statBox, styles.statBoxOrange]}>
-              <Text style={[styles.statNumber, styles.statNumberOrange]}>{String(stats.goat).padStart(2, '0')}</Text>
-              <Text style={styles.statLabel}>Goat</Text>
-            </View>
-            <View style={[styles.statBox, styles.statBoxPink]}>
-              <Text style={[styles.statNumber, styles.statNumberPink]}>{String(stats.buffalo).padStart(2, '0')}</Text>
-              <Text style={styles.statLabel}>Buffalo</Text>
-            </View>
+          <View style={styles.weatherRight}>
+            <Text style={styles.weatherIcon}>⛅</Text>
+            <Text style={styles.tempText}>29°C</Text>
           </View>
         </View>
 
-        {/* Task List */}
-        <Text style={styles.sectionTitle}>Today&apos;s Tasks</Text>
-        <View style={styles.taskListCard}>
-          {isTasksLoading ? (
-            <>
-              <RowSkeleton />
-              <RowSkeleton />
-            </>
-          ) : tasks.length === 0 ? (
-            <EmptyState compact title="No tasks for today yet" />
-          ) : (
-            tasks.map((task, idx) => (
-              <View
-                key={task.id}
-                style={[styles.taskRow, idx === tasks.length - 1 && { borderBottomWidth: 0 }]}
-              >
-                <TouchableOpacity
-                  style={styles.taskRowLeft}
-                  activeOpacity={0.7}
-                  onPress={() => toggleTask(task.id)}
-                >
-                  <View style={[styles.checkbox, task.isDone ? styles.checkboxChecked : styles.checkboxUnchecked]}>
-                    {task.isDone ? <Text style={styles.checkIcon}>✓</Text> : null}
-                  </View>
-                  <View style={styles.taskTextContainer}>
-                    <Text style={[styles.taskTitle, task.isDone && styles.taskTitleDone]}>{task.title}</Text>
-                    <Text style={styles.taskTime}>{formatTaskTime(task.scheduledTime)}</Text>
-                  </View>
-                </TouchableOpacity>
-                <TouchableOpacity onPress={() => deleteTask(task.id)} activeOpacity={0.7} style={styles.deleteButton}>
-                  <Text style={styles.deleteIcon}>✕</Text>
-                </TouchableOpacity>
-              </View>
-            ))
-          )}
+        {/* Filter Pills */}
+        <View style={styles.filterRow}>
+          <TouchableOpacity
+            style={[styles.filterPill, activeFilter === 'all' && styles.filterPillActive]}
+            onPress={() => setActiveFilter('all')}
+            activeOpacity={0.8}
+          >
+            <Text style={[styles.filterPillText, activeFilter === 'all' && styles.filterPillTextActive]}>
+              All Tasks ({tasks.length})
+            </Text>
+          </TouchableOpacity>
 
-          <View style={styles.addTaskRow}>
-            <TextInput
-              style={styles.addTaskInput}
-              placeholder="Add a task..."
-              placeholderTextColor="#A39E99"
-              value={newTaskTitle}
-              onChangeText={setNewTaskTitle}
-              onSubmitEditing={addTask}
-              returnKeyType="done"
-            />
-            <TouchableOpacity style={styles.addTaskButton} onPress={addTask} activeOpacity={0.8}>
-              <Text style={styles.addTaskButtonText}>＋</Text>
-            </TouchableOpacity>
-          </View>
+          <TouchableOpacity
+            style={[styles.filterPill, activeFilter === 'pending' && styles.filterPillActive]}
+            onPress={() => setActiveFilter('pending')}
+            activeOpacity={0.8}
+          >
+            <Text style={[styles.filterPillText, activeFilter === 'pending' && styles.filterPillTextActive]}>
+              Pending ({pendingTasks.length})
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.filterPill, activeFilter === 'completed' && styles.filterPillActive]}
+            onPress={() => setActiveFilter('completed')}
+            activeOpacity={0.8}
+          >
+            <Text style={[styles.filterPillText, activeFilter === 'completed' && styles.filterPillTextActive]}>
+              Completed ({completedTasks.length})
+            </Text>
+          </TouchableOpacity>
         </View>
 
-        {/* Subscription Plan Card */}
-        <TouchableOpacity style={styles.planCard} activeOpacity={0.9}>
-          <View style={styles.planDetails}>
-            <Text style={styles.planLabel}>Current Plan</Text>
-            <Text style={styles.planCost}>$99.00</Text>
-            <Text style={styles.planBilling}>Next Billing : Oct 15, 2026</Text>
-          </View>
-          <Text style={styles.planChevron}>❯</Text>
+        {/* Add Task Button */}
+        <TouchableOpacity
+          style={styles.addMainTaskBtn}
+          onPress={() => router.push('/add-task')}
+          activeOpacity={0.85}
+        >
+          <Text style={styles.addMainTaskBtnText}>Add Task</Text>
         </TouchableOpacity>
 
-        {/* Menu List */}
-        <View style={styles.menuList}>
-          {menuItems.map((item) => (
+        {/* Section Title */}
+        <Text style={styles.sectionTitle}>
+          {activeFilter === 'all'
+            ? 'All Tasks'
+            : activeFilter === 'pending'
+            ? 'Pending Tasks'
+            : 'Completed Tasks'}
+        </Text>
+
+        {/* Task Cards or Empty State */}
+        {isTasksLoading ? (
+          <View style={{ gap: 12 }}>
+            <RowSkeleton />
+            <RowSkeleton />
+          </View>
+        ) : filteredTasks.length === 0 ? (
+          /* Empty State Matching Screenshot 2 */
+          <View style={styles.emptyCardContainer}>
+            <View style={styles.emptyIconBadge}>
+              <Ionicons name="calendar-outline" size={32} color="#BD632F" />
+            </View>
+            <Text style={styles.emptyTitle}>Schedule New Task</Text>
+            <Text style={styles.emptySubtitle}>You have no Task for Today</Text>
+
             <TouchableOpacity
-              key={item.id}
-              style={styles.menuItem}
-              onPress={() => item.route && router.push(item.route as any)}
-              activeOpacity={0.7}
+              style={styles.emptyAddBtn}
+              onPress={() => router.push('/add-task')}
+              activeOpacity={0.85}
             >
-              <View style={styles.menuItemLeft}>
-                <View style={styles.menuIconContainer}>
-                  <Text style={styles.menuIcon}>{item.icon}</Text>
-                </View>
-                <Text style={styles.menuLabel}>{item.label}</Text>
-              </View>
-              <Text style={styles.menuChevron}>❯</Text>
+              <Text style={styles.emptyAddBtnText}>Add Task</Text>
             </TouchableOpacity>
-          ))}
-        </View>
+          </View>
+        ) : (
+          filteredTasks.map((task) => (
+            <View
+              key={task.id}
+              style={[
+                styles.taskCard,
+                task.isDone ? styles.taskCardDone : styles.taskCardPending,
+              ]}
+            >
+              {/* Top Row */}
+              <View style={styles.taskCardTopRow}>
+                <View style={styles.taskTitleContainer}>
+                  <View style={styles.taskTypeBadge}>
+                    <Text style={styles.badgeEmoji}>
+                      {task.title.toLowerCase().includes('water')
+                        ? '💧'
+                        : task.title.toLowerCase().includes('feed')
+                        ? '🌾'
+                        : task.title.toLowerCase().includes('clean')
+                        ? '🧹'
+                        : task.title.toLowerCase().includes('vaccin')
+                        ? '💉'
+                        : '📋'}
+                    </Text>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.taskCardTitle, task.isDone && styles.taskCardTitleDone]}>
+                      {task.title}
+                    </Text>
+                    <Text style={styles.taskCardSpec}>
+                      {task.detail || 'Cow Shed'}
+                    </Text>
+                  </View>
+                </View>
+
+                {/* Right Action */}
+                {task.isDone ? (
+                  <View style={styles.checkDoneCircle}>
+                    <Ionicons name="checkmark" size={16} color="#FFFFFF" />
+                  </View>
+                ) : (
+                  <TouchableOpacity
+                    style={styles.trashBtn}
+                    onPress={() => setTaskToDelete(task)}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons name="trash-outline" size={20} color="#E53935" />
+                  </TouchableOpacity>
+                )}
+              </View>
+
+              {/* Time Row */}
+              <View style={styles.timeRow}>
+                <View style={styles.timeCol}>
+                  <Ionicons name="calendar-outline" size={14} color="#BD7D5B" />
+                  <Text style={styles.timeLabel}>Work Start </Text>
+                  <Text style={styles.timeVal}>{formatTaskTime(task.scheduledTime)}</Text>
+                </View>
+                <View style={styles.timeDividerVertical} />
+                <View style={styles.timeCol}>
+                  <Ionicons name="calendar-outline" size={14} color="#BD7D5B" />
+                  <Text style={styles.timeLabel}>Work End </Text>
+                  <Text style={styles.timeVal}>08:00 PM</Text>
+                </View>
+              </View>
+
+              {/* Description */}
+              <Text style={styles.taskDescription}>
+                Feed livestock according to the planned diet.
+              </Text>
+
+              {/* Card Action Buttons for Pending Task */}
+              {!task.isDone && (
+                <View style={styles.cardActionsRow}>
+                  <TouchableOpacity
+                    style={styles.markDoneBtn}
+                    onPress={() => handleToggleDone(task.id)}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={styles.markDoneBtnText}>Mark Done</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.editTaskBtn}
+                    onPress={() =>
+                      router.push({
+                        pathname: '/edit-task',
+                        params: { id: String(task.id), title: task.title, detail: task.detail },
+                      })
+                    }
+                    activeOpacity={0.8}
+                  >
+                    <Text style={styles.editTaskBtnText}>Edit Task</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
+          ))
+        )}
       </ScrollView>
+
+      {/* Custom Delete Confirmation Modal */}
+      <Modal
+        visible={!!taskToDelete}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setTaskToDelete(null)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalBox}>
+            <View style={styles.deleteModalIconCircle}>
+              <Ionicons name="trash-outline" size={28} color="#E53935" />
+            </View>
+            <Text style={styles.modalTitle}>Delete Task?</Text>
+            <Text style={styles.modalMessage}>
+              Are you really sure you want to delete &quot;{taskToDelete?.title}&quot;? This action cannot be undone.
+            </Text>
+
+            <View style={styles.modalButtonsRow}>
+              <TouchableOpacity
+                style={styles.modalCancelBtn}
+                onPress={() => setTaskToDelete(null)}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.modalCancelText}>Cancel</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.modalConfirmBtn}
+                onPress={confirmDelete}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.modalConfirmText}>Yes, Delete</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -237,111 +328,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#FAF9F6',
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#1A1817',
-    marginBottom: 12,
-  },
-  taskListCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 24,
-    borderWidth: 1,
-    borderColor: '#E6E1DC',
-    paddingHorizontal: 12,
-    marginBottom: 20,
-  },
-  taskRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 14,
-    paddingHorizontal: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F0EAE1',
-  },
-  taskRowLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  taskTextContainer: {
-    marginLeft: 12,
-    flex: 1,
-  },
-  taskTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#1A1817',
-  },
-  taskTitleDone: {
-    textDecorationLine: 'line-through',
-    color: '#9C9690',
-  },
-  taskTime: {
-    fontSize: 12,
-    color: '#7C7672',
-    marginTop: 2,
-  },
-  checkbox: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  checkboxChecked: {
-    backgroundColor: '#4CAF50',
-  },
-  checkboxUnchecked: {
-    borderWidth: 1.5,
-    borderColor: '#E6E1DC',
-    backgroundColor: '#FFFFFF',
-  },
-  checkIcon: {
-    color: '#FFFFFF',
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  deleteButton: {
-    padding: 8,
-  },
-  deleteIcon: {
-    fontSize: 14,
-    color: '#C4C0BB',
-    fontWeight: '700',
-  },
-  addTaskRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-    gap: 10,
-  },
-  addTaskInput: {
-    flex: 1,
-    height: 44,
-    backgroundColor: '#FAF9F6',
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: '#E6E1DC',
-    paddingHorizontal: 14,
-    fontSize: 14,
-    color: '#1A1817',
-  },
-  addTaskButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
-    backgroundColor: '#BD632F',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  addTaskButtonText: {
-    color: '#FFFFFF',
-    fontSize: 18,
-    fontWeight: '700',
   },
   scrollContainer: {
     paddingHorizontal: 24,
@@ -352,196 +338,367 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 24,
-    paddingTop: 16,
+    paddingTop: 12,
     marginBottom: 20,
   },
-  circleButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+  headerSquareBtn: {
+    width: 42,
+    height: 42,
+    borderRadius: 12,
     backgroundColor: '#BD632F',
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  buttonText: {
-    color: '#FFFFFF',
-    fontSize: 18,
-    fontWeight: '700',
+    shadowColor: '#BD632F',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 2,
   },
   headerTitle: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: '700',
     color: '#1A1817',
   },
-  userCard: {
+  dateWeatherCard: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#EDF4FE',
+    borderRadius: 18,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    marginBottom: 16,
+  },
+  dateWeatherLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  calendarCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#D4E2FF',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  dateText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#1A1817',
+  },
+  weatherRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  weatherIcon: {
+    fontSize: 18,
+  },
+  tempText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#1A1817',
+  },
+  filterRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 16,
+  },
+  filterPill: {
+    flex: 1,
+    height: 38,
+    borderRadius: 19,
     backgroundColor: '#FFFFFF',
-    borderRadius: 28,
-    padding: 20,
     borderWidth: 1,
     borderColor: '#E6E1DC',
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.02,
-    shadowRadius: 10,
-    elevation: 2,
-    marginBottom: 20,
-  },
-  userInfoRow: {
-    flexDirection: 'row',
+    justifyContent: 'center',
     alignItems: 'center',
   },
-  avatar: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    marginRight: 14,
-  },
-  userDetails: {
-    flex: 1,
-  },
-  userName: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#1A1817',
-    marginBottom: 4,
-  },
-  userSubtitle: {
-    fontSize: 12,
-    color: '#9C9690',
-  },
-  editButton: {
-    backgroundColor: '#FAF9F6',
-    borderWidth: 1,
-    borderColor: '#E6E1DC',
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-  },
-  editText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#1A1817',
-  },
-  divider: {
-    height: 1.5,
-    backgroundColor: '#FAF9F6',
-    marginVertical: 16,
-  },
-  statsRow: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  statBox: {
-    flex: 1,
-    borderRadius: 16,
+  filterPillActive: {
+    borderColor: '#BD632F',
+    backgroundColor: '#FFF8F4',
     borderWidth: 1.5,
-    paddingVertical: 12,
-    alignItems: 'center',
   },
-  statBoxBlue: {
-    backgroundColor: '#F3F6FF',
-    borderColor: '#D4E2FF',
-  },
-  statBoxOrange: {
-    backgroundColor: '#FFF7F3',
-    borderColor: '#FFE3D4',
-  },
-  statBoxPink: {
-    backgroundColor: '#FFF2F6',
-    borderColor: '#FFD4E2',
-  },
-  statNumber: {
-    fontSize: 18,
-    fontWeight: '800',
-    marginBottom: 2,
-  },
-  statNumberBlue: {
-    color: '#1976D2',
-  },
-  statNumberOrange: {
-    color: '#BD632F',
-  },
-  statNumberPink: {
-    color: '#D81B60',
-  },
-  statLabel: {
-    fontSize: 11,
+  filterPillText: {
+    fontSize: 12,
     fontWeight: '600',
     color: '#7C7672',
   },
-  planCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: '#F2F6FC',
-    borderRadius: 24,
-    borderWidth: 1,
-    borderColor: '#D2E2FA',
-    padding: 20,
-    marginBottom: 20,
-  },
-  planDetails: {
-    flex: 1,
-  },
-  planLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#657786',
-    marginBottom: 4,
-  },
-  planCost: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: '#1A1817',
-    marginBottom: 4,
-  },
-  planBilling: {
-    fontSize: 11,
-    color: '#657786',
-    fontWeight: '500',
-  },
-  planChevron: {
-    fontSize: 14,
+  filterPillTextActive: {
     color: '#BD632F',
     fontWeight: '700',
   },
-  menuList: {
-    gap: 12,
-    marginBottom: 24,
-  },
-  menuItem: {
-    flexDirection: 'row',
+  addMainTaskBtn: {
+    backgroundColor: '#BD632F',
+    height: 50,
+    borderRadius: 16,
+    justifyContent: 'center',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: '#FFFFFF',
+    marginBottom: 24,
+    shadowColor: '#BD632F',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.15,
+    shadowRadius: 5,
+    elevation: 3,
+  },
+  addMainTaskBtnText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1A1817',
+    marginBottom: 14,
+  },
+  emptyCardContainer: {
+    backgroundColor: '#FFFDFB',
+    borderRadius: 24,
     borderWidth: 1,
     borderColor: '#E6E1DC',
-    borderRadius: 20,
-    padding: 16,
+    padding: 28,
+    alignItems: 'center',
+    marginVertical: 10,
   },
-  menuItemLeft: {
-    flexDirection: 'row',
+  emptyIconBadge: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: '#FFF2EB',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  emptyTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: '#1A1817',
+    marginBottom: 4,
+  },
+  emptySubtitle: {
+    fontSize: 13,
+    color: '#7C7672',
+    marginBottom: 20,
+  },
+  emptyAddBtn: {
+    backgroundColor: '#803D16',
+    borderRadius: 14,
+    height: 44,
+    paddingHorizontal: 36,
+    justifyContent: 'center',
     alignItems: 'center',
   },
-  menuIconContainer: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    backgroundColor: '#FFF8F4',
+  emptyAddBtnText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  taskCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    padding: 18,
+    marginBottom: 16,
+    borderWidth: 1,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.03,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  taskCardPending: {
+    borderColor: '#FCD2C1',
+  },
+  taskCardDone: {
+    borderColor: '#C8E6C9',
+  },
+  taskCardTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 14,
+  },
+  taskTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    marginRight: 10,
+  },
+  taskTypeBadge: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#FFF2EB',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
   },
-  menuIcon: {
-    fontSize: 16,
+  badgeEmoji: {
+    fontSize: 20,
   },
-  menuLabel: {
+  taskCardTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#1A1817',
+    marginBottom: 2,
+  },
+  taskCardTitleDone: {
+    textDecorationLine: 'line-through',
+    color: '#9C9690',
+  },
+  taskCardSpec: {
+    fontSize: 12,
+    color: '#7C7672',
+  },
+  checkDoneCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#BD632F',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  trashBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#FFEBEE',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  timeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FAF9F6',
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    marginBottom: 12,
+  },
+  timeCol: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    gap: 4,
+  },
+  timeLabel: {
+    fontSize: 11,
+    color: '#7C7672',
+    fontWeight: '500',
+  },
+  timeVal: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#1A1817',
+  },
+  timeDividerVertical: {
+    width: 1,
+    height: 16,
+    backgroundColor: '#E6E1DC',
+    marginHorizontal: 8,
+  },
+  taskDescription: {
+    fontSize: 12.5,
+    color: '#7C7672',
+    lineHeight: 18,
+    marginBottom: 16,
+  },
+  cardActionsRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  markDoneBtn: {
+    flex: 1,
+    backgroundColor: '#BD632F',
+    height: 40,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  markDoneBtnText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  editTaskBtn: {
+    flex: 1,
+    backgroundColor: '#F5F2EC',
+    height: 40,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  editTaskBtnText: {
+    color: '#1A1817',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+  },
+  modalBox: {
+    width: '100%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    padding: 24,
+    alignItems: 'center',
+  },
+  deleteModalIconCircle: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#FFEBEE',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1A1817',
+    marginBottom: 8,
+  },
+  modalMessage: {
+    fontSize: 13.5,
+    color: '#7C7672',
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: 24,
+  },
+  modalButtonsRow: {
+    flexDirection: 'row',
+    gap: 12,
+    width: '100%',
+  },
+  modalCancelBtn: {
+    flex: 1,
+    backgroundColor: '#F5F2EC',
+    height: 46,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalCancelText: {
     fontSize: 14,
     fontWeight: '700',
     color: '#1A1817',
   },
-  menuChevron: {
-    fontSize: 12,
-    color: '#9C9690',
+  modalConfirmBtn: {
+    flex: 1,
+    backgroundColor: '#E53935',
+    height: 46,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalConfirmText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
 });

@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { useGetMyProfileQuery, useUpdateMyProfileMutation } from '@/store/usersApi';
 
 export default function EditProfileScreen() {
@@ -18,10 +19,13 @@ export default function EditProfileScreen() {
   const { data: profile } = useGetMyProfileQuery();
   const [updateProfile, { isLoading: isSaving }] = useUpdateMyProfileMutation();
 
-  const [name, setName] = useState('');
+  const [name, setName] = useState(profile?.name || '');
+  const [phone, setPhone] = useState(profile?.phone || '');
+  const [location, setLocation] = useState('');
 
   useEffect(() => {
     if (profile?.name) setName(profile.name);
+    if (profile?.phone) setPhone(profile.phone);
   }, [profile]);
 
   async function handleSave() {
@@ -39,16 +43,16 @@ export default function EditProfileScreen() {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity
-          style={styles.circleButton}
+          style={styles.backButton}
           onPress={() => router.back()}
           activeOpacity={0.8}
         >
-          <Text style={styles.buttonText}>←</Text>
+          <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
         </TouchableOpacity>
 
         <Text style={styles.headerTitle}>Edit Profile</Text>
 
-        <View style={{ width: 44 }} />
+        <View style={{ width: 42 }} />
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
@@ -61,7 +65,7 @@ export default function EditProfileScreen() {
               style={styles.avatarImage}
             />
             <TouchableOpacity style={styles.cameraIconContainer} activeOpacity={0.85}>
-              <Text style={styles.cameraEmoji}>📷</Text>
+              <Ionicons name="camera-outline" size={20} color="#BD632F" />
             </TouchableOpacity>
           </View>
 
@@ -77,7 +81,7 @@ export default function EditProfileScreen() {
                 placeholderTextColor="#A39E99"
               />
               <TouchableOpacity style={styles.inputActionBtn} activeOpacity={0.7}>
-                <Text style={styles.actionIcon}>🎤</Text>
+                <Ionicons name="mic-outline" size={20} color="#BD632F" />
               </TouchableOpacity>
             </View>
           </View>
@@ -87,14 +91,30 @@ export default function EditProfileScreen() {
             <View style={styles.inputWrapper}>
               <TextInput
                 style={styles.textInput}
-                value={profile?.phone || ''}
+                value={phone}
+                onChangeText={setPhone}
                 editable={false}
+                placeholder='Enter Phone'
                 placeholderTextColor="#A39E99"
                 keyboardType="phone-pad"
               />
-              <View style={styles.verifiedIconContainer}>
-                <Text style={styles.verifiedCheck}>✓</Text>
-              </View>
+              <Ionicons name="checkmark-circle" size={22} color="#4CAF50" />
+            </View>
+          </View>
+
+          <View style={styles.fieldContainer}>
+            <Text style={styles.fieldLabel}>Location (Village/District)</Text>
+            <View style={styles.inputWrapper}>
+              <TextInput
+                style={styles.textInput}
+                value={location}
+                onChangeText={setLocation}
+                placeholder="Enter location"
+                placeholderTextColor="#A39E99"
+              />
+              <TouchableOpacity style={styles.inputActionBtn} activeOpacity={0.7}>
+                <Ionicons name="locate-outline" size={20} color="#BD632F" />
+              </TouchableOpacity>
             </View>
           </View>
         </View>
@@ -127,44 +147,44 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 24,
-    paddingTop: 16,
-    marginBottom: 28,
+    paddingTop: 12,
+    marginBottom: 20,
   },
-  circleButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+  backButton: {
+    width: 42,
+    height: 42,
+    borderRadius: 12,
     backgroundColor: '#BD632F',
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  buttonText: {
-    color: '#FFFFFF',
-    fontSize: 18,
-    fontWeight: '700',
+    shadowColor: '#BD632F',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 2,
   },
   headerTitle: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: '700',
     color: '#1A1817',
   },
   profileCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 28,
+    borderRadius: 24,
     borderWidth: 1,
     borderColor: '#E6E1DC',
     padding: 24,
     alignItems: 'center',
     marginBottom: 24,
     shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.01,
-    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.02,
+    shadowRadius: 8,
     elevation: 2,
   },
   avatarWrapper: {
     position: 'relative',
-    marginBottom: 32,
+    marginBottom: 28,
   },
   avatarImage: {
     width: 140,
@@ -178,9 +198,9 @@ const styles = StyleSheet.create({
     bottom: 2,
     right: 2,
     backgroundColor: '#FFFFFF',
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1.5,
@@ -189,20 +209,17 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    elevation: 4,
-  },
-  cameraEmoji: {
-    fontSize: 18,
+    elevation: 3,
   },
   fieldContainer: {
     width: '100%',
-    marginBottom: 20,
+    marginBottom: 18,
   },
   fieldLabel: {
     fontSize: 13,
-    fontWeight: '600',
-    color: '#9C9690',
-    marginBottom: 8,
+    fontWeight: '500',
+    color: '#BD7D5B',
+    marginBottom: 6,
   },
   inputWrapper: {
     flexDirection: 'row',
@@ -217,29 +234,12 @@ const styles = StyleSheet.create({
   textInput: {
     flex: 1,
     height: '100%',
-    fontSize: 14,
+    fontSize: 15,
     color: '#1A1817',
     fontWeight: '700',
   },
   inputActionBtn: {
     padding: 4,
-  },
-  actionIcon: {
-    fontSize: 18,
-    color: '#BD632F',
-  },
-  verifiedIconContainer: {
-    backgroundColor: '#E8F5E9',
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  verifiedCheck: {
-    color: '#4CAF50',
-    fontSize: 12,
-    fontWeight: '800',
   },
   saveButton: {
     backgroundColor: '#BD632F',

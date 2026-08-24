@@ -61,18 +61,27 @@ export default function DoctorsScreen() {
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Doctors</Text>
-          <TouchableOpacity style={styles.notificationButton} activeOpacity={0.8}>
-            <Text style={styles.bellIcon}>🔔</Text>
-          </TouchableOpacity>
+          <View style={styles.headerRightControls}>
+            <TouchableOpacity style={styles.langBadge} activeOpacity={0.8}>
+              <Text style={styles.langGlobe}>🌐</Text>
+              <Text style={styles.langText}>EN</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.notificationButton} activeOpacity={0.8}>
+              <Text style={styles.bellIcon}>🔔</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Location selector and My Treatment button */}
         <View style={styles.locationContainer}>
-          <TouchableOpacity style={styles.locationSelector} activeOpacity={0.7}>
-            <Text style={styles.pinIcon}>📍</Text>
-            <Text style={styles.locationText}>Uttar Badda, Dhaka</Text>
-            <Text style={styles.dropdownArrow}>∨</Text>
-          </TouchableOpacity>
+          <View>
+            <Text style={styles.locationLabel}>Location</Text>
+            <TouchableOpacity style={styles.locationSelector} activeOpacity={0.7}>
+              <Text style={styles.pinIcon}>📍</Text>
+              <Text style={styles.locationText}>Uttar Badda, Dhaka</Text>
+              <Text style={styles.dropdownArrow}>∨</Text>
+            </TouchableOpacity>
+          </View>
 
           <TouchableOpacity style={styles.myTreatmentButton} activeOpacity={0.8}>
             <Text style={styles.treatmentIcon}>📅</Text>
@@ -85,7 +94,7 @@ export default function DoctorsScreen() {
           <Text style={styles.searchIcon}>🔍</Text>
           <TextInput
             style={styles.searchInput}
-            placeholder="Search doctor"
+            placeholder="Search doctors..."
             placeholderTextColor="#A39E99"
           />
         </View>
@@ -111,6 +120,8 @@ export default function DoctorsScreen() {
                   </TouchableOpacity>
                 </View>
               </View>
+
+              <View style={styles.cardDividerDashed} />
 
               <View style={styles.doctorQuickInfo}>
                 <Image source={require('@/assets/images/doctor.png')} style={styles.doctorThumb} />
@@ -209,38 +220,42 @@ export default function DoctorsScreen() {
 
         {doctors.map((doc) => (
           <View key={doc.id} style={styles.doctorCard}>
-            <View style={styles.doctorCardMain}>
-              <Image source={doc.image} style={styles.doctorPortrait} />
-              <View style={styles.doctorDetails}>
-                <Text style={styles.doctorName}>{doc.name}</Text>
-                <Text style={styles.doctorSpecialty}>{doc.specialty}</Text>
-                <View style={styles.ratingLocationRow}>
-                  <Text style={styles.locationPin}>📍</Text>
-                  <Text style={styles.locationTextMeta}>{doc.location}</Text>
-                </View>
-                <View style={styles.ratingRow}>
-                  <Text style={styles.starIcon}>⭐</Text>
-                  <Text style={styles.ratingValue}>{doc.rating}</Text>
-                  <Text style={styles.reviewsText}>| {doc.reviews} Reviews</Text>
-                </View>
-              </View>
-            </View>
+            <Image source={doc.image} style={styles.doctorPortrait} />
+            <View style={styles.doctorDetails}>
+              <Text style={styles.doctorName}>{doc.name}</Text>
 
-            <View style={styles.doctorCardButtons}>
-              <TouchableOpacity
-                style={styles.bookButton}
-                onPress={() => router.push({ pathname: '/book-slot', params: { id: doc.id } })}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.bookButtonText}>📅 Book Slot</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.detailsButton}
-                onPress={() => router.push({ pathname: '/doctor-detail', params: { id: doc.id } })}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.detailsButtonText}>📄 Details</Text>
-              </TouchableOpacity>
+              <View style={styles.doctorCardDivider} />
+
+              <Text style={styles.doctorSpecialty}>{doc.specialty}</Text>
+
+              <View style={styles.ratingLocationRow}>
+                <Text style={styles.locationPin}>📍</Text>
+                <Text style={styles.locationTextMeta}>{doc.location}</Text>
+              </View>
+
+              <View style={styles.ratingRow}>
+                <Text style={styles.starIcon}>⭐</Text>
+                <Text style={styles.ratingValue}>{doc.rating}</Text>
+                <Text style={styles.reviewsText}>| {doc.reviews.toLocaleString()} Reviews</Text>
+              </View>
+
+              {/* Action Buttons inside Details Column */}
+              <View style={styles.doctorCardButtons}>
+                <TouchableOpacity
+                  style={styles.bookButton}
+                  onPress={() => router.push({ pathname: '/book-slot', params: { id: doc.id } })}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.bookButtonText}>📅 Book Slot</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.detailsButton}
+                  onPress={() => router.push({ pathname: '/doctor-detail', params: { id: doc.id } })}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.detailsButtonText}>📄 Details</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
         ))}
@@ -270,10 +285,34 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#1A1817',
   },
+  headerRightControls: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  langBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E6E1DC',
+    borderRadius: 18,
+    paddingHorizontal: 12,
+    height: 38,
+    gap: 4,
+  },
+  langGlobe: {
+    fontSize: 14,
+  },
+  langText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#BD632F',
+  },
   notificationButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 40,
+    height: 40,
+    borderRadius: 12,
     backgroundColor: '#BD632F',
     justifyContent: 'center',
     alignItems: 'center',
@@ -293,6 +332,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 24,
     marginBottom: 16,
+  },
+  locationLabel: {
+    fontSize: 11,
+    color: '#9C9690',
+    marginBottom: 2,
   },
   locationSelector: {
     flexDirection: 'row',
@@ -317,9 +361,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#BD632F',
-    borderRadius: 16,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    height: 38,
     shadowColor: '#BD632F',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -343,7 +387,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E6E1DC',
     borderRadius: 14,
-    height: 52,
+    height: 50,
     marginHorizontal: 24,
     paddingHorizontal: 16,
     marginBottom: 20,
@@ -366,15 +410,14 @@ const styles = StyleSheet.create({
   upcomingCard: {
     backgroundColor: '#BD632F',
     borderRadius: 24,
-    padding: 20,
+    padding: 18,
     position: 'relative',
-    height: 160,
+    height: 165,
   },
   upcomingHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
   },
   upcomingTitle: {
     color: '#FFFFFF',
@@ -387,23 +430,23 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   chatButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
     backgroundColor: '#FFFFFF',
     justifyContent: 'center',
     alignItems: 'center',
   },
   actionEmoji: {
-    fontSize: 16,
+    fontSize: 15,
   },
   callButton: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
-    borderRadius: 18,
+    borderRadius: 16,
     paddingHorizontal: 12,
-    paddingVertical: 8,
+    height: 34,
   },
   callIcon: {
     fontSize: 12,
@@ -415,6 +458,20 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
   },
+  cardDividerDashed: {
+    height: 1,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.35)',
+    borderStyle: 'dashed',
+    marginVertical: 12,
+  },
+  doctorCardDivider: {
+    height: 1,
+    borderWidth: 1,
+    borderColor: '#E8E1D8',
+    borderStyle: 'solid',
+    marginVertical: 4,
+  },
   doctorQuickInfo: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -422,7 +479,7 @@ const styles = StyleSheet.create({
   doctorThumb: {
     width: 48,
     height: 48,
-    borderRadius: 24,
+    borderRadius: 18,
     marginRight: 12,
     borderWidth: 2,
     borderColor: '#FFFFFF',
@@ -451,7 +508,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 6,
     position: 'absolute',
-    bottom: 12,
+    bottom: 10,
     left: 0,
     right: 0,
   },
@@ -468,13 +525,13 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.4)',
   },
   aiCard: {
-    backgroundColor: '#FFF8F4',
-    borderWidth: 1.5,
-    borderColor: '#F3EFE9',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E6E1DC',
     borderRadius: 24,
-    padding: 16,
+    padding: 18,
     position: 'relative',
-    height: 160,
+    height: 165,
   },
   aiCardContent: {
     flexDirection: 'row',
@@ -502,9 +559,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#BD632F',
-    borderRadius: 14,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    height: 36,
     alignSelf: 'flex-start',
   },
   scanNowIcon: {
@@ -514,7 +571,7 @@ const styles = StyleSheet.create({
   },
   scanNowText: {
     color: '#FFFFFF',
-    fontSize: 11,
+    fontSize: 11.5,
     fontWeight: '700',
   },
   aiCowImage: {
@@ -557,6 +614,7 @@ const styles = StyleSheet.create({
   categoryCardActive: {
     borderColor: '#BD632F',
     borderWidth: 1.5,
+    backgroundColor: '#FFF8F4',
   },
   categoryIconCircle: {
     width: 44,
@@ -568,7 +626,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   categoryIconCircleActive: {
-    backgroundColor: '#FFF8F4',
+    backgroundColor: '#FFFFFF',
   },
   categoryIconText: {
     fontSize: 18,
@@ -583,6 +641,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   doctorCard: {
+    flexDirection: 'row',
     backgroundColor: '#FFFFFF',
     borderRadius: 24,
     marginHorizontal: 24,
@@ -594,37 +653,32 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 2,
     borderWidth: 1,
-    borderColor: '#F0EAE1',
-  },
-  doctorCardMain: {
-    flexDirection: 'row',
-    marginBottom: 16,
+    borderColor: '#E6E1DC',
   },
   doctorPortrait: {
-    width: 80,
-    height: 80,
-    borderRadius: 16,
-    marginRight: 16,
+    width: 100,
+    height: 115,
+    borderRadius: 18,
+    marginRight: 14,
   },
   doctorDetails: {
     flex: 1,
-    justifyContent: 'center',
+    justifyContent: 'space-between',
   },
   doctorName: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '700',
     color: '#1A1817',
-    marginBottom: 4,
   },
   doctorSpecialty: {
-    fontSize: 13,
+    fontSize: 12.5,
     color: '#7C7672',
-    marginBottom: 6,
+    marginTop: 2,
   },
   ratingLocationRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 4,
+    marginTop: 4,
   },
   locationPin: {
     fontSize: 11,
@@ -638,16 +692,18 @@ const styles = StyleSheet.create({
   ratingRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginTop: 4,
+    marginBottom: 8,
   },
   starIcon: {
-    fontSize: 11,
+    fontSize: 12,
     marginRight: 4,
   },
   ratingValue: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '700',
     color: '#1A1817',
-    marginRight: 4,
+    marginRight: 6,
   },
   reviewsText: {
     fontSize: 11,
@@ -655,34 +711,35 @@ const styles = StyleSheet.create({
   },
   doctorCardButtons: {
     flexDirection: 'row',
-    gap: 12,
+    gap: 8,
+    marginTop: 4,
   },
   bookButton: {
-    flex: 1.2,
+    flex: 1,
     backgroundColor: '#BD632F',
-    height: 40,
-    borderRadius: 20,
+    height: 36,
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
   },
   bookButtonText: {
     color: '#FFFFFF',
-    fontSize: 12,
+    fontSize: 11.5,
     fontWeight: '700',
   },
   detailsButton: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#FFF8F5',
     borderWidth: 1,
     borderColor: '#BD632F',
-    height: 40,
-    borderRadius: 20,
+    height: 36,
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
   },
   detailsButtonText: {
     color: '#BD632F',
-    fontSize: 12,
+    fontSize: 11.5,
     fontWeight: '700',
   },
 });

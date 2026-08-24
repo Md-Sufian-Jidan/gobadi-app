@@ -8,6 +8,7 @@ import {
   Image,
   Alert,
   Dimensions,
+  Share,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -41,20 +42,38 @@ export default function MyAnimalDetailScreen() {
     ]);
   }
 
+  async function handleShare() {
+    try {
+      await Share.share({
+        message: `Check out ${animal?.name || 'this animal'} (${animal?.breed || 'Livestock'}) on Gobadi! Live Weight: ${animal?.weight || '725 Kg'}.`,
+      });
+    } catch (err) {
+      console.log('Error sharing:', err);
+    }
+  }
+
+  function handleAddToMarketplace() {
+    Alert.alert('Added to Marketplace', `${animal?.name || 'Animal'} has been listed in the Gobadi marketplace.`);
+  }
+
   const image = animal?.image
     ? { uri: animal.image }
     : animal?.breed?.toLowerCase().includes('buffalo')
       ? require('@/assets/images/albino_buffalo.png')
       : require('@/assets/images/bangladeshi_cow.png');
 
-  const basicInfo = animal
-    ? [
-        { label: 'Breed', value: animal.breed },
-        { label: 'Age', value: animal.age },
-        { label: 'Color', value: animal.color },
-        { label: 'Live Weight', value: animal.weight },
-      ]
-    : [];
+  const basicInfo = [
+    { label: 'Date Of Birth', value: '31/01/2025' },
+    { label: 'Gender', value: 'Male' },
+    { label: 'Source', value: 'Purchased' },
+    { label: 'Breed', value: animal?.breed || 'Albenian' },
+    { label: 'Age', value: animal?.age || '28 months' },
+    { label: 'Color', value: animal?.color || 'Pinkish White' },
+    { label: 'Joined Farm', value: '12/12/2024' },
+    { label: 'Stage', value: 'Growing' },
+    { label: 'Live Weight', value: animal?.weight || '725 Kg' },
+    { label: 'Price per kg', value: '680' },
+  ];
 
   return (
     <SafeAreaView style={styles.container}>
@@ -63,29 +82,79 @@ export default function MyAnimalDetailScreen() {
         <View style={styles.imageContainer}>
           <Image source={image} style={styles.mainImage} resizeMode="cover" />
 
-          <View style={styles.imageHeader}>
-            <TouchableOpacity
-              style={styles.circleButton}
-              onPress={() => router.back()}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.buttonText}>←</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.circleButton} onPress={confirmDelete} activeOpacity={0.8}>
-              <Text style={styles.buttonText}>🗑️</Text>
-            </TouchableOpacity>
+          {/* Carousel Pagination Dots */}
+          <View style={styles.paginationRow}>
+            {[0, 1, 2, 3, 4, 5, 6].map((i) => (
+              <View
+                key={i}
+                style={[styles.dot, i === 1 && styles.dotActive]}
+              />
+            ))}
           </View>
+
+          {/* Header Action Buttons */}
+          <SafeAreaView edges={['top']} style={styles.imageHeaderSafeArea}>
+            <View style={styles.imageHeader}>
+              <TouchableOpacity
+                style={styles.circleButton}
+                onPress={() => router.back()}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.buttonText}>←</Text>
+              </TouchableOpacity>
+              <View style={{ flexDirection: 'row', gap: 10 }}>
+                <TouchableOpacity style={styles.circleButton} onPress={confirmDelete} activeOpacity={0.8}>
+                  <Text style={styles.buttonText}>🗑️</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.circleButton}
+                  onPress={() => router.push('/notifications')}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.buttonText}>🔔</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </SafeAreaView>
         </View>
 
-        {/* Content Area */}
-        <View style={styles.contentContainer}>
-          <View style={styles.titleRow}>
-            <Text style={styles.animalTitle}>{animal?.name || 'Loading...'}</Text>
+        {/* Content Sheet Area */}
+        <View style={styles.sheetContainer}>
+          {/* Header Title & Price Row */}
+          <View style={styles.headerRow}>
+            <View style={styles.headerLeft}>
+              <Text style={styles.animalTitle}>{animal?.name || 'Donald Tramp'}</Text>
+              <View style={styles.healthyBadge}>
+                <Text style={styles.healthyBadgeText}>Healthy</Text>
+              </View>
+            </View>
+            <View style={styles.headerRight}>
+              <Text style={styles.priceText}>৳ 3,20,000</Text>
+              <Text style={styles.priceSubtext}>(Negotiable/Live wight)</Text>
+            </View>
           </View>
 
-          <View style={styles.divider} />
+          {/* Action Buttons */}
+          <View style={styles.actionsRow}>
+            <TouchableOpacity
+              style={styles.addToMarketBtn}
+              activeOpacity={0.8}
+              onPress={handleAddToMarketplace}
+            >
+              <Text style={styles.addToMarketBtnText}>🛒 Add To Marketplace</Text>
+            </TouchableOpacity>
 
-          <Text style={styles.sectionTitle}>Basic Information</Text>
+            <TouchableOpacity
+              style={styles.shareDetailsBtn}
+              activeOpacity={0.8}
+              onPress={handleShare}
+            >
+              <Text style={styles.shareDetailsBtnText}>📤 Share Details</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Basic Informations Grid */}
+          <Text style={styles.sectionTitle}>Basic Informations</Text>
 
           <View style={styles.gridContainer}>
             {basicInfo.map((info, idx) => (
@@ -98,14 +167,14 @@ export default function MyAnimalDetailScreen() {
         </View>
       </ScrollView>
 
-      {/* Floating Bottom action button */}
+      {/* Floating Bottom Bar */}
       <View style={styles.bottomBar}>
         <TouchableOpacity
           style={styles.editBtn}
           onPress={() => router.push({ pathname: '/add-animal', params: { id, edit: '1' } })}
           activeOpacity={0.85}
         >
-          <Text style={styles.editBtnText}>✏️ Edit Animal</Text>
+          <Text style={styles.editBtnText}>✏️ Edit Animal Details</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -118,35 +187,67 @@ const styles = StyleSheet.create({
     backgroundColor: '#FAF9F6',
   },
   scrollContainer: {
-    paddingBottom: 120,
+    paddingBottom: 90,
   },
   imageContainer: {
     width: '100%',
-    height: 300,
+    height: 320,
     position: 'relative',
+    backgroundColor: '#EBE5DF',
   },
   mainImage: {
     width: '100%',
     height: '100%',
   },
-  imageHeader: {
+  paginationRow: {
     position: 'absolute',
-    top: 24,
-    left: 20,
-    right: 20,
+    bottom: 42,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 6,
+  },
+  dot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#FFFFFF',
+    opacity: 0.8,
+  },
+  dotActive: {
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: '#BD632F',
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+    opacity: 1,
+  },
+  imageHeaderSafeArea: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+  },
+  imageHeader: {
+    paddingHorizontal: 20,
+    paddingTop: 12,
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
   },
   circleButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
+    width: 42,
+    height: 42,
+    borderRadius: 12,
     backgroundColor: '#BD632F',
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
+    shadowOpacity: 0.15,
     shadowRadius: 4,
     elevation: 3,
   },
@@ -155,45 +256,117 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
   },
-  contentContainer: {
-    padding: 24,
+  sheetContainer: {
+    backgroundColor: '#FAF9F6',
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    marginTop: -28,
+    paddingHorizontal: 24,
+    paddingTop: 24,
+    paddingBottom: 24,
   },
-  titleRow: {
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
     marginBottom: 20,
+  },
+  headerLeft: {
+    flex: 1,
   },
   animalTitle: {
     fontSize: 24,
     fontWeight: '800',
     color: '#1A1817',
+    marginBottom: 8,
   },
-  divider: {
-    height: 1.5,
-    backgroundColor: '#F0EAE1',
-    marginBottom: 20,
+  healthyBadge: {
+    backgroundColor: '#EEF4E3',
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 8,
+    alignSelf: 'flex-start',
+  },
+  healthyBadgeText: {
+    color: '#608030',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  headerRight: {
+    alignItems: 'flex-end',
+  },
+  priceText: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#1A1817',
+    marginBottom: 4,
+  },
+  priceSubtext: {
+    fontSize: 11,
+    color: '#608030',
+    fontWeight: '600',
+  },
+  actionsRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 24,
+  },
+  addToMarketBtn: {
+    flex: 1,
+    height: 48,
+    backgroundColor: '#BD632F',
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  addToMarketBtnText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  shareDetailsBtn: {
+    flex: 1,
+    height: 48,
+    backgroundColor: '#FFF7F2',
+    borderWidth: 1,
+    borderColor: '#E8C5B0',
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  shareDetailsBtnText: {
+    color: '#BD632F',
+    fontSize: 13,
+    fontWeight: '700',
   },
   sectionTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#BD632F',
+    color: '#BD7D5B',
     marginBottom: 16,
   },
   gridContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
-    gap: 12,
+    rowGap: 12,
   },
   gridCard: {
     width: (width - 60) / 2,
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: '#E6E1DC',
-    borderRadius: 14,
+    borderRadius: 16,
     padding: 14,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.02,
+    shadowRadius: 4,
+    elevation: 1,
   },
   gridLabel: {
-    fontSize: 10,
-    color: '#9C9690',
+    fontSize: 11,
+    color: '#BD7D5B',
     fontWeight: '500',
     marginBottom: 4,
   },
@@ -209,20 +382,20 @@ const styles = StyleSheet.create({
     right: 0,
     backgroundColor: '#FAF9F6',
     paddingHorizontal: 24,
-    paddingVertical: 16,
+    paddingVertical: 14,
     borderTopWidth: 1,
     borderTopColor: '#E9E5DF',
   },
   editBtn: {
     backgroundColor: '#BD632F',
-    height: 52,
-    borderRadius: 26,
+    height: 48,
+    borderRadius: 24,
     justifyContent: 'center',
     alignItems: 'center',
   },
   editBtnText: {
     color: '#FFFFFF',
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '700',
   },
 });
