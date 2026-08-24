@@ -100,7 +100,6 @@ function RootNavigator() {
     </Stack>
   );
 }
-
 export default function RootLayout() {
   const colorScheme = useColorScheme();
 
