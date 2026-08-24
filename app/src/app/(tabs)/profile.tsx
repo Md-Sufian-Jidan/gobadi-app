@@ -49,7 +49,7 @@ export default function ProfileScreen() {
   }> = [
       { id: '1', label: 'My Task', icon: 'calendar-outline', route: '/my-task' },
       { id: '2', label: 'Notification', icon: 'notifications-outline', route: '/notifications' },
-      { id: '3', label: 'Language', icon: 'language-outline', route: null },
+      { id: '3', label: 'Language', icon: 'language-outline', route: '/select-language' },
       { id: '4', label: 'Refer & Earn', icon: 'gift-outline', route: '/refer-earn' },
       { id: '5', label: 'Help & Support', icon: 'headset-outline', route: '/help-support' },
       { id: '6', label: 'My Orders', icon: 'cube-outline', route: '/my-orders' },

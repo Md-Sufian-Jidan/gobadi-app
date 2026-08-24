@@ -96,6 +96,7 @@ function RootNavigator() {
       <Stack.Screen name="contact-support" />
       <Stack.Screen name="report-issues" />
       <Stack.Screen name="subscription" />
+      <Stack.Screen name="select-language" />
     </Stack>
   );
 }

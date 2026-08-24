@@ -19,6 +19,8 @@ function getIconName(routeName: string, isFocused: boolean): keyof typeof Ionico
       return isFocused ? 'storefront' : 'storefront-outline';
     case 'profile':
       return isFocused ? 'person' : 'person-outline';
+    case 'doctor-home':
+      return isFocused ? 'home' : 'home-outline';
     case 'doctor-bookings':
       return isFocused ? 'calendar' : 'calendar-outline';
     case 'doctor-availability':
@@ -42,12 +44,14 @@ function getLabel(routeName: string) {
       return 'Market';
     case 'profile':
       return 'Profile';
+    case 'doctor-home':
+      return 'Home';
     case 'doctor-bookings':
-      return 'Bookings';
+      return 'Calendar';
     case 'doctor-availability':
-      return 'Availability';
+      return 'Schedule';
     case 'doctor-messages':
-      return 'Messages';
+      return 'Chat';
     default:
       return routeName;
   }
@@ -132,6 +136,7 @@ export default function AppTabs() {
 
   return (
     <Tabs
+      initialRouteName={isDoctor ? 'doctor-home' : 'index'}
       screenOptions={{
         headerShown: false,
       }}
@@ -141,6 +146,7 @@ export default function AppTabs() {
       <Tabs.Screen name="animals" options={{ href: isDoctor ? null : undefined }} />
       <Tabs.Screen name="doctors" options={{ href: isDoctor ? null : undefined }} />
       <Tabs.Screen name="market" options={{ href: isDoctor ? null : undefined }} />
+      <Tabs.Screen name="doctor-home" options={{ href: isDoctor ? undefined : null }} />
       <Tabs.Screen name="doctor-bookings" options={{ href: isDoctor ? undefined : null }} />
       <Tabs.Screen name="doctor-availability" options={{ href: isDoctor ? undefined : null }} />
       <Tabs.Screen name="doctor-messages" options={{ href: isDoctor ? undefined : null }} />
