@@ -253,7 +253,7 @@ export default function HomeDashboard() {
         </View>
 
         {/* Today's Task Section */}
-        <Text style={[styles.sectionTitle, { marginTop: 24, marginBottom: 16 }]}>Today's Task</Text>
+        <Text style={[styles.sectionTitle, { marginTop: 24, marginBottom: 16, marginLeft:24 }]}>Today's Task</Text>
 
         <View style={styles.listCard}>
           {isTasksLoading ? (
