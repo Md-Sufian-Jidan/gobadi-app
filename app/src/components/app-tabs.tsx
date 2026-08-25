@@ -2,39 +2,43 @@ import React from 'react';
 import { Tabs } from 'expo-router';
 import { StyleSheet, View, Text, TouchableOpacity, Dimensions } from 'react-native';
 import { useSelector } from 'react-redux';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { RootState } from '@/store/store';
 
 const { width } = Dimensions.get('window');
 
-function getIconName(routeName: string, isFocused: boolean): keyof typeof Ionicons.glyphMap {
+function TabIcon({ routeName, isFocused }: { routeName: string; isFocused: boolean }) {
+  const activeColor = '#BD632F';
+  const inactiveColor = '#9C9690';
+  const color = isFocused ? activeColor : inactiveColor;
+  const size = isFocused ? 24 : 22;
+
   switch (routeName) {
     case 'index':
-      return isFocused ? 'home' : 'home-outline';
-    case 'animals':
-      return isFocused ? 'paw' : 'paw-outline';
-    case 'doctors':
-      return isFocused ? 'medical' : 'medical-outline';
-    case 'market':
-      return isFocused ? 'storefront' : 'storefront-outline';
-    case 'profile':
-      return isFocused ? 'person' : 'person-outline';
     case 'doctor-home':
-      return isFocused ? 'home' : 'home-outline';
+      return <MaterialCommunityIcons name={isFocused ? 'home' : 'home-outline'} size={size} color={color} />;
+    case 'animals':
+      return <MaterialCommunityIcons name="cow" size={size} color={color} />;
+    case 'doctors':
+      return <MaterialCommunityIcons name="doctor" size={size} color={color} />;
+    case 'market':
+      return <MaterialCommunityIcons name={isFocused ? 'storefront' : 'storefront-outline'} size={size} color={color} />;
     case 'doctor-bookings':
-      return isFocused ? 'calendar' : 'calendar-outline';
-    case 'doctor-availability':
-      return isFocused ? 'time' : 'time-outline';
+      return <MaterialCommunityIcons name={isFocused ? 'calendar-month' : 'calendar-month-outline'} size={size} color={color} />;
     case 'doctor-messages':
-      return isFocused ? 'chatbubbles' : 'chatbubbles-outline';
+      return <MaterialCommunityIcons name={isFocused ? 'message-processing' : 'message-processing-outline'} size={size} color={color} />;
+    case 'profile':
+      return <Ionicons name={isFocused ? 'person' : 'person-outline'} size={size} color={color} />;
     default:
-      return 'ellipse-outline';
+      return <Ionicons name="ellipse-outline" size={size} color={color} />;
   }
 }
 
 function getLabel(routeName: string) {
   switch (routeName) {
     case 'index':
+    case 'doctor-home':
       return 'Home';
     case 'animals':
       return 'Animals';
@@ -42,31 +46,37 @@ function getLabel(routeName: string) {
       return 'Doctors';
     case 'market':
       return 'Market';
-    case 'profile':
-      return 'Profile';
-    case 'doctor-home':
-      return 'Home';
     case 'doctor-bookings':
       return 'Calendar';
     case 'doctor-availability':
       return 'Schedule';
     case 'doctor-messages':
       return 'Chat';
+    case 'profile':
+      return 'Profile';
     default:
       return routeName;
   }
 }
 
 function CustomTabBar({ state, descriptors, navigation }: any) {
+  const insets = useSafeAreaInsets();
+
+  const visibleRoutes = state.routes.filter((route: any) => {
+    const { options } = descriptors[route.key];
+    if (options.href === null || options.tabBarItemStyle?.display === 'none') {
+      return false;
+    }
+    return true;
+  });
+
+  const bottomPadding = Math.max(insets.bottom, 10);
+
   return (
-    <View style={styles.tabBarContainer}>
-      <View style={styles.tabBarBackground}>
-        {state.routes.map((route: any, index: number) => {
-          const { options } = descriptors[route.key];
-          if (options.tabBarItemStyle?.display === 'none') {
-            return null;
-          }
-          const isFocused = state.index === index;
+    <View style={[styles.tabBarContainer, { height: 65 + bottomPadding }]}>
+      <View style={[styles.tabBarBackground, { height: 60 + bottomPadding, paddingBottom: bottomPadding }]}>
+        {visibleRoutes.map((route: any) => {
+          const isFocused = state.routes[state.index]?.key === route.key;
 
           const onPress = () => {
             const event = navigation.emit({
@@ -87,7 +97,6 @@ function CustomTabBar({ state, descriptors, navigation }: any) {
             });
           };
 
-          const iconName = getIconName(route.name, isFocused);
           const label = getLabel(route.name);
 
           return (
@@ -103,9 +112,7 @@ function CustomTabBar({ state, descriptors, navigation }: any) {
                   activeOpacity={0.85}
                 >
                   <View style={styles.floatingInnerCircle}>
-                    <View style={styles.iconCircleBadge}>
-                      <Ionicons name={iconName} size={22} color="#BD632F" />
-                    </View>
+                    <TabIcon routeName={route.name} isFocused={true} />
                   </View>
                   <Text style={styles.labelActive}>{label}</Text>
                 </TouchableOpacity>
@@ -113,12 +120,13 @@ function CustomTabBar({ state, descriptors, navigation }: any) {
                 /* Inactive Tab */
                 <TouchableOpacity
                   accessibilityRole="button"
+                  accessibilityState={{ selected: false }}
                   onPress={onPress}
                   onLongPress={onLongPress}
                   style={styles.tabItem}
                   activeOpacity={0.7}
                 >
-                  <Ionicons name={iconName} size={22} color="#9C9690" style={{ marginBottom: 3 }} />
+                  <TabIcon routeName={route.name} isFocused={false} />
                   <Text style={styles.labelInactive}>{label}</Text>
                 </TouchableOpacity>
               )}
@@ -141,16 +149,82 @@ export default function AppTabs() {
         headerShown: false,
       }}
       tabBar={(props) => <CustomTabBar {...props} />}
-    >  
-      <Tabs.Screen name="index" options={{ href: isDoctor ? null : undefined }} />
-      <Tabs.Screen name="animals" options={{ href: isDoctor ? null : undefined }} />
-      <Tabs.Screen name="doctors" options={{ href: isDoctor ? null : undefined }} />
-      <Tabs.Screen name="market" options={{ href: isDoctor ? null : undefined }} />
-      <Tabs.Screen name="doctor-home" options={{ href: isDoctor ? undefined : null }} />
-      <Tabs.Screen name="doctor-bookings" options={{ href: isDoctor ? undefined : null }} />
-      <Tabs.Screen name="doctor-availability" options={{ href: null }} />
-      <Tabs.Screen name="doctor-messages" options={{ href: isDoctor ? undefined : null }} />
-      <Tabs.Screen name="profile" />
+    >
+      {/* Farmer Module Screens */}
+      <Tabs.Screen
+        name="index"
+        options={{
+          title: 'Home',
+          href: isDoctor ? null : undefined,
+          tabBarItemStyle: isDoctor ? { display: 'none' } : undefined,
+        }}
+      />
+      <Tabs.Screen
+        name="animals"
+        options={{
+          title: 'Animals',
+          href: isDoctor ? null : undefined,
+          tabBarItemStyle: isDoctor ? { display: 'none' } : undefined,
+        }}
+      />
+      <Tabs.Screen
+        name="doctors"
+        options={{
+          title: 'Doctors',
+          href: isDoctor ? null : undefined,
+          tabBarItemStyle: isDoctor ? { display: 'none' } : undefined,
+        }}
+      />
+      <Tabs.Screen
+        name="market"
+        options={{
+          title: 'Market',
+          href: isDoctor ? null : undefined,
+          tabBarItemStyle: isDoctor ? { display: 'none' } : undefined,
+        }}
+      />
+
+      {/* Doctor Module Screens */}
+      <Tabs.Screen
+        name="doctor-home"
+        options={{
+          title: 'Home',
+          href: isDoctor ? undefined : null,
+          tabBarItemStyle: isDoctor ? undefined : { display: 'none' },
+        }}
+      />
+      <Tabs.Screen
+        name="doctor-bookings"
+        options={{
+          title: 'Calendar',
+          href: isDoctor ? undefined : null,
+          tabBarItemStyle: isDoctor ? undefined : { display: 'none' },
+        }}
+      />
+      <Tabs.Screen
+        name="doctor-availability"
+        options={{
+          title: 'Schedule',
+          href: null,
+          tabBarItemStyle: { display: 'none' },
+        }}
+      />
+      <Tabs.Screen
+        name="doctor-messages"
+        options={{
+          title: 'Chat',
+          href: isDoctor ? undefined : null,
+          tabBarItemStyle: isDoctor ? undefined : { display: 'none' },
+        }}
+      />
+
+      {/* Shared Screens */}
+      <Tabs.Screen
+        name="profile"
+        options={{
+          title: 'Profile',
+        }}
+      />
     </Tabs>
   );
 }
@@ -160,13 +234,11 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 0,
     width: width,
-    height: 80,
     backgroundColor: 'transparent',
   },
   tabBarBackground: {
     flexDirection: 'row',
     backgroundColor: '#FFFFFF',
-    height: 70,
     position: 'absolute',
     bottom: 0,
     width: '100%',
@@ -174,9 +246,9 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 28,
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.06,
-    shadowRadius: 10,
-    elevation: 10,
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 12,
     justifyContent: 'space-around',
     alignItems: 'center',
     paddingHorizontal: 8,
@@ -191,44 +263,39 @@ const styles = StyleSheet.create({
     height: '100%',
     justifyContent: 'center',
     alignItems: 'center',
+    paddingTop: 4,
   },
   labelInactive: {
     fontSize: 12,
     fontWeight: '500',
     color: '#9C9690',
+    marginTop: 4,
   },
   floatingActiveButton: {
     position: 'absolute',
-    top: -24,
+    top: -20,
     alignItems: 'center',
     justifyContent: 'center',
   },
   floatingInnerCircle: {
-    width: 58,
-    height: 58,
-    borderRadius: 29,
+    width: 54,
+    height: 54,
+    borderRadius: 27,
     backgroundColor: '#FFFFFF',
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#BD632F',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
+    shadowOpacity: 0.2,
     shadowRadius: 8,
-    elevation: 6,
-    marginBottom: 4,
-  },
-  iconCircleBadge: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    elevation: 8,
     borderWidth: 1.5,
     borderColor: '#BD632F',
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   labelActive: {
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: '600',
     color: '#BD632F',
+    marginTop: 4,
   },
 });

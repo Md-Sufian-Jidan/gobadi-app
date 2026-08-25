@@ -108,6 +108,9 @@ function RootNavigator() {
       <Stack.Screen name="calendar-settings" />
       <Stack.Screen name="working-hours" />
       <Stack.Screen name="block-time-off" />
+      <Stack.Screen name="legal-about" />
+      <Stack.Screen name="terms-of-service" />
+      <Stack.Screen name="about-app" />
     </Stack>
   );
 }

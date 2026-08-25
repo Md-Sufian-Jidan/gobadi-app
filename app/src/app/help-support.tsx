@@ -16,7 +16,7 @@ export default function HelpSupportScreen() {
   const options = [
     { id: 'faqs', title: 'FAQs', subtitle: 'Common Question and Answer', icon: 'help-circle-outline' as const, route: '/faqs' },
     { id: 'contact', title: 'Contact Support', subtitle: 'Get Help From Our Team', icon: 'chatbubble-ellipses-outline' as const, route: '/contact-support' },
-    { id: 'report', title: 'Report Issues', subtitle: 'Report Issues or Abuse', icon: 'flag-outline' as const, route: null },
+    { id: 'report', title: 'Report Issues', subtitle: 'Report Issues or Abuse', icon: 'flag-outline' as const, route: '/report-issues' },
   ];
 
   return (

@@ -11,14 +11,19 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useGetDoctorBookingsQuery, useGetMyDoctorProfileQuery } from '@/store/doctorPortalApi';
 
 type Tab = 'about' | 'experience' | 'credentials';
 
 export default function ProfileDetailsScreen() {
+  // Doctor data
   const router = useRouter();
   const isDoctor = useRequireDoctor();
   if (!isDoctor) return null;
   const [activeTab, setActiveTab] = useState<Tab>('about');
+
+  const { data: doctorProfile } = useGetMyDoctorProfileQuery(undefined, { skip: !isDoctor });
+  const { data: doctorBookings = [] } = useGetDoctorBookingsQuery(undefined, { skip: !isDoctor });
 
   return (
     <SafeAreaView style={styles.container}>
@@ -42,28 +47,28 @@ export default function ProfileDetailsScreen() {
               <View style={styles.onlineDot} />
             </View>
             <View style={styles.doctorDetails}>
-              <Text style={styles.doctorName}>Dr. David Patel</Text>
-              <Text style={styles.doctorSpecialty}>Veterinary Surgery</Text>
+              <Text style={styles.doctorName}>{`Dr ${doctorProfile?.name}`}</Text>
+              <Text style={styles.doctorSpecialty}>{doctorProfile?.specialty}</Text>
               <View style={styles.ratingRow}>
                 <Ionicons name="star" size={14} color="#F59E0B" />
-                <Text style={styles.ratingText}>4.8 (141 reviews)</Text>
+                <Text style={styles.ratingText}>{doctorProfile?.rating} ({doctorBookings?.length} reviews)</Text>
               </View>
               <Text style={styles.doctorLocation}>Cardiology Center, USA</Text>
             </View>
           </View>
           <View style={styles.statsRow}>
             <View style={styles.statItem}>
-              <Text style={styles.statNumber}>248</Text>
+              <Text style={styles.statNumber}>0</Text>
               <Text style={styles.statLabel}>Patients</Text>
             </View>
             <View style={styles.statDivider} />
             <View style={styles.statItem}>
-              <Text style={styles.statNumber}>423</Text>
+              <Text style={styles.statNumber}>0</Text>
               <Text style={styles.statLabel}>Consultations</Text>
             </View>
             <View style={styles.statDivider} />
             <View style={styles.statItem}>
-              <Text style={styles.statNumber}>1 yrs</Text>
+              <Text style={styles.statNumber}>{`${doctorProfile?.experience || "0 Years"}`}</Text>
               <Text style={styles.statLabel}>Years Experience</Text>
             </View>
           </View>
@@ -98,7 +103,7 @@ export default function ProfileDetailsScreen() {
             <View style={styles.fieldCard}>
               <Text style={styles.fieldLabel}>Your Name</Text>
               <View style={styles.fieldValue}>
-                <Text style={styles.fieldText}>Ramesh Kumar</Text>
+                <Text style={styles.fieldText}>{doctorProfile?.name}</Text>
                 <Ionicons name="mic-outline" size={18} color="#BD632F" />
               </View>
             </View>
@@ -121,7 +126,7 @@ export default function ProfileDetailsScreen() {
 
             <Text style={[styles.sectionTitle, { marginTop: 16, marginBottom: 8 }]}>About</Text>
             <Text style={styles.aboutText}>
-              Hi, I'm Dr. Johnny Williams. I became a doctor to help people. I have been given much and I want to give back. Primary area to help is family medicine, geriatrics...{' '}
+              {doctorProfile?.bio || "Hi, I'm Dr. Johnny Williams. I became a doctor to help people. I have been given much and I want to give back. Primary area to help is family medicine, geriatrics..."}
               <Text style={styles.readMore}>Read More</Text>
             </Text>
           </View>
