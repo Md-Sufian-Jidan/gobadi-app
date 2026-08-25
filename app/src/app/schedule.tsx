@@ -460,9 +460,9 @@ export default function ScheduleScreen() {
           <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Schedule</Text>
-        <TouchableOpacity style={styles.settingsBtn} activeOpacity={0.7}>
+        {/* <TouchableOpacity style={styles.settingsBtn} activeOpacity={0.7}>
           <Ionicons name="settings-outline" size={20} color="#BD632F" />
-        </TouchableOpacity>
+        </TouchableOpacity> */}
       </View>
 
       <View style={styles.viewToggle}>
@@ -573,7 +573,8 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    // justifyContent: 'space-between',
+    gap: 20,
     paddingHorizontal: 20,
     paddingTop: 4,
     paddingBottom: 12,
@@ -587,7 +588,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   headerTitle: {
-    fontSize: 20,
+    fontSize: 24,
     fontWeight: '800',
     color: '#1A1817',
   },

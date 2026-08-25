@@ -11,8 +11,9 @@ export default function CalendarSettingsScreen() {
   if (!isDoctor) return null;
 
   const menuItems = [
-    { id: 'working-hours', label: 'Working hours', icon: 'time-outline' as const, route: '/working-hours' },
-    { id: 'block-time', label: 'Block time off', icon: 'pause-circle-outline' as const, route: '/block-time-off' },
+    { id: 'working-hours', label: 'Working hours', icon: 'hourglass-outline' as const, route: '/working-hours' },
+    // Note: Ionicons doesn't have a crossed-out hourglass, so falling back to a standard hourglass/timer aesthetic
+    { id: 'block-time', label: 'Block time off', icon: 'hourglass-outline' as const, route: '/block-time-off' },
   ];
 
   return (
@@ -22,23 +23,25 @@ export default function CalendarSettingsScreen() {
           <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Calendar Settings</Text>
-        <View style={{ width: 40 }} />
       </View>
 
       <View style={styles.content}>
         {menuItems.map((item) => (
-          <TouchableOpacity
-            key={item.id}
-            style={styles.menuItem}
-            onPress={() => router.push(item.route as any)}
-            activeOpacity={0.7}
-          >
-            <View style={styles.menuIcon}>
-              <Ionicons name={item.icon} size={22} color="#BD632F" />
-            </View>
-            <Text style={styles.menuLabel}>{item.label}</Text>
-            <Ionicons name="chevron-forward" size={18} color="#9C9690" />
-          </TouchableOpacity>
+          <View key={item.id}>
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => router.push(item.route as any)}
+              activeOpacity={0.7}
+            >
+              <View style={styles.menuIcon}>
+                <Ionicons name={item.icon} size={24} color="#BD632F" />
+              </View>
+              <Text style={styles.menuLabel}>{item.label}</Text>
+              <Ionicons name="chevron-forward" size={20} color="#9C9690" />
+            </TouchableOpacity>
+            {/* Dotted separator line */}
+            <View style={styles.separator} />
+          </View>
         ))}
       </View>
     </SafeAreaView>
@@ -46,12 +49,57 @@ export default function CalendarSettingsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FAF9F6' },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 4, paddingBottom: 12 },
-  backBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#BD632F', justifyContent: 'center', alignItems: 'center' },
-  headerTitle: { fontSize: 20, fontWeight: '800', color: '#1A1817' },
-  content: { paddingHorizontal: 20, paddingTop: 20 },
-  menuItem: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFFFFF', borderRadius: 16, borderWidth: 1, borderColor: '#E6E1DC', padding: 16, marginBottom: 12, gap: 14 },
-  menuIcon: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#FFF2EB', justifyContent: 'center', alignItems: 'center' },
-  menuLabel: { flex: 1, fontSize: 16, fontWeight: '600', color: '#1A1817' },
+  container: {
+    flex: 1,
+    backgroundColor: '#FAF9F6'
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: 10,
+    paddingBottom: 24,
+    gap: 16 // Aligns title directly next to the back button
+  },
+  backBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: '#BD632F',
+    justifyContent: 'center',
+    alignItems: 'center'
+  },
+  headerTitle: {
+    fontSize: 22,
+    fontWeight: '600',
+    color: '#1A1817'
+  },
+  content: {
+    paddingHorizontal: 20,
+  },
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 18,
+    gap: 16
+  },
+  menuIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#FFF2EB',
+    justifyContent: 'center',
+    alignItems: 'center'
+  },
+  menuLabel: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#1A1817'
+  },
+  separator: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#E6E0D8',
+    borderStyle: 'dotted',
+  }
 });
