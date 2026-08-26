@@ -15,6 +15,8 @@ import { useRouter } from 'expo-router';
 
 import { useForgotPasswordMutation } from '@/store/authApi';
 
+const BD_PHONE_REGEX = /^01[3-9]\d{8}$/;
+
 type Tab = 'phone' | 'email';
 
 export default function ForgotPasswordScreen() {
@@ -31,6 +33,10 @@ export default function ForgotPasswordScreen() {
     const identifier = tab === 'phone' ? phone : email;
     if (!identifier) {
       setErrorMessage(tab === 'phone' ? 'Phone number is required.' : 'Email is required.');
+      return;
+    }
+    if (tab === 'phone' && !BD_PHONE_REGEX.test(phone)) {
+      setErrorMessage('Please enter a valid 11-digit Bangladeshi phone number (e.g., 01*********).');
       return;
     }
 
@@ -103,7 +109,7 @@ export default function ForgotPasswordScreen() {
                 <View style={styles.phoneInputContainer}>
                   <View style={styles.countryCodeSelector}>
                     <Text style={styles.flagEmoji}>🇧🇩</Text>
-                    <Text style={styles.countryCode}>+88</Text>
+                    <Text style={styles.countryCode}>+880</Text>
                   </View>
                   <View style={styles.phoneDivider} />
                   <TextInput
@@ -113,6 +119,7 @@ export default function ForgotPasswordScreen() {
                     placeholder="Phone number"
                     placeholderTextColor="#A39E99"
                     keyboardType="phone-pad"
+                    maxLength={11}
                   />
                 </View>
               </View>

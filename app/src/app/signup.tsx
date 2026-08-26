@@ -19,6 +19,7 @@ import { useSocialAuth } from '@/hooks/use-social-auth';
 import { PasswordField } from '@/components/password-field';
 import { IdentifierTabs, IdentifierMode } from '@/components/identifier-tabs';
 
+const BD_PHONE_REGEX = /^01[3-9]\d{8}$/;
 
 export default function SignUpScreen() {
   const router = useRouter();
@@ -44,6 +45,10 @@ export default function SignUpScreen() {
     const identifier = mode === 'phone' ? phone : email;
     if (!identifier || !password) {
       setErrorMessage(`${mode === 'phone' ? 'Phone number' : 'Email'} and password are required.`);
+      return;
+    }
+    if (mode === 'phone' && !BD_PHONE_REGEX.test(phone)) {
+      setErrorMessage('Please enter a valid 11-digit Bangladeshi phone number (e.g., 01712345678).');
       return;
     }
     if (password !== confirmPassword) {
@@ -106,7 +111,7 @@ export default function SignUpScreen() {
                 <View style={styles.phoneInputContainer}>
                   <TouchableOpacity style={styles.countryCodeSelector} activeOpacity={0.7}>
                     <Text style={styles.flagEmoji}>🇧🇩</Text>
-                    <Text style={styles.countryCode}>+88</Text>
+                    <Text style={styles.countryCode}>+880</Text>
                     <Text style={styles.dropdownArrow}>▼</Text>
                   </TouchableOpacity>
                   <View style={styles.phoneDivider} />
@@ -117,6 +122,7 @@ export default function SignUpScreen() {
                     placeholder="Phone number"
                     placeholderTextColor="#A39E99"
                     keyboardType="phone-pad"
+                    maxLength={11}
                   />
                 </View>
               </View>
