@@ -4,7 +4,7 @@ import {
 } from 'class-validator';
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const PHONE_REGEX = /^\+?[0-9]{7,15}$/;
+const PHONE_REGEX = /^(\+?880|0)?1[3-9]\d{8}$/;
 
 export function IsPhoneOrEmail(validationOptions?: ValidationOptions) {
   return function (object: object, propertyName: string) {
