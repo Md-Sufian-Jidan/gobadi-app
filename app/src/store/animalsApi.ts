@@ -11,6 +11,17 @@ export interface Animal {
   age: string;
   color: string;
   image?: string;
+  description?: string;
+  dob?: string;
+  gender?: string;
+  source?: string;
+  joinedFarm?: string;
+  liveWeight?: string;
+  reproStatus?: string;
+  photos?: string[];
+  photoCost?: string;
+  sellingPrice?: string;
+  liveWeightPrice?: string;
 }
 
 export type NewAnimal = Omit<Animal, 'id' | 'userId'>;

@@ -9,10 +9,13 @@ import {
   Share,
   TextInput,
   Alert,
+  ImageBackground,
+  StatusBar,
 } from 'react-native';
 import { Image } from 'expo-image';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { useGetAnimalsQuery } from '@/store/animalsApi';
 import { useGetTasksQuery, useToggleTaskMutation } from '@/store/tasksApi';
 import { useGetWeatherQuery } from '@/store/weatherApi';
@@ -47,6 +50,7 @@ function formatTaskTime(scheduledTime: string): string {
 
 export default function HomeDashboard() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
 
   const { data: allAnimals, isLoading: isAnimalsLoading } = useGetAnimalsQuery();
   const { data: tasks = [], isLoading: isTasksLoading } = useGetTasksQuery(todayDateKey());
@@ -104,29 +108,41 @@ export default function HomeDashboard() {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
+      <StatusBar barStyle="light-content" backgroundColor="#BD632F" translucent />
       <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
         {/* Header Section */}
-        <View style={styles.header}>
-          <View style={styles.headerTextContainer}>
-            <Text style={styles.greetingText}>Hello, <Text style={styles.greetingBold}>Good Morning</Text></Text>
-            <TouchableOpacity style={styles.dateSelector} activeOpacity={0.7}>
-              <Text style={styles.dateText}>{formatFullDate()}</Text>
-              <Text style={styles.dropdownArrow}>∨</Text>
-            </TouchableOpacity>
-          </View>
-          <View style={{ flexDirection: 'row', gap: 10 }}>
-            <TouchableOpacity
-              style={styles.notificationButton}
-              activeOpacity={0.8}
-              onPress={() => router.push('/search')}
-            >
-              <Text style={styles.bellIcon}>🔍</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.notificationButton} onPress={() => router.push('/notifications')} activeOpacity={0.8}>
-              <Text style={styles.bellIcon}>🔔</Text>
-            </TouchableOpacity>
-          </View>
+        <View style={styles.headerWrapper}>
+          <ImageBackground
+            source={require('@/assets/Top BG.png')}
+            style={[styles.header, { paddingTop: insets.top + 16 }]}
+            resizeMode="cover"
+          >
+            <View style={styles.headerTextContainer}>
+              <Text style={styles.greetingTitle}>Good Morning</Text>
+              <TouchableOpacity style={styles.dateSelector} activeOpacity={0.7} onPress={() => router.push('/schedule')}>
+                <Text style={styles.dateText}>{formatFullDate()}</Text>
+                <Text style={styles.dropdownArrow}>∨</Text>
+              </TouchableOpacity>
+            </View>
+            <View style={styles.headerRightControls}>
+              <TouchableOpacity
+                style={styles.langBadgeHeader}
+                activeOpacity={0.8}
+                onPress={() => router.push('/select-language')}
+              >
+                <Ionicons name="globe-outline" size={15} color="#FFFFFF" />
+                <Text style={styles.langTextHeader}>EN</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.notifBtnWhite}
+                onPress={() => router.push('/notifications')}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="notifications-outline" size={20} color="#BD632F" />
+              </TouchableOpacity>
+            </View>
+          </ImageBackground>
         </View>
 
         {/* Farm Weather Card */}
@@ -471,7 +487,7 @@ export default function HomeDashboard() {
         </View>
 
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -483,12 +499,14 @@ const styles = StyleSheet.create({
   scrollContainer: {
     paddingBottom: 110,
   },
-  header: {
+  headerWrapper: {
     backgroundColor: '#BD632F',
     borderBottomLeftRadius: 32,
     borderBottomRightRadius: 32,
+    overflow: 'hidden',
+  },
+  header: {
     paddingHorizontal: 24,
-    paddingTop: 40,
     paddingBottom: 80,
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -496,6 +514,11 @@ const styles = StyleSheet.create({
   },
   headerTextContainer: {
     flex: 1,
+  },
+  greetingTitle: {
+    fontSize: 26,
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
   greetingText: {
     fontSize: 24,
@@ -508,28 +531,47 @@ const styles = StyleSheet.create({
   dateSelector: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 8,
+    marginTop: 6,
   },
   dateText: {
-    color: '#F4ECE6',
+    color: 'rgba(255, 255, 255, 0.9)',
     fontSize: 14,
     marginRight: 6,
   },
   dropdownArrow: {
-    color: '#F4ECE6',
+    color: 'rgba(255, 255, 255, 0.9)',
     fontSize: 10,
   },
-  notificationButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
+  headerRightControls: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  langBadgeHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 18,
+    paddingHorizontal: 12,
+    height: 38,
+    gap: 6,
+  },
+  langTextHeader: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  notifBtnWhite: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
     backgroundColor: '#FFFFFF',
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 6,
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
     elevation: 2,
   },
   bellIcon: {

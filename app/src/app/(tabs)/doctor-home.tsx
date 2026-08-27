@@ -7,9 +7,11 @@ import {
   TouchableOpacity,
   ScrollView,
   ActivityIndicator,
+  ImageBackground,
+  StatusBar,
 } from 'react-native';
 import { Image } from 'expo-image';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSelector } from 'react-redux';
@@ -36,6 +38,7 @@ const QUICK_TILES = [
 
 export default function DoctorHomeScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const isDoctor = useRequireDoctor();
   if (!isDoctor) return null;
   const user = useSelector((state: RootState) => state.auth.user);
@@ -50,36 +53,43 @@ export default function DoctorHomeScreen() {
   const totalConsults = bookings.length;
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
+      <StatusBar barStyle="light-content" backgroundColor="#BD632F" translucent />
       {/* Orange Header Banner */}
-      <View style={styles.headerBanner}>
-        {/* Decorative circles */}
-        <View style={styles.decorCircle1} />
-        <View style={styles.decorCircle2} />
+      <View style={styles.headerBannerWrapper}>
+        <ImageBackground
+          source={require('@/assets/Top BG.png')}
+          style={[styles.headerBanner, { paddingTop: insets.top + 16 }]}
+          resizeMode="cover"
+        >
+          <View style={styles.headerTop}>
+            <View>
+              <Text style={styles.greetingText}>{getGreeting()}</Text>
+              <Text style={styles.doctorName}>Dr. {user?.name || 'Nirmala Azalea'}</Text>
+            </View>
 
-        <View style={styles.headerTop}>
-          <View>
-            <Text style={styles.greetingText}>{getGreeting()}</Text>
-            <Text style={styles.doctorName}>Dr. {user?.name || 'Doctor'}</Text>
+            <View style={styles.headerActions}>
+              <TouchableOpacity
+                style={styles.langPill}
+                onPress={() => router.push('/select-language')}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="globe-outline" size={15} color="#FFFFFF" />
+                <Text style={styles.langPillText}>EN</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.notifBtnWhite}
+                onPress={() => router.push('/notifications')}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="notifications-outline" size={20} color="#BD632F" />
+              </TouchableOpacity>
+            </View>
           </View>
 
-          <View style={styles.headerActions}>
-            <TouchableOpacity
-              style={styles.langPill}
-              onPress={() => router.push('/select-language')}
-              activeOpacity={0.8}
-            >
-              <Ionicons name="globe-outline" size={13} color="#FFFFFF" />
-              <Text style={styles.langPillText}>EN</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.notifBtn} activeOpacity={0.8}>
-              <Ionicons name="notifications-outline" size={20} color="#FFFFFF" />
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        <Text style={styles.ongoingLabel}>Ongoing Patients</Text>
+          <Text style={styles.ongoingLabel}>Ongoing Patients</Text>
+        </ImageBackground>
       </View>
 
       <ScrollView
@@ -165,7 +175,7 @@ export default function DoctorHomeScreen() {
           ))}
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -174,33 +184,15 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#FAF9F6',
   },
-  headerBanner: {
+  headerBannerWrapper: {
     backgroundColor: '#BD632F',
-    paddingHorizontal: 24,
-    paddingTop: 12,
-    paddingBottom: 32,
-    borderBottomLeftRadius: 28,
-    borderBottomRightRadius: 28,
+    borderBottomLeftRadius: 32,
+    borderBottomRightRadius: 32,
     overflow: 'hidden',
-    position: 'relative',
   },
-  decorCircle1: {
-    position: 'absolute',
-    width: 180,
-    height: 180,
-    borderRadius: 90,
-    backgroundColor: 'rgba(255,255,255,0.06)',
-    top: -60,
-    right: -40,
-  },
-  decorCircle2: {
-    position: 'absolute',
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    top: 40,
-    right: 60,
+  headerBanner: {
+    paddingHorizontal: 24,
+    paddingBottom: 32,
   },
   headerTop: {
     flexDirection: 'row',
@@ -209,15 +201,15 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   greetingText: {
-    fontSize: 22,
+    fontSize: 26,
     fontWeight: '700',
     color: '#FFFFFF',
     marginBottom: 4,
   },
   doctorName: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '500',
-    color: 'rgba(255,255,255,0.82)',
+    color: 'rgba(255,255,255,0.9)',
   },
   headerActions: {
     flexDirection: 'row',
@@ -227,29 +219,34 @@ const styles = StyleSheet.create({
   langPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.18)',
-    borderRadius: 14,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    gap: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 18,
+    paddingHorizontal: 12,
+    height: 38,
+    gap: 6,
   },
   langPillText: {
     color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  notifBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(255,255,255,0.18)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  ongoingLabel: {
     fontSize: 13,
     fontWeight: '700',
-    color: 'rgba(255,255,255,0.85)',
+  },
+  notifBtnWhite: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: '#FFFFFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  ongoingLabel: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#FFFFFF',
     letterSpacing: 0.3,
   },
   scrollContainer: {

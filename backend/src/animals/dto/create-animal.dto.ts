@@ -31,4 +31,58 @@ export class CreateAnimalDto {
   @IsOptional()
   @IsString()
   image?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  description?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  dob?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  gender?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  source?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  joinedFarm?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  liveWeight?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  reproStatus?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  photos?: string[];
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  photoCost?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  sellingPrice?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  liveWeightPrice?: string;
 }

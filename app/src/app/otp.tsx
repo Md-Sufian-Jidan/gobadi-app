@@ -23,7 +23,7 @@ export default function OTPScreen() {
   const purpose = (params.purpose as 'login' | 'verify' | 'reset' | undefined) ?? 'verify';
 
   const OTP_LENGTH = 4;
-  const [otp, setOtp] = useState([otpHint ? otpHint[0] || '5' : '5', '', '', '']); // First prefilled with hint or '5' per mockup
+  const [otp, setOtp] = useState([otpHint ? otpHint[0] || '' : '', '', '', '']); // First prefilled with hint or '5' per mockup
   const [errorMessage, setErrorMessage] = useState('');
   const inputRefs = [
     useRef<TextInput>(null),
