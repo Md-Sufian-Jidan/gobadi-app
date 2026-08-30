@@ -14,6 +14,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
+import { Ionicons } from '@expo/vector-icons';
 
 import { useUploadDiagnosisImageMutation } from '@/store/aiDiagnosisApi';
 
@@ -97,11 +98,11 @@ export default function AiScanScreen() {
             onPress={() => router.back()}
             activeOpacity={0.8}
           >
-            <Text style={styles.buttonText}>←</Text>
+            <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.circleButton} activeOpacity={0.8}>
-            <Text style={styles.buttonText}>🔔</Text>
+            <Ionicons name="notifications-outline" size={20} color="#FFFFFF" />
           </TouchableOpacity>
         </View>
 
@@ -110,7 +111,7 @@ export default function AiScanScreen() {
             <Image source={{ uri: imageUri }} style={styles.previewImage} resizeMode="cover" />
           ) : (
             <View style={styles.iconCircle}>
-              <Text style={styles.cameraIcon}>📷</Text>
+              <Ionicons name="camera" size={40} color="#BD632F" />
             </View>
           )}
 
@@ -146,14 +147,14 @@ export default function AiScanScreen() {
               onPress={pickFromCamera}
               activeOpacity={0.85}
             >
-              <Text style={styles.scanButtonIcon}>📷</Text>
+              <Ionicons name="camera" size={18} color="#FFFFFF" style={styles.scanButtonIcon} />
               <Text style={styles.scanButtonText}>Scan Now</Text>
             </TouchableOpacity>
           )}
 
           {!imageUri && (
             <TouchableOpacity style={styles.uploadButton} activeOpacity={0.8} onPress={pickFromGallery}>
-              <Text style={styles.uploadButtonIcon}>📤</Text>
+              <Ionicons name="images-outline" size={18} color="#7C7672" style={styles.uploadButtonIcon} />
               <Text style={styles.uploadButtonText}>Upload From Gallery</Text>
             </TouchableOpacity>
           )}
@@ -220,10 +221,6 @@ const styles = StyleSheet.create({
     height: 180,
     borderRadius: 24,
     marginBottom: 24,
-  },
-  cameraIcon: {
-    fontSize: 40,
-    color: '#BD632F',
   },
   title: {
     fontSize: 20,

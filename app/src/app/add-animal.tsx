@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   StyleSheet,
   View,
@@ -10,10 +10,13 @@ import {
   Platform,
   Modal,
   FlatList,
+  Alert,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { useEffect } from 'react';
+import * as ImagePicker from 'expo-image-picker';
+import { Ionicons } from '@expo/vector-icons';
 
 import {
   useGetAnimalByIdQuery,
@@ -21,18 +24,129 @@ import {
   useUpdateAnimalMutation,
 } from '@/store/animalsApi';
 
+// Custom Calendar Modal Component
+interface CalendarModalProps {
+  visible: boolean;
+  title: string;
+  onClose: () => void;
+  onSelectDate: (dateStr: string) => void;
+}
+
+function CalendarModal({ visible, title, onClose, onSelectDate }: CalendarModalProps) {
+  const [viewDate, setViewDate] = useState(new Date());
+
+  const year = viewDate.getFullYear();
+  const month = viewDate.getMonth();
+
+  const monthNames = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ];
+  const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const firstDayOfWeek = new Date(year, month, 1).getDay();
+
+  const prevMonth = () => {
+    setViewDate(new Date(year, month - 1, 1));
+  };
+
+  const nextMonth = () => {
+    setViewDate(new Date(year, month + 1, 1));
+  };
+
+  const handleSelectDay = (dayNum: number) => {
+    const dayFormatted = String(dayNum).padStart(2, '0');
+    const monthFormatted = String(month + 1).padStart(2, '0');
+    const formattedStr = `${dayFormatted}/${monthFormatted}/${year}`;
+    onSelectDate(formattedStr);
+    onClose();
+  };
+
+  const cells: (number | null)[] = [];
+  for (let i = 0; i < firstDayOfWeek; i++) {
+    cells.push(null);
+  }
+  for (let d = 1; d <= daysInMonth; d++) {
+    cells.push(d);
+  }
+
+  const today = new Date();
+  const isCurrentMonth = today.getFullYear() === year && today.getMonth() === month;
+  const currentTodayNum = today.getDate();
+
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={onClose}>
+        <TouchableOpacity activeOpacity={1} style={styles.calendarModalContent}>
+          <View style={styles.calendarModalHeader}>
+            <Text style={styles.calendarModalTitle}>{title}</Text>
+            <TouchableOpacity onPress={onClose} style={styles.calendarCloseBtn}>
+              <Ionicons name="close" size={20} color="#7C7672" />
+            </TouchableOpacity>
+          </View>
+
+          {/* Month Navigation */}
+          <View style={styles.calendarMonthRow}>
+            <TouchableOpacity onPress={prevMonth} style={styles.calendarArrowBtn}>
+              <Ionicons name="chevron-back" size={20} color="#BD632F" />
+            </TouchableOpacity>
+            <Text style={styles.calendarMonthText}>
+              {monthNames[month]} {year}
+            </Text>
+            <TouchableOpacity onPress={nextMonth} style={styles.calendarArrowBtn}>
+              <Ionicons name="chevron-forward" size={20} color="#BD632F" />
+            </TouchableOpacity>
+          </View>
+
+          {/* Day Names Header */}
+          <View style={styles.calendarDaysHeader}>
+            {dayNames.map((d, i) => (
+              <Text key={i} style={styles.calendarDayNameText}>
+                {d}
+              </Text>
+            ))}
+          </View>
+
+          {/* Days Grid */}
+          <View style={styles.calendarGrid}>
+            {cells.map((cell, idx) => {
+              if (cell === null) {
+                return <View key={idx} style={styles.calendarCellEmpty} />;
+              }
+              const isToday = isCurrentMonth && cell === currentTodayNum;
+              return (
+                <TouchableOpacity
+                  key={idx}
+                  style={[styles.calendarCell, isToday && styles.calendarCellToday]}
+                  onPress={() => handleSelectDay(cell)}
+                >
+                  <Text style={[styles.calendarCellText, isToday && styles.calendarCellTextToday]}>
+                    {cell}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </TouchableOpacity>
+      </TouchableOpacity>
+    </Modal>
+  );
+}
+
 export default function AddAnimalScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const editId = params.edit ? String(params.id || '') : '';
   const [step, setStep] = useState(1); // 1: Info, 2: Details, 3: Visual, 4: Pricing
 
-  // Form State
-  const [name, setName] = useState(editId ? '' : 'Donald Tramp');
+  // Form State - Step 1: Info
+  const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [dob, setDob] = useState('');
   const [gender, setGender] = useState('');
 
+  // Form State - Step 2: Details
   const [source, setSource] = useState('');
   const [breed, setBreed] = useState('');
   const [age, setAge] = useState('');
@@ -42,14 +156,16 @@ export default function AddAnimalScreen() {
   const [reproStatus, setReproStatus] = useState('');
   const [color, setColor] = useState('');
 
-  const [price, setPrice] = useState('');
-  const [isNegotiable, setIsNegotiable] = useState(true);
+  // Form State - Step 3: Visual
+  const [photos, setPhotos] = useState<string[]>([]);
+  const [activePhotoIndex, setActivePhotoIndex] = useState(0);
 
+  // Form State - Step 4: Pricing
   const [photoCost, setPhotoCost] = useState('');
   const [sellingPrice, setSellingPrice] = useState('');
   const [liveWeightPrice, setLiveWeightPrice] = useState('');
 
-  // Dropdown States
+  // Dropdown Modal States
   const [modalVisible, setModalVisible] = useState(false);
   const [modalData, setModalData] = useState<{ title: string; options: string[]; onSelect: (val: string) => void }>({
     title: '',
@@ -57,9 +173,67 @@ export default function AddAnimalScreen() {
     onSelect: () => {},
   });
 
+  // Calendar Modal States
+  const [calendarVisible, setCalendarVisible] = useState(false);
+  const [calendarTitle, setCalendarTitle] = useState('Select Date');
+  const [calendarTarget, setCalendarTarget] = useState<'dob' | 'age' | 'joinedFarm' | null>(null);
+
   const openDropdown = (title: string, options: string[], onSelect: (val: string) => void) => {
     setModalData({ title, options, onSelect });
     setModalVisible(true);
+  };
+
+  const openCalendar = (target: 'dob' | 'age' | 'joinedFarm', title: string) => {
+    setCalendarTarget(target);
+    setCalendarTitle(title);
+    setCalendarVisible(true);
+  };
+
+  const handleCalendarSelect = (dateStr: string) => {
+    if (calendarTarget === 'dob') {
+      setDob(dateStr);
+    } else if (calendarTarget === 'age') {
+      setAge(dateStr);
+    } else if (calendarTarget === 'joinedFarm') {
+      setJoinedFarm(dateStr);
+    }
+  };
+
+  // Multiple Image Picker
+  const pickImages = async () => {
+    try {
+      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permissionResult.granted) {
+        Alert.alert('Permission required', 'Access to photo gallery is required to upload animal photos.');
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsMultipleSelection: true,
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const newUris = result.assets.map((asset) => asset.uri);
+        setPhotos((prev) => [...prev, ...newUris]);
+        if (photos.length === 0) {
+          setActivePhotoIndex(0);
+        }
+      }
+    } catch (err) {
+      console.log('Error picking images:', err);
+    }
+  };
+
+  const removePhoto = (index: number) => {
+    setPhotos((prev) => {
+      const updated = prev.filter((_, i) => i !== index);
+      if (activePhotoIndex >= updated.length) {
+        setActivePhotoIndex(Math.max(0, updated.length - 1));
+      }
+      return updated;
+    });
   };
 
   const { data: existingAnimal } = useGetAnimalByIdQuery(editId, { skip: !editId });
@@ -76,26 +250,74 @@ export default function AddAnimalScreen() {
   }, [existingAnimal]);
 
   const handleNext = async () => {
-    if (step < 4) {
-      setStep(step + 1);
+    if (step === 1) {
+      if (!name.trim()) {
+        Alert.alert('Required field', 'Please enter animal name.');
+        return;
+      }
+      if (!description.trim()) {
+        Alert.alert('Required field', 'Please enter description.');
+        return;
+      }
+      if (!gender) {
+        Alert.alert('Required field', 'Please select gender.');
+        return;
+      }
+      if (!dob.trim()) {
+        Alert.alert('Required field', 'Please enter date of birth.');
+        return;
+      }
+      setStep(2);
+    } else if (step === 2) {
+      if (!weight.trim()) {
+        Alert.alert('Required field', 'Please add weight when joined farm.');
+        return;
+      }
+      if (!color.trim()) {
+        Alert.alert('Required field', 'Please add animal color.');
+        return;
+      }
+      setStep(3);
+    } else if (step === 3) {
+      if (photos.length === 0) {
+        Alert.alert('Required field', 'Please add at least one photo.');
+        return;
+      }
+      setStep(4);
     } else {
+      if (!photoCost.trim()) {
+        Alert.alert('Required field', 'Please add purchase cost.');
+        return;
+      }
       try {
         const payload = {
-          name: name || 'Donald Tramp',
-          breed: breed || 'Albino Buffalo',
-          weight: weight || '725 Kg',
-          age: age || '8 months',
-          color: color || 'Cream-white',
+          name: name,
+          breed: breed,
+          weight: weight,
+          age: age,
+          color: color,
+          description: description,
+          dob: dob,
+          gender: gender,
+          source: source,
+          joinedFarm: joinedFarm,
+          liveWeight: liveWeight,
+          reproStatus: reproStatus,
+          photos: photos,
+          photoCost: photoCost,
+          sellingPrice: sellingPrice,
+          liveWeightPrice: liveWeightPrice,
         };
         if (editId) {
           await updateAnimal({ id: editId, data: payload }).unwrap();
         } else {
           await addAnimal(payload).unwrap();
         }
-      } catch (err) {
+        router.replace('/(tabs)/animals');
+      } catch (err: any) {
         console.log('Error saving animal:', err);
+        Alert.alert('Error', err?.data?.message || err?.message || 'Failed to save animal. Please try again.');
       }
-      router.replace('/(tabs)/animals');
     }
   };
 
@@ -119,7 +341,7 @@ export default function AddAnimalScreen() {
             onPress={() => router.back()}
             activeOpacity={0.8}
           >
-            <Text style={styles.closeText}>✕</Text>
+            <Ionicons name="close" size={18} color="#C62828" />
           </TouchableOpacity>
         </View>
 
@@ -129,7 +351,7 @@ export default function AddAnimalScreen() {
             {/* Step 1 */}
             <View style={styles.stepItem}>
               <View style={[styles.stepDot, step >= 1 ? styles.stepDotActive : styles.stepDotInactive]}>
-                {step > 1 ? <Text style={styles.stepCheck}>✓</Text> : <View style={styles.stepInnerDot} />}
+                {step > 1 ? <Ionicons name="checkmark" size={14} color="#BD632F" /> : <View style={styles.stepInnerDot} />}
               </View>
               <Text style={[styles.stepLabel, step === 1 && styles.stepLabelActive]}>Info</Text>
             </View>
@@ -139,7 +361,7 @@ export default function AddAnimalScreen() {
             {/* Step 2 */}
             <View style={styles.stepItem}>
               <View style={[styles.stepDot, step >= 2 ? styles.stepDotActive : styles.stepDotInactive]}>
-                {step > 2 ? <Text style={styles.stepCheck}>✓</Text> : step === 2 ? <View style={styles.stepInnerDot} /> : null}
+                {step > 2 ? <Ionicons name="checkmark" size={14} color="#BD632F" /> : step === 2 ? <View style={styles.stepInnerDot} /> : null}
               </View>
               <Text style={[styles.stepLabel, step === 2 && styles.stepLabelActive]}>Details</Text>
             </View>
@@ -149,7 +371,7 @@ export default function AddAnimalScreen() {
             {/* Step 3 */}
             <View style={styles.stepItem}>
               <View style={[styles.stepDot, step >= 3 ? styles.stepDotActive : styles.stepDotInactive]}>
-                {step > 3 ? <Text style={styles.stepCheck}>✓</Text> : step === 3 ? <View style={styles.stepInnerDot} /> : null}
+                {step > 3 ? <Ionicons name="checkmark" size={14} color="#BD632F" /> : step === 3 ? <View style={styles.stepInnerDot} /> : null}
               </View>
               <Text style={[styles.stepLabel, step === 3 && styles.stepLabelActive]}>Visual</Text>
             </View>
@@ -177,7 +399,7 @@ export default function AddAnimalScreen() {
                   style={styles.input}
                   value={name}
                   onChangeText={setName}
-                  placeholder="Enter name"
+                  placeholder="Enter animal name"
                   placeholderTextColor="#A39E99"
                 />
               </View>
@@ -198,15 +420,16 @@ export default function AddAnimalScreen() {
 
               {/* Date of Birth */}
               <View style={styles.inputGroup}>
-                <Text style={styles.label}>Date of Birth <Text style={styles.optional}>(optional)</Text></Text>
+                <Text style={styles.label}>Date of Birth*</Text>
                 <TouchableOpacity
                   style={styles.dropdown}
-                  onPress={() => openDropdown('Date of Birth', ['31/01/2025', '12/12/2024', '01/01/2024'], setDob)}
+                  activeOpacity={0.8}
+                  onPress={() => openCalendar('dob', 'Select Date of Birth')}
                 >
                   <Text style={[styles.dropdownValue, !dob && styles.placeholder]}>
                     {dob || 'Add date of birth'}
                   </Text>
-                  <Text style={styles.dropdownArrow}>▼</Text>
+                  <Ionicons name="chevron-down" size={18} color="#7C7672" />
                 </TouchableOpacity>
               </View>
 
@@ -215,12 +438,13 @@ export default function AddAnimalScreen() {
                 <Text style={styles.label}>Gender*</Text>
                 <TouchableOpacity
                   style={styles.dropdown}
+                  activeOpacity={0.8}
                   onPress={() => openDropdown('Gender', ['Male', 'Female'], setGender)}
                 >
                   <Text style={[styles.dropdownValue, !gender && styles.placeholder]}>
                     {gender || 'Select gender'}
                   </Text>
-                  <Text style={styles.dropdownArrow}>▼</Text>
+                  <Ionicons name="chevron-down" size={18} color="#7C7672" />
                 </TouchableOpacity>
               </View>
             </View>
@@ -233,12 +457,13 @@ export default function AddAnimalScreen() {
                 <Text style={styles.label}>Source <Text style={styles.optional}>(optional)</Text></Text>
                 <TouchableOpacity
                   style={styles.dropdown}
-                  onPress={() => openDropdown('Source', ['Purchased', 'Born in Farm', 'Leased'], setSource)}
+                  activeOpacity={0.8}
+                  onPress={() => openDropdown('Source', ['Purchased', 'Born in Farm', 'Leased', 'Imported'], setSource)}
                 >
                   <Text style={[styles.dropdownValue, !source && styles.placeholder]}>
                     {source || 'Select source'}
                   </Text>
-                  <Text style={styles.dropdownArrow}>▼</Text>
+                  <Ionicons name="chevron-down" size={18} color="#7C7672" />
                 </TouchableOpacity>
               </View>
 
@@ -247,12 +472,13 @@ export default function AddAnimalScreen() {
                 <Text style={styles.label}>Breed <Text style={styles.optional}>(optional)</Text></Text>
                 <TouchableOpacity
                   style={styles.dropdown}
-                  onPress={() => openDropdown('Breed', ['Albanian', 'Bangladeshi Cow', 'Gir', 'Holstein'], setBreed)}
+                  activeOpacity={0.8}
+                  onPress={() => openDropdown('Breed', ['Albino Buffalo', 'Bangladeshi Cow', 'Gir', 'Holstein', 'Sahiwal', 'Crossbreed'], setBreed)}
                 >
                   <Text style={[styles.dropdownValue, !breed && styles.placeholder]}>
                     {breed || 'Select breed'}
                   </Text>
-                  <Text style={styles.dropdownArrow}>▼</Text>
+                  <Ionicons name="chevron-down" size={18} color="#7C7672" />
                 </TouchableOpacity>
               </View>
 
@@ -261,12 +487,13 @@ export default function AddAnimalScreen() {
                 <Text style={styles.label}>Age <Text style={styles.optional}>(optional)</Text></Text>
                 <TouchableOpacity
                   style={styles.dropdown}
-                  onPress={() => openDropdown('Age', ['6 months', '12 months', '18 months', '28 months'], setAge)}
+                  activeOpacity={0.8}
+                  onPress={() => openCalendar('age', 'Select Farm Joined Date')}
                 >
                   <Text style={[styles.dropdownValue, !age && styles.placeholder]}>
                     {age || 'Select farm joined date'}
                   </Text>
-                  <Text style={styles.dropdownArrow}>▼</Text>
+                  <Ionicons name="chevron-down" size={18} color="#7C7672" />
                 </TouchableOpacity>
               </View>
 
@@ -275,12 +502,13 @@ export default function AddAnimalScreen() {
                 <Text style={styles.label}>Joined Farm <Text style={styles.optional}>(optional)</Text></Text>
                 <TouchableOpacity
                   style={styles.dropdown}
-                  onPress={() => openDropdown('Joined Farm', ['12/12/2024', '01/01/2025'], setJoinedFarm)}
+                  activeOpacity={0.8}
+                  onPress={() => openCalendar('joinedFarm', 'Select Farm Joined Date')}
                 >
                   <Text style={[styles.dropdownValue, !joinedFarm && styles.placeholder]}>
                     {joinedFarm || 'Select farm joined date'}
                   </Text>
-                  <Text style={styles.dropdownArrow}>▼</Text>
+                  <Ionicons name="chevron-down" size={18} color="#7C7672" />
                 </TouchableOpacity>
               </View>
 
@@ -313,13 +541,16 @@ export default function AddAnimalScreen() {
               {/* Reproductive Status */}
               <View style={styles.inputGroup}>
                 <Text style={styles.label}>Reproductive Status <Text style={styles.optional}>(optional)</Text></Text>
-                <TextInput
-                  style={styles.input}
-                  value={reproStatus}
-                  onChangeText={setReproStatus}
-                  placeholder="Add reproductive status"
-                  placeholderTextColor="#A39E99"
-                />
+                <TouchableOpacity
+                  style={styles.dropdown}
+                  activeOpacity={0.8}
+                  onPress={() => openDropdown('Reproductive Status', ['Open', 'Pregnant', 'Lactating', 'Dry', 'N/A'], setReproStatus)}
+                >
+                  <Text style={[styles.dropdownValue, !reproStatus && styles.placeholder]}>
+                    {reproStatus || 'Add reproductive status'}
+                  </Text>
+                  <Ionicons name="chevron-down" size={18} color="#7C7672" />
+                </TouchableOpacity>
               </View>
 
               {/* Color */}
@@ -338,22 +569,82 @@ export default function AddAnimalScreen() {
 
           {step === 3 && (
             <View style={styles.formStep}>
-              <Text style={styles.stepTitle}>Upload Visuals</Text>
-              <Text style={styles.stepSubtitle}>Add high-quality photos of your animal from multiple angles.</Text>
+              <Text style={styles.label}>Photo*</Text>
 
-              <TouchableOpacity style={styles.uploadArea} activeOpacity={0.7}>
-                <Text style={styles.uploadIcon}>📷</Text>
-                <Text style={styles.uploadLabel}>Upload Animal Photos</Text>
-                <Text style={styles.uploadLimit}>Support JPG, PNG up to 10MB</Text>
+              {/* Main Photo Card Box */}
+              <TouchableOpacity
+                style={styles.photoMainBox}
+                activeOpacity={0.85}
+                onPress={pickImages}
+              >
+                {photos.length > 0 && photos[activePhotoIndex] ? (
+                  <View style={styles.photoPreviewWrapper}>
+                    <Image
+                      source={{ uri: photos[activePhotoIndex] }}
+                      style={styles.photoMainImage}
+                      contentFit="cover"
+                    />
+                    <TouchableOpacity
+                      style={styles.removeMainPhotoBtn}
+                      onPress={() => removePhoto(activePhotoIndex)}
+                    >
+                      <Ionicons name="close-circle" size={28} color="#E53935" />
+                    </TouchableOpacity>
+                  </View>
+                ) : (
+                  <View style={styles.photoUploadPlaceholder}>
+                    <View style={styles.photoUploadIconCircle}>
+                      <Ionicons name="image-outline" size={48} color="#A39E99" />
+                      <Ionicons name="arrow-up" size={20} color="#A39E99" style={styles.photoArrowBadge} />
+                    </View>
+                    <Text style={styles.photoUploadText}>Tap to upload photo</Text>
+                  </View>
+                )}
               </TouchableOpacity>
+
+              {/* Thumbnails Row */}
+              <View style={styles.thumbnailsContainer}>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.thumbnailsRow}>
+                  {photos.map((uri, idx) => (
+                    <TouchableOpacity
+                      key={idx}
+                      style={[
+                        styles.thumbnailCard,
+                        activePhotoIndex === idx && styles.thumbnailCardActive,
+                      ]}
+                      onPress={() => setActivePhotoIndex(idx)}
+                      activeOpacity={0.8}
+                    >
+                      <Image source={{ uri }} style={styles.thumbnailImage} contentFit="cover" />
+                      <TouchableOpacity
+                        style={styles.thumbnailDeleteBadge}
+                        onPress={() => removePhoto(idx)}
+                      >
+                        <Ionicons name="close" size={12} color="#FFFFFF" />
+                      </TouchableOpacity>
+                    </TouchableOpacity>
+                  ))}
+
+                  {/* Add More Button */}
+                  <TouchableOpacity
+                    style={styles.addMoreCard}
+                    onPress={pickImages}
+                    activeOpacity={0.8}
+                  >
+                    <Ionicons name="image-outline" size={24} color="#7C7672" />
+                    <Ionicons name="add" size={14} color="#7C7672" style={styles.addPlusBadge} />
+                    <Text style={styles.addMoreText}>Add More</Text>
+                  </TouchableOpacity>
+                </ScrollView>
+              </View>
             </View>
           )}
 
           {step === 4 && (
             <View style={styles.formStep}>
-              {/* Photo* / Purchase Cost */}
+              {/* Purchase Cost */}
               <View style={styles.inputGroup}>
-                <Text style={styles.label}>Photo*</Text>
+                <Text style={styles.label}>Purchase Cost*</Text>
                 <TextInput
                   style={styles.input}
                   value={photoCost}
@@ -439,6 +730,14 @@ export default function AddAnimalScreen() {
           </View>
         </TouchableOpacity>
       </Modal>
+
+      {/* Calendar Picker Modal */}
+      <CalendarModal
+        visible={calendarVisible}
+        title={calendarTitle}
+        onClose={() => setCalendarVisible(false)}
+        onSelectDate={handleCalendarSelect}
+      />
     </SafeAreaView>
   );
 }
@@ -457,7 +756,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   headerTitle: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: '700',
     color: '#1A1817',
   },
@@ -468,11 +767,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#FBEBEA',
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  closeText: {
-    color: '#C62828',
-    fontSize: 14,
-    fontWeight: '700',
   },
   stepIndicatorContainer: {
     paddingHorizontal: 24,
@@ -508,11 +802,6 @@ const styles = StyleSheet.create({
     height: 10,
     borderRadius: 5,
     backgroundColor: '#BD632F',
-  },
-  stepCheck: {
-    color: '#BD632F',
-    fontSize: 12,
-    fontWeight: '700',
   },
   stepLabel: {
     fontSize: 11,
@@ -590,89 +879,109 @@ const styles = StyleSheet.create({
   placeholder: {
     color: '#A39E99',
   },
-  dropdownArrow: {
-    fontSize: 10,
-    color: '#7C7672',
-  },
-  stepTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#1A1817',
-    marginBottom: 8,
-  },
-  stepSubtitle: {
-    fontSize: 14,
-    color: '#7C7672',
-    marginBottom: 24,
-  },
-  uploadArea: {
-    borderWidth: 2,
-    borderColor: '#E6E1DC',
-    borderStyle: 'dashed',
-    borderRadius: 16,
-    height: 180,
-    justifyContent: 'center',
-    alignItems: 'center',
+  photoMainBox: {
+    height: 240,
     backgroundColor: '#FFFFFF',
-  },
-  uploadIcon: {
-    fontSize: 32,
-    marginBottom: 12,
-  },
-  uploadLabel: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#1A1817',
-    marginBottom: 4,
-  },
-  uploadLimit: {
-    fontSize: 12,
-    color: '#9C9690',
-  },
-  toggleRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
+    borderRadius: 20,
     borderWidth: 1,
     borderColor: '#E6E1DC',
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'hidden',
+    marginBottom: 16,
   },
-  toggleText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#1A1817',
-  },
-  toggleSwitch: {
-    width: 50,
-    height: 28,
-    borderRadius: 14,
-    padding: 2,
+  photoUploadPlaceholder: {
+    alignItems: 'center',
     justifyContent: 'center',
   },
-  toggleActive: {
-    backgroundColor: '#BD632F',
+  photoUploadIconCircle: {
+    position: 'relative',
+    marginBottom: 12,
   },
-  toggleInactive: {
-    backgroundColor: '#E6E1DC',
+  photoArrowBadge: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
   },
-  toggleThumb: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+  photoUploadText: {
+    fontSize: 15,
+    color: '#A39E99',
+    fontWeight: '500',
+  },
+  photoPreviewWrapper: {
+    width: '100%',
+    height: '100%',
+    position: 'relative',
+  },
+  photoMainImage: {
+    width: '100%',
+    height: '100%',
+  },
+  removeMainPhotoBtn: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
     backgroundColor: '#FFFFFF',
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 2,
-    elevation: 2,
+    borderRadius: 16,
   },
-  thumbActive: {
-    alignSelf: 'flex-end',
+  thumbnailsContainer: {
+    marginBottom: 20,
   },
-  thumbInactive: {
-    alignSelf: 'flex-start',
+  thumbnailsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  thumbnailCard: {
+    width: 72,
+    height: 72,
+    borderRadius: 14,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E6E1DC',
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  thumbnailCardActive: {
+    borderColor: '#BD632F',
+    borderWidth: 2,
+  },
+  thumbnailImage: {
+    width: '100%',
+    height: '100%',
+  },
+  thumbnailDeleteBadge: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    backgroundColor: '#E53935',
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  addMoreCard: {
+    width: 72,
+    height: 72,
+    borderRadius: 14,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E6E1DC',
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'relative',
+  },
+  addPlusBadge: {
+    position: 'absolute',
+    top: 14,
+    right: 16,
+  },
+  addMoreText: {
+    fontSize: 11,
+    color: '#7C7672',
+    fontWeight: '500',
+    marginTop: 4,
   },
   buttonRow: {
     flexDirection: 'row',
@@ -684,7 +993,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#A39E99',
     height: 52,
-    borderRadius: 26,
+    borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -697,7 +1006,7 @@ const styles = StyleSheet.create({
     flex: 1.5,
     backgroundColor: '#BD632F',
     height: 52,
-    borderRadius: 26,
+    borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#BD632F',
@@ -714,14 +1023,16 @@ const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.4)',
-    justifyContent: 'flex-end',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 20,
   },
   modalContent: {
     backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    borderRadius: 24,
     padding: 24,
-    maxHeight: '50%',
+    width: '100%',
+    maxHeight: '60%',
   },
   modalTitle: {
     fontSize: 18,
@@ -739,5 +1050,90 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#1A1817',
     textAlign: 'center',
+  },
+
+  // Calendar Modal Styles
+  calendarModalContent: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    padding: 20,
+    width: '100%',
+    maxWidth: 360,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 5,
+  },
+  calendarModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  calendarModalTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: '#1A1817',
+  },
+  calendarCloseBtn: {
+    padding: 4,
+  },
+  calendarMonthRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+    backgroundColor: '#FAF9F6',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  calendarArrowBtn: {
+    padding: 4,
+  },
+  calendarMonthText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#1A1817',
+  },
+  calendarDaysHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  calendarDayNameText: {
+    width: 36,
+    textAlign: 'center',
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#9C9690',
+  },
+  calendarGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  calendarCellEmpty: {
+    width: '14.28%',
+    height: 40,
+  },
+  calendarCell: {
+    width: '14.28%',
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 20,
+  },
+  calendarCellToday: {
+    backgroundColor: '#BD632F',
+  },
+  calendarCellText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#1A1817',
+  },
+  calendarCellTextToday: {
+    color: '#FFFFFF',
+    fontWeight: '700',
   },
 });

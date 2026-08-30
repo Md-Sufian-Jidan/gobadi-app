@@ -89,6 +89,12 @@ export default function ConfirmPayScreen() {
           </View>
 
           {/* Your Slot Section */}
+          <Text style={styles.sectionHeader}>Booking Reason</Text>
+          <Text style={styles.reasonText}>{params.reason || 'The symptom was extreme fever'}</Text>
+
+          <View style={styles.dashedDivider} />
+
+          {/* Your Slot Section */}
           <Text style={styles.sectionHeader}>Your Slot</Text>
           
           <View style={styles.slotDetailRow}>
@@ -140,6 +146,7 @@ export default function ConfirmPayScreen() {
                 timeSlot: selectedTime,
                 day: selectedDay,
                 visitType: selectedVisitType,
+                reason: params.reason || '',
               },
             })
           }
@@ -281,6 +288,13 @@ const styles = StyleSheet.create({
   },
   onlineText: {
     color: '#2E7D32',
+  },
+  reasonText: {
+    fontSize: 13,
+    color: '#7C7672',
+    fontWeight: '500',
+    marginBottom: 12,
+    lineHeight: 18,
   },
   dashedDivider: {
     height: 1.5,

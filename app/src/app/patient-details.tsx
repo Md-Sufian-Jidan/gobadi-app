@@ -580,7 +580,7 @@ export default function PatientDetailsScreen() {
       </ScrollView>
 
       <View style={styles.bottomBar}>
-        <TouchableOpacity style={styles.consultBtn} activeOpacity={0.85}>
+        <TouchableOpacity style={styles.consultBtn} activeOpacity={0.85} onPress={() => router.push({ pathname: '/chat', params: { conversationId: '1', fullPage: 'true' } })}>
           <Text style={styles.consultBtnText}>Start Consultation</Text>
         </TouchableOpacity>
       </View>

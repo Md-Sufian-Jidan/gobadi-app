@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 
 import { useAnalyzeSymptomsMutation, useGetDiagnosisByIdQuery } from '@/store/aiDiagnosisApi';
 
@@ -89,7 +90,7 @@ export default function AiHoldScreen() {
             onPress={() => router.back()}
             activeOpacity={0.8}
           >
-            <Text style={styles.buttonText}>←</Text>
+            <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
           </TouchableOpacity>
         </SafeAreaView>
 
@@ -113,7 +114,7 @@ export default function AiHoldScreen() {
         {scanState !== 'done' && (
           <View style={styles.bottomControls}>
             <View style={styles.statusBadge}>
-              <Text style={styles.statusBadgeIcon}>⌛</Text>
+              <Ionicons name="time-outline" size={14} color="#FFFFFF" style={styles.statusBadgeIcon} />
               <Text style={styles.statusBadgeText}>Please hold still...</Text>
             </View>
 
@@ -161,6 +162,13 @@ export default function AiHoldScreen() {
             ) : (
               <>
                 <Text style={styles.diagnosticTitle}>{diagnosis?.analysisResult ?? 'Analyzing...'}</Text>
+                <Text style={styles.diagnosticSubtitle}>Highly contagious viral disease</Text>
+                <Text style={styles.diagnosticParagraph}>
+                  Foot-and-Mouth Disease (FMD) is a highly viral illness affecting cloven-hoofed livestock like cattle, pigs, and sheep, but it poses absolutely no threat to human health or food safety.
+                </Text>
+                <Text style={styles.diagnosticParagraph}>
+                  If FMD has been detected in your herd or region, immediate action is required to prevent widespread transmission and massive economic losses.
+                </Text>
                 {diagnosis?.recommendations?.length ? (
                   <Text style={styles.actionPlanLabel}>Immediate Action Plan</Text>
                 ) : null}

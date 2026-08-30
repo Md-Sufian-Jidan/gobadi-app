@@ -8,9 +8,11 @@ import {
   TouchableOpacity,
   Image,
   Dimensions,
+  StatusBar,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 
 const { width } = Dimensions.get('window');
 
@@ -57,17 +59,26 @@ export default function DoctorsScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor="#FAF9F6" />
       <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Doctors</Text>
           <View style={styles.headerRightControls}>
-            <TouchableOpacity style={styles.langBadge} activeOpacity={0.8}>
-              <Text style={styles.langGlobe}>🌐</Text>
+            <TouchableOpacity
+              style={styles.langBadge}
+              activeOpacity={0.8}
+              onPress={() => router.push('/select-language')}
+            >
+              <Ionicons name="globe-outline" size={16} color="#BD632F" />
               <Text style={styles.langText}>EN</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.notificationButton} activeOpacity={0.8}>
-              <Text style={styles.bellIcon}>🔔</Text>
+            <TouchableOpacity
+              style={styles.notificationButton}
+              activeOpacity={0.8}
+              onPress={() => router.push('/notifications')}
+            >
+              <Ionicons name="notifications-outline" size={20} color="#FFFFFF" />
             </TouchableOpacity>
           </View>
         </View>
@@ -83,7 +94,7 @@ export default function DoctorsScreen() {
             </TouchableOpacity>
           </View>
 
-          <TouchableOpacity style={styles.myTreatmentButton} activeOpacity={0.8}>
+          <TouchableOpacity style={styles.myTreatmentButton} activeOpacity={0.8} onPress={() => router.push('/my-treatment')}>
             <Text style={styles.treatmentIcon}>📅</Text>
             <Text style={styles.treatmentText}>My Treatment</Text>
           </TouchableOpacity>
@@ -111,10 +122,10 @@ export default function DoctorsScreen() {
               <View style={styles.upcomingHeader}>
                 <Text style={styles.upcomingTitle}>Upcoming Treatment</Text>
                 <View style={styles.upcomingActions}>
-                  <TouchableOpacity style={styles.chatButton}>
+                  <TouchableOpacity style={styles.chatButton} onPress={() => router.push({ pathname: '/chat', params: { conversationId: '1' } })}>
                     <Text style={styles.actionEmoji}>💬</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity style={styles.callButton} activeOpacity={0.8}>
+                  <TouchableOpacity style={styles.callButton} activeOpacity={0.8} onPress={() => router.push('/video-call')}>
                     <Text style={styles.callIcon}>📹</Text>
                     <Text style={styles.callText}>Start Call</Text>
                   </TouchableOpacity>
@@ -151,7 +162,7 @@ export default function DoctorsScreen() {
                 <View style={styles.aiLeftColumn}>
                   <Text style={styles.aiCardTitle}>Analyze with AI</Text>
                   <Text style={styles.aiCardSubtitle}>
-                    Ananlyze your animals instantly with our latest AI Module
+                    Analyze your animals instantly with our latest AI Module
                   </Text>
                   <TouchableOpacity
                     style={styles.scanNowButton}
@@ -180,7 +191,7 @@ export default function DoctorsScreen() {
         {/* Categories Section */}
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Categories</Text>
-          <TouchableOpacity>
+          <TouchableOpacity onPress={() => router.push('/all-doctors')}>
             <Text style={styles.viewAllText}>View all</Text>
           </TouchableOpacity>
         </View>
@@ -281,7 +292,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   headerTitle: {
-    fontSize: 24,
+    fontSize: 26,
     fontWeight: '700',
     color: '#1A1817',
   },
@@ -298,8 +309,8 @@ const styles = StyleSheet.create({
     borderColor: '#E6E1DC',
     borderRadius: 18,
     paddingHorizontal: 12,
-    height: 38,
-    gap: 4,
+    height: 40,
+    gap: 6,
   },
   langGlobe: {
     fontSize: 14,

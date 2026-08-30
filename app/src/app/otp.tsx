@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   StyleSheet,
   View,
@@ -9,6 +9,7 @@ import {
   Platform,
   ScrollView,
   ActivityIndicator,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -23,7 +24,7 @@ export default function OTPScreen() {
   const purpose = (params.purpose as 'login' | 'verify' | 'reset' | undefined) ?? 'verify';
 
   const OTP_LENGTH = 4;
-  const [otp, setOtp] = useState([otpHint ? otpHint[0] || '5' : '5', '', '', '']); // First prefilled with hint or '5' per mockup
+  const [otp, setOtp] = useState([otpHint ? otpHint[0] || '' : '', '', '', '']); // First prefilled with hint or '5' per mockup
   const [errorMessage, setErrorMessage] = useState('');
   const inputRefs = [
     useRef<TextInput>(null),
@@ -34,6 +35,15 @@ export default function OTPScreen() {
 
   const [verifyOtp, { isLoading: isVerifying }] = useVerifyOtpMutation();
   const [sendOtp, { isLoading: isResending }] = useSendOtpMutation();
+  const [cooldown, setCooldown] = useState(0);
+
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const timer = setInterval(() => {
+      setCooldown((prev) => (prev <= 1 ? 0 : prev - 1));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [cooldown]);
 
   const handleOtpChange = (rawValue: string, index: number) => {
     const digits = rawValue.replace(/\D/g, '');
@@ -95,9 +105,11 @@ export default function OTPScreen() {
   };
 
   const handleResend = async () => {
+    if (cooldown > 0) return;
     setErrorMessage('');
     try {
       await sendOtp({ phone, purpose }).unwrap();
+      setCooldown(30);
     } catch (err: any) {
       setErrorMessage(err?.data?.message || 'Could not resend OTP. Please try again.');
     }
@@ -124,10 +136,12 @@ export default function OTPScreen() {
           {/* Title */}
           <Text style={styles.title}>OTP Verification</Text>
 
-          {/* Decorative Placeholder Box */}
-          <View style={styles.placeholderBox}>
-            <View style={styles.placeholderGrid} />
-          </View>
+          {/* Illustration */}
+          <Image
+            source={require('@/assets/images/gobadi-otp-verification-image.png')}
+            style={styles.illustration}
+            resizeMode="contain"
+          />
 
           {/* Subtitle */}
           <Text style={styles.subtitle}>
@@ -164,8 +178,10 @@ export default function OTPScreen() {
           {/* Resend text */}
           <View style={styles.resendContainer}>
             <Text style={styles.resendText}>Didn't receive an OTP?</Text>
-            <TouchableOpacity onPress={handleResend} activeOpacity={0.7} disabled={isResending}>
-              <Text style={styles.resendLink}>{isResending ? 'Resending...' : 'Resend OTP'}</Text>
+            <TouchableOpacity onPress={handleResend} activeOpacity={0.7} disabled={cooldown > 0 || isResending}>
+              <Text style={[styles.resendLink, (cooldown > 0 || isResending) && styles.resendLinkDisabled]}>
+                {cooldown > 0 ? `Resend OTP in ${cooldown}s` : isResending ? 'Resending...' : 'Resend OTP'}
+              </Text>
             </TouchableOpacity>
           </View>
 
@@ -233,24 +249,10 @@ const styles = StyleSheet.create({
     marginTop: 10,
     marginBottom: 20,
   },
-  placeholderBox: {
+  illustration: {
     width: '100%',
-    height: 200,
-    borderRadius: 16,
-    backgroundColor: '#F3EFE9',
-    overflow: 'hidden',
+    height: 220,
     marginBottom: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-    opacity: 0.8,
-  },
-  placeholderGrid: {
-    width: '90%',
-    height: '90%',
-    borderColor: '#E6E1DC',
-    borderWidth: 1,
-    borderStyle: 'dashed',
-    borderRadius: 12,
   },
   subtitle: {
     fontSize: 16,
@@ -309,6 +311,10 @@ const styles = StyleSheet.create({
     color: '#BD632F',
     fontWeight: '700',
     textDecorationLine: 'underline',
+  },
+  resendLinkDisabled: {
+    color: '#9C9690',
+    fontWeight: '600',
   },
   verifyButton: {
     backgroundColor: '#BD632F',

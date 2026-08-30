@@ -7,10 +7,12 @@ import {
   ScrollView,
   TouchableOpacity,
   Dimensions,
+  StatusBar,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { useGetAnimalsQuery } from '@/store/animalsApi';
 import { EmptyState } from '@/components/ui/empty-state';
 import { MediaCardSkeleton } from '@/components/ui/skeleton';
@@ -34,16 +36,25 @@ export default function AnimalsListScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor="#FAF9F6" />
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>My Animals</Text>
         <View style={styles.headerRightControls}>
-          <TouchableOpacity style={styles.langBadge} activeOpacity={0.8}>
-            <Text style={styles.langGlobe}>🌐</Text>
+          <TouchableOpacity
+            style={styles.langBadge}
+            activeOpacity={0.8}
+            onPress={() => router.push('/select-language')}
+          >
+            <Ionicons name="globe-outline" size={16} color="#BD632F" />
             <Text style={styles.langText}>EN</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.notificationButton} activeOpacity={0.8}>
-            <Text style={styles.bellIcon}>🔔</Text>
+          <TouchableOpacity
+            style={styles.notificationButton}
+            activeOpacity={0.8}
+            onPress={() => router.push('/notifications')}
+          >
+            <Ionicons name="notifications-outline" size={20} color="#FFFFFF" />
           </TouchableOpacity>
         </View>
       </View>
@@ -192,7 +203,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   headerTitle: {
-    fontSize: 24,
+    fontSize: 26,
     fontWeight: '700',
     color: '#1A1817',
   },
@@ -209,8 +220,8 @@ const styles = StyleSheet.create({
     borderColor: '#E6E1DC',
     borderRadius: 18,
     paddingHorizontal: 12,
-    height: 38,
-    gap: 4,
+    height: 40,
+    gap: 6,
   },
   langGlobe: {
     fontSize: 14,

@@ -199,7 +199,7 @@ export default function ChatScreen() {
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Donald Tramp</Text>
         <View style={styles.headerActions}>
-          <TouchableOpacity style={styles.headerActionBtn} activeOpacity={0.7}>
+          <TouchableOpacity style={styles.headerActionBtn} activeOpacity={0.7} onPress={() => router.push('/video-call')}>
             <Ionicons name="call" size={18} color="#1A1817" />
           </TouchableOpacity>
           <TouchableOpacity

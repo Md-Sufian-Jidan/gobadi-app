@@ -5,6 +5,7 @@ import {
   Text,
   TouchableOpacity,
   ScrollView,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -30,10 +31,12 @@ export default function CongoScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
-        {/* Decorative Grid Illustration */}
-        <View style={styles.placeholderBox}>
-          <View style={styles.placeholderGrid} />
-        </View>
+        {/* Illustration */}
+        <Image
+          source={require('@/assets/images/splash-icon.png')}
+          style={styles.illustration}
+          resizeMode="contain"
+        />
 
         {/* Title */}
         <Text style={styles.title}>Congratulations!</Text>
@@ -93,24 +96,10 @@ const styles = StyleSheet.create({
     paddingTop: 40,
     paddingBottom: 40,
   },
-  placeholderBox: {
+  illustration: {
     width: '100%',
     height: 240,
-    borderRadius: 16,
-    backgroundColor: '#F3EFE9',
-    overflow: 'hidden',
     marginBottom: 32,
-    justifyContent: 'center',
-    alignItems: 'center',
-    opacity: 0.8,
-  },
-  placeholderGrid: {
-    width: '90%',
-    height: '90%',
-    borderColor: '#E6E1DC',
-    borderWidth: 1,
-    borderStyle: 'dashed',
-    borderRadius: 12,
   },
   title: {
     fontSize: 28,

@@ -6,6 +6,7 @@ import {
   ScrollView,
   TouchableOpacity,
   Image,
+  TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -25,6 +26,7 @@ export default function BookSlotScreen() {
   const [selectedVisitType, setSelectedVisitType] = useState('Online');
   const [selectedDay, setSelectedDay] = useState(today.getDate());
   const [selectedTimeSlot, setSelectedTimeSlot] = useState('');
+  const [bookingReason, setBookingReason] = useState('');
 
   const selectedDateStr = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(selectedDay)}`;
 
@@ -93,6 +95,7 @@ export default function BookSlotScreen() {
         timeSlot: selectedTimeSlot,
         day: selectedDay,
         visitType: selectedVisitType,
+        reason: bookingReason,
       },
     });
   };
@@ -162,6 +165,18 @@ export default function BookSlotScreen() {
           <Text style={styles.dropdownValue}>{selectedVisitType}</Text>
           <Text style={styles.dropdownArrow}>▼</Text>
         </TouchableOpacity>
+
+        {/* Booking Reason */}
+        <Text style={styles.sectionTitle}>Booking Reason</Text>
+        <TextInput
+          style={styles.reasonInput}
+          placeholder="Description of symptoms"
+          placeholderTextColor="#A39E99"
+          value={bookingReason}
+          onChangeText={setBookingReason}
+          multiline
+          textAlignVertical="top"
+        />
 
         {/* Date Selection */}
         <Text style={styles.sectionTitle}>Select Date</Text>
@@ -391,6 +406,19 @@ const styles = StyleSheet.create({
   dropdownArrow: {
     fontSize: 12,
     color: '#BD632F',
+  },
+  reasonInput: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E6E1DC',
+    borderRadius: 14,
+    height: 100,
+    paddingHorizontal: 16,
+    paddingTop: 14,
+    fontSize: 14,
+    color: '#1A1817',
+    marginBottom: 20,
+    textAlignVertical: 'top',
   },
   calendarContainer: {
     backgroundColor: '#FFFFFF',

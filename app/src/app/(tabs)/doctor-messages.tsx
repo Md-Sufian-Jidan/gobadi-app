@@ -60,7 +60,7 @@ export default function DoctorMessagesScreen() {
               <View style={styles.upcomingPetAvatar}>
                 <Text style={styles.petEmoji}>🐄</Text>
               </View>
-              <TouchableOpacity style={styles.joinBtn} activeOpacity={0.85}>
+              <TouchableOpacity style={styles.joinBtn} activeOpacity={0.85} onPress={() => router.push('/video-call')}>
                 <Text style={styles.joinBtnText}>Join</Text>
               </TouchableOpacity>
             </View>
