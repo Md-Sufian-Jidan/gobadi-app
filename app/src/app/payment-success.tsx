@@ -16,7 +16,13 @@ export default function PaymentSuccessScreen() {
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <View />
+        <TouchableOpacity
+          style={styles.circleButton}
+          onPress={() => router.back()}
+          activeOpacity={0.8}
+        >
+          <Text style={styles.buttonText}>←</Text>
+        </TouchableOpacity>
         <TouchableOpacity style={styles.circleButton} activeOpacity={0.8}>
           <Text style={styles.buttonText}>🔔</Text>
         </TouchableOpacity>

@@ -83,8 +83,8 @@ export class AnimalsService {
     userId: number,
     data: Omit<Animal, 'id' | 'userId'>,
   ): Promise<Animal> {
-    if (!data.name || !data.breed) {
-      throw new BadRequestException('Name and Breed are required');
+    if (!data.name || !data.breed || !data.dob) {
+      throw new BadRequestException('Name, Breed, and Date of Birth are required');
     }
     const newAnimal = this.animalRepository.create({ ...data, userId });
     const saved = await this.animalRepository.save(newAnimal);

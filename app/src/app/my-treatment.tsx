@@ -46,6 +46,7 @@ function isUpcoming(status: AppointmentStatus): boolean {
 export default function MyTreatmentScreen() {
   const router = useRouter();
   const [activeFilter, setActiveFilter] = useState<'All' | 'Upcoming'>('All');
+  const [activeVisitTab, setActiveVisitTab] = useState<'online' | 'physical'>('online');
   const [searchQuery, setSearchQuery] = useState('');
 
   const { data: appointments = [] } = useGetDoctorBookingsQuery();
@@ -132,9 +133,31 @@ export default function MyTreatmentScreen() {
           />
         </View>
 
+        {/* Online / Physical Visit Tabs */}
+        <View style={styles.visitTabsContainer}>
+          <TouchableOpacity
+            style={[styles.visitTab, activeVisitTab === 'online' && styles.visitTabActive]}
+            onPress={() => setActiveVisitTab('online')}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.visitTabText, activeVisitTab === 'online' && styles.visitTabTextActive]}>
+              Online Visit
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.visitTab, activeVisitTab === 'physical' && styles.visitTabActive]}
+            onPress={() => setActiveVisitTab('physical')}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.visitTabText, activeVisitTab === 'physical' && styles.visitTabTextActive]}>
+              Physical Visit
+            </Text>
+          </TouchableOpacity>
+        </View>
+
         {/* Filter Chips row */}
         <View style={styles.filtersRow}>
-          {(['All', 'Upcoming'] as const).map((filter) => {
+          {(['All', 'Upcoming', 'Medicine'] as const).map((filter) => {
             const isSelected = activeFilter === filter;
             return (
               <TouchableOpacity
@@ -160,7 +183,7 @@ export default function MyTreatmentScreen() {
               <TouchableOpacity
                 key={item.id}
                 style={styles.treatmentCard}
-                onPress={() => router.push('/doctor-detail')}
+                onPress={() => router.push({ pathname: '/doctor-detail', params: { id: String(item.doctorId) } })}
                 activeOpacity={0.9}
               >
                 {/* Top Card Row */}
@@ -208,30 +231,14 @@ export default function MyTreatmentScreen() {
                         isUpcoming(item.status) ? styles.statusTextUpcoming : styles.statusTextCompleted,
                       ]}
                     >
-                      {item.status}
+                      {isUpcoming(item.status) ? 'Upcoming' : 'Completed'}
                     </Text>
                   </View>
-                  {isUpcoming(item.status) ? (
-                    <View style={styles.bookingActionsRow}>
-                      <TouchableOpacity
-                        onPress={() =>
-                          router.push({
-                            pathname: '/book-slot',
-                            params: { id: item.doctorId, appointmentId: item.id, mode: 'reschedule' },
-                          })
-                        }
-                        activeOpacity={0.7}
-                      >
-                        <Text style={styles.rescheduleText}>Reschedule</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        onPress={() => cancelBooking(Number(item.id))}
-                        activeOpacity={0.7}
-                      >
-                        <Text style={styles.cancelText}>Cancel</Text>
-                      </TouchableOpacity>
-                    </View>
-                  ) : null}
+                  <View style={styles.priceContainer}>
+                    <Text style={styles.currencySymbol}>৳</Text>
+                    <Text style={styles.priceAmount}> 120 </Text>
+                    <Text style={styles.paidBadge}>(Paid)</Text>
+                  </View>
                 </View>
               </TouchableOpacity>
             ))
@@ -325,6 +332,31 @@ const styles = StyleSheet.create({
     height: '100%',
     fontSize: 14,
     color: '#1A1817',
+  },
+  visitTabsContainer: {
+    flexDirection: 'row',
+    marginBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E6E1DC',
+  },
+  visitTab: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 12,
+  },
+  visitTabActive: {
+    borderBottomWidth: 2,
+    borderBottomColor: '#BD632F',
+    marginBottom: -1,
+  },
+  visitTabText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#9C9690',
+  },
+  visitTabTextActive: {
+    color: '#BD632F',
+    fontWeight: '700',
   },
   tabContainer: {
     flexDirection: 'row',

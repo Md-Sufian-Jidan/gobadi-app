@@ -10,6 +10,7 @@ import {
 import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { useGetDoctorsQuery } from '@/store/doctorsApi';
 import { EmptyState } from '@/components/ui/empty-state';
 import { MediaCardSkeleton } from '@/components/ui/skeleton';
@@ -27,29 +28,53 @@ interface DoctorView {
 export default function AllDoctorsScreen() {
   const router = useRouter();
   const [activeFilter, setActiveFilter] = useState('All');
+  const [searchText, setSearchText] = useState('');
   const { data: doctorList = [], isLoading } = useGetDoctorsQuery();
 
-  const doctors: DoctorView[] = useMemo(
-    () =>
-      doctorList.map((d) => ({
-        id: d.id,
-        name: d.name,
-        specialty: d.specialty,
-        location: 'Uttar Badda, Dhaka',
-        rating: d.rating || 4.8,
-        reviews: 124,
-        image: d.avatar === 'jessica_doctor.png'
-          ? require('@/assets/images/jessica_doctor.png')
-          : require('@/assets/images/michael_doctor.png'),
-      })),
-    [doctorList],
-  );
+  const doctors: DoctorView[] = useMemo(() => {
+    let filtered = doctorList.map((d) => ({
+      id: d.id,
+      name: d.name,
+      specialty: d.specialty,
+      location: 'Uttar Badda, Dhaka',
+      rating: d.rating || 4.8,
+      reviews: 124,
+      image: d.avatar === 'jessica_doctor.png'
+        ? require('@/assets/images/jessica_doctor.png')
+        : require('@/assets/images/michael_doctor.png'),
+    }));
+
+    if (activeFilter !== 'All') {
+      filtered = filtered.filter((d) =>
+        d.specialty.toLowerCase().includes(activeFilter.toLowerCase())
+      );
+    }
+
+    if (searchText.trim()) {
+      const q = searchText.toLowerCase();
+      filtered = filtered.filter(
+        (d) =>
+          d.name.toLowerCase().includes(q) ||
+          d.specialty.toLowerCase().includes(q)
+      );
+    }
+
+    return filtered;
+  }, [doctorList, activeFilter, searchText]);
+
+  const totalCount = doctorList.length;
+  const medicineCount = doctorList.filter((d) =>
+    d.specialty?.toLowerCase().includes('medicine')
+  ).length;
+  const gynaeCount = doctorList.filter((d) =>
+    d.specialty?.toLowerCase().includes('gynaecol') || d.specialty?.toLowerCase().includes('gynecol')
+  ).length;
 
   const filterOptions = [
-    { label: '⚙️ Filter', value: 'filter' },
-    { label: 'All (12)', value: 'All' },
-    { label: 'Medicine(3)', value: 'Medicine' },
-    { label: 'Gynaecology(2)', value: 'Gynaecology' },
+    { label: 'Filter', value: 'filter', icon: 'options-outline' as const },
+    { label: `All (${totalCount})`, value: 'All', icon: null },
+    { label: `Medicine(${medicineCount})`, value: 'Medicine', icon: null },
+    { label: `Gynaecology(${gynaeCount})`, value: 'Gynaecology', icon: null },
   ];
 
   return (
@@ -61,32 +86,34 @@ export default function AllDoctorsScreen() {
           onPress={() => router.back()}
           activeOpacity={0.8}
         >
-          <Text style={styles.buttonText}>←</Text>
+          <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
         </TouchableOpacity>
 
         <Text style={styles.headerTitle}>All Doctors</Text>
 
         <TouchableOpacity style={styles.circleButton} activeOpacity={0.8}>
-          <Text style={styles.buttonText}>🔔</Text>
+          <Ionicons name="notifications-outline" size={20} color="#FFFFFF" />
         </TouchableOpacity>
       </View>
 
       {/* Location bar */}
       <View style={styles.locationContainer}>
         <TouchableOpacity style={styles.locationSelector} activeOpacity={0.7}>
-          <Text style={styles.pinIcon}>📍</Text>
+          <Ionicons name="location" size={16} color="#BD632F" style={styles.pinIcon} />
           <Text style={styles.locationText}>Uttar Badda, Dhaka</Text>
-          <Text style={styles.dropdownArrow}>▼</Text>
+          <Ionicons name="chevron-down" size={14} color="#7C7672" />
         </TouchableOpacity>
       </View>
 
       {/* Search Input */}
       <View style={styles.searchContainer}>
-        <Text style={styles.searchIcon}>🔍</Text>
+        <Ionicons name="search" size={18} color="#7C7672" style={styles.searchIcon} />
         <TextInput
           style={styles.searchInput}
           placeholder="Search doctor"
           placeholderTextColor="#A39E99"
+          value={searchText}
+          onChangeText={setSearchText}
         />
       </View>
 
@@ -114,6 +141,14 @@ export default function AllDoctorsScreen() {
                 }}
                 activeOpacity={0.7}
               >
+                {opt.icon && (
+                  <Ionicons
+                    name={opt.icon}
+                    size={14}
+                    color={isActive ? '#FFFFFF' : '#7C7672'}
+                    style={styles.filterChipIcon}
+                  />
+                )}
                 <Text style={[styles.filterChipText, isActive && styles.filterChipTextActive]}>
                   {opt.label}
                 </Text>
@@ -145,11 +180,11 @@ export default function AllDoctorsScreen() {
                 <Text style={styles.doctorName}>{doc.name}</Text>
                 <Text style={styles.doctorSpecialty}>{doc.specialty}</Text>
                 <View style={styles.ratingLocationRow}>
-                  <Text style={styles.locationPin}>📍</Text>
+                  <Ionicons name="location" size={12} color="#9C9690" style={styles.locationPin} />
                   <Text style={styles.locationTextMeta}>{doc.location}</Text>
                 </View>
                 <View style={styles.ratingRow}>
-                  <Text style={styles.starIcon}>⭐</Text>
+                  <Ionicons name="star" size={12} color="#F5A623" style={styles.starIcon} />
                   <Text style={styles.ratingValue}>{doc.rating}</Text>
                   <Text style={styles.reviewsText}>| {doc.reviews} Reviews</Text>
                 </View>
@@ -162,14 +197,16 @@ export default function AllDoctorsScreen() {
                 onPress={() => router.push({ pathname: '/book-slot', params: { id: doc.id } })}
                 activeOpacity={0.8}
               >
-                <Text style={styles.bookButtonText}>📅 Book Slot</Text>
+                <Ionicons name="calendar-outline" size={14} color="#BD632F" style={styles.buttonIcon} />
+                <Text style={styles.bookButtonText}>Book Slot</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.detailsButton}
                 onPress={() => router.push({ pathname: '/doctor-detail', params: { id: doc.id } })}
                 activeOpacity={0.8}
               >
-                <Text style={styles.detailsButtonText}>📄 Details</Text>
+                <Ionicons name="document-text-outline" size={14} color="#BD632F" style={styles.buttonIcon} />
+                <Text style={styles.detailsButtonText}>Details</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -200,11 +237,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  buttonText: {
-    color: '#FFFFFF',
-    fontSize: 18,
-    fontWeight: '700',
-  },
   headerTitle: {
     fontSize: 20,
     fontWeight: '700',
@@ -228,10 +260,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#1A1817',
     marginRight: 4,
-  },
-  dropdownArrow: {
-    fontSize: 10,
-    color: '#7C7672',
   },
   searchContainer: {
     flexDirection: 'row',
@@ -287,6 +315,9 @@ const styles = StyleSheet.create({
   },
   filterChipTextActive: {
     color: '#FFFFFF',
+  },
+  filterChipIcon: {
+    marginRight: 4,
   },
   cardsScroll: {
     paddingHorizontal: 24,
@@ -368,30 +399,37 @@ const styles = StyleSheet.create({
   },
   bookButton: {
     flex: 1.2,
-    backgroundColor: '#BD632F',
-    height: 40,
-    borderRadius: 20,
-    justifyContent: 'center',
+    flexDirection: 'row',
     alignItems: 'center',
-  },
-  bookButtonText: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  detailsButton: {
-    flex: 1,
+    justifyContent: 'center',
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: '#BD632F',
     height: 40,
     borderRadius: 20,
-    justifyContent: 'center',
+  },
+  bookButtonText: {
+    color: '#BD632F',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  detailsButton: {
+    flex: 1,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#BD632F',
+    height: 40,
+    borderRadius: 20,
   },
   detailsButtonText: {
     color: '#BD632F',
     fontSize: 12,
     fontWeight: '700',
+  },
+  buttonIcon: {
+    marginRight: 4,
   },
 });

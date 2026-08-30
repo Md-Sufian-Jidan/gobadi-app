@@ -1,4 +1,3 @@
-import React from 'react';
 import {
   StyleSheet,
   View,
@@ -63,16 +62,16 @@ export default function MyAnimalDetailScreen() {
       : require('@/assets/images/bangladeshi_cow.png');
 
   const basicInfo = [
-    { label: 'Date Of Birth', value: '31/01/2025' },
-    { label: 'Gender', value: 'Male' },
-    { label: 'Source', value: 'Purchased' },
-    { label: 'Breed', value: animal?.breed || 'Albenian' },
-    { label: 'Age', value: animal?.age || '28 months' },
-    { label: 'Color', value: animal?.color || 'Pinkish White' },
-    { label: 'Joined Farm', value: '12/12/2024' },
-    { label: 'Stage', value: 'Growing' },
-    { label: 'Live Weight', value: animal?.weight || '725 Kg' },
-    { label: 'Price per kg', value: '680' },
+    { label: 'Date Of Birth', value: animal?.dob || 'N/A' },
+    { label: 'Gender', value: animal?.gender || 'N/A' },
+    { label: 'Source', value: animal?.source || 'N/A' },
+    { label: 'Breed', value: animal?.breed || 'N/A' },
+    { label: 'Age', value: animal?.age || 'N/A' },
+    { label: 'Color', value: animal?.color || 'N/A' },
+    { label: 'Joined Farm', value: animal?.joinedFarm || 'N/A' },
+    { label: 'Stage', value: animal?.source || 'N/A' },
+    { label: 'Live Weight', value: animal?.liveWeight || 'N/A' },
+    { label: 'Price per kg', value: animal?.liveWeightPrice || 'N/A' },
   ];
 
   return (
@@ -123,13 +122,13 @@ export default function MyAnimalDetailScreen() {
           {/* Header Title & Price Row */}
           <View style={styles.headerRow}>
             <View style={styles.headerLeft}>
-              <Text style={styles.animalTitle}>{animal?.name || 'Donald Tramp'}</Text>
+              <Text style={styles.animalTitle}>{animal?.name}</Text>
               <View style={styles.healthyBadge}>
                 <Text style={styles.healthyBadgeText}>Healthy</Text>
               </View>
             </View>
             <View style={styles.headerRight}>
-              <Text style={styles.priceText}>৳ 3,20,000</Text>
+              <Text style={styles.priceText}>৳ {animal?.liveWeightPrice || 0}</Text>
               <Text style={styles.priceSubtext}>(Negotiable/Live wight)</Text>
             </View>
           </View>

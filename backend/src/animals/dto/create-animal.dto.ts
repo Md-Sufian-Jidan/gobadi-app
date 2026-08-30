@@ -37,10 +37,10 @@ export class CreateAnimalDto {
   @IsString()
   description?: string;
 
-  @ApiPropertyOptional()
-  @IsOptional()
+  @ApiProperty({ example: '31/01/2025' })
   @IsString()
-  dob?: string;
+  @IsNotEmpty()
+  dob: string;
 
   @ApiPropertyOptional()
   @IsOptional()

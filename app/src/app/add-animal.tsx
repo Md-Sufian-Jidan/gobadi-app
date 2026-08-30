@@ -141,7 +141,7 @@ export default function AddAnimalScreen() {
   const [step, setStep] = useState(1); // 1: Info, 2: Details, 3: Visual, 4: Pricing
 
   // Form State - Step 1: Info
-  const [name, setName] = useState(editId ? '' : 'Donald Tramp');
+  const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [dob, setDob] = useState('');
   const [gender, setGender] = useState('');
@@ -255,8 +255,16 @@ export default function AddAnimalScreen() {
         Alert.alert('Required field', 'Please enter animal name.');
         return;
       }
+      if (!description.trim()) {
+        Alert.alert('Required field', 'Please enter description.');
+        return;
+      }
       if (!gender) {
         Alert.alert('Required field', 'Please select gender.');
+        return;
+      }
+      if (!dob.trim()) {
+        Alert.alert('Required field', 'Please enter date of birth.');
         return;
       }
       setStep(2);
@@ -271,26 +279,34 @@ export default function AddAnimalScreen() {
       }
       setStep(3);
     } else if (step === 3) {
+      if (photos.length === 0) {
+        Alert.alert('Required field', 'Please add at least one photo.');
+        return;
+      }
       setStep(4);
     } else {
+      if (!photoCost.trim()) {
+        Alert.alert('Required field', 'Please add purchase cost.');
+        return;
+      }
       try {
         const payload = {
-          name: name || 'Donald Tramp',
-          breed: breed || 'Albino Buffalo',
-          weight: weight || '725 Kg',
-          age: age || '8 months',
-          color: color || 'Cream-white',
-          description: description || '',
-          dob: dob || '',
-          gender: gender || '',
-          source: source || '',
-          joinedFarm: joinedFarm || '',
-          liveWeight: liveWeight || '',
-          reproStatus: reproStatus || '',
+          name: name,
+          breed: breed,
+          weight: weight,
+          age: age,
+          color: color,
+          description: description,
+          dob: dob,
+          gender: gender,
+          source: source,
+          joinedFarm: joinedFarm,
+          liveWeight: liveWeight,
+          reproStatus: reproStatus,
           photos: photos,
-          photoCost: photoCost || '',
-          sellingPrice: sellingPrice || '',
-          liveWeightPrice: liveWeightPrice || '',
+          photoCost: photoCost,
+          sellingPrice: sellingPrice,
+          liveWeightPrice: liveWeightPrice,
         };
         if (editId) {
           await updateAnimal({ id: editId, data: payload }).unwrap();
@@ -383,7 +399,7 @@ export default function AddAnimalScreen() {
                   style={styles.input}
                   value={name}
                   onChangeText={setName}
-                  placeholder="Donald Tramp"
+                  placeholder="Enter animal name"
                   placeholderTextColor="#A39E99"
                 />
               </View>
@@ -404,7 +420,7 @@ export default function AddAnimalScreen() {
 
               {/* Date of Birth */}
               <View style={styles.inputGroup}>
-                <Text style={styles.label}>Date of Birth <Text style={styles.optional}>(optional)</Text></Text>
+                <Text style={styles.label}>Date of Birth*</Text>
                 <TouchableOpacity
                   style={styles.dropdown}
                   activeOpacity={0.8}
@@ -626,9 +642,9 @@ export default function AddAnimalScreen() {
 
           {step === 4 && (
             <View style={styles.formStep}>
-              {/* Photo* / Purchase Cost */}
+              {/* Purchase Cost */}
               <View style={styles.inputGroup}>
-                <Text style={styles.label}>Photo*</Text>
+                <Text style={styles.label}>Purchase Cost*</Text>
                 <TextInput
                   style={styles.input}
                   value={photoCost}

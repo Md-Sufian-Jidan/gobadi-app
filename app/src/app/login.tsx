@@ -21,6 +21,7 @@ import { PasswordField } from '@/components/password-field';
 import { IdentifierTabs, IdentifierMode } from '@/components/identifier-tabs';
 
 const BD_PHONE_REGEX = /^01[3-9]\d{8}$/;
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -41,6 +42,10 @@ export default function LoginScreen() {
     const identifier = mode === 'phone' ? phone : email;
     if (mode === 'phone' && !BD_PHONE_REGEX.test(phone)) {
       setErrorMessage('Please enter a valid 11-digit Bangladeshi phone number (e.g., 01712345678).');
+      return;
+    }
+    if (mode === 'email' && !EMAIL_REGEX.test(email.trim())) {
+      setErrorMessage('Please enter a valid email address.');
       return;
     }
     try {

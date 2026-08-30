@@ -132,7 +132,7 @@ export default function DoctorHomeScreen() {
                 ) : null}
               </View>
 
-              <TouchableOpacity style={styles.chatBtn} activeOpacity={0.8}>
+              <TouchableOpacity style={styles.chatBtn} activeOpacity={0.8} onPress={() => router.push({ pathname: '/chat', params: { conversationId: String(b.patientId) } })}>
                 <Ionicons name="chatbubble-outline" size={16} color="#BD632F" />
               </TouchableOpacity>
             </View>

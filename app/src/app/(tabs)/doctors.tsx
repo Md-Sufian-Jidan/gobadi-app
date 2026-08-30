@@ -94,7 +94,7 @@ export default function DoctorsScreen() {
             </TouchableOpacity>
           </View>
 
-          <TouchableOpacity style={styles.myTreatmentButton} activeOpacity={0.8}>
+          <TouchableOpacity style={styles.myTreatmentButton} activeOpacity={0.8} onPress={() => router.push('/my-treatment')}>
             <Text style={styles.treatmentIcon}>📅</Text>
             <Text style={styles.treatmentText}>My Treatment</Text>
           </TouchableOpacity>
@@ -122,10 +122,10 @@ export default function DoctorsScreen() {
               <View style={styles.upcomingHeader}>
                 <Text style={styles.upcomingTitle}>Upcoming Treatment</Text>
                 <View style={styles.upcomingActions}>
-                  <TouchableOpacity style={styles.chatButton}>
+                  <TouchableOpacity style={styles.chatButton} onPress={() => router.push({ pathname: '/chat', params: { conversationId: '1' } })}>
                     <Text style={styles.actionEmoji}>💬</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity style={styles.callButton} activeOpacity={0.8}>
+                  <TouchableOpacity style={styles.callButton} activeOpacity={0.8} onPress={() => router.push('/video-call')}>
                     <Text style={styles.callIcon}>📹</Text>
                     <Text style={styles.callText}>Start Call</Text>
                   </TouchableOpacity>
@@ -162,7 +162,7 @@ export default function DoctorsScreen() {
                 <View style={styles.aiLeftColumn}>
                   <Text style={styles.aiCardTitle}>Analyze with AI</Text>
                   <Text style={styles.aiCardSubtitle}>
-                    Ananlyze your animals instantly with our latest AI Module
+                    Analyze your animals instantly with our latest AI Module
                   </Text>
                   <TouchableOpacity
                     style={styles.scanNowButton}
@@ -191,7 +191,7 @@ export default function DoctorsScreen() {
         {/* Categories Section */}
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Categories</Text>
-          <TouchableOpacity>
+          <TouchableOpacity onPress={() => router.push('/all-doctors')}>
             <Text style={styles.viewAllText}>View all</Text>
           </TouchableOpacity>
         </View>

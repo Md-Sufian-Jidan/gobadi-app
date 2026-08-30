@@ -74,7 +74,13 @@ export default function BillingDetailsScreen() {
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <View />
+        <TouchableOpacity
+          style={styles.circleButton}
+          onPress={() => router.back()}
+          activeOpacity={0.8}
+        >
+          <Text style={styles.buttonText}>←</Text>
+        </TouchableOpacity>
         <TouchableOpacity style={styles.circleButton} activeOpacity={0.8}>
           <Text style={styles.buttonText}>🔔</Text>
         </TouchableOpacity>
@@ -102,6 +108,12 @@ export default function BillingDetailsScreen() {
               </View>
             </View>
           </View>
+
+          {/* Your Slot Section */}
+          <Text style={styles.sectionHeader}>Booking Reason</Text>
+          <Text style={styles.reasonText}>{params.reason || 'The symptom was extreme fever'}</Text>
+
+          <View style={styles.divider} />
 
           {/* Your Slot Section */}
           <Text style={styles.sectionHeader}>Your Slot</Text>
@@ -315,6 +327,13 @@ const styles = StyleSheet.create({
   },
   onlineText: {
     color: '#2E7D32',
+  },
+  reasonText: {
+    fontSize: 13,
+    color: '#7C7672',
+    fontWeight: '500',
+    marginBottom: 12,
+    lineHeight: 18,
   },
   paidText: {
     color: '#2E7D32',
