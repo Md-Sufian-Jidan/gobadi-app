@@ -58,7 +58,7 @@ export default function DoctorMessagesScreen() {
             </View>
             <View style={styles.upcomingRight}>
               <View style={styles.upcomingPetAvatar}>
-                <Text style={styles.petEmoji}>🐄</Text>
+                <Ionicons name="paw" size={28} color="#BD632F" />
               </View>
               <TouchableOpacity style={styles.joinBtn} activeOpacity={0.85} onPress={() => router.push('/video-call')}>
                 <Text style={styles.joinBtnText}>Join</Text>
@@ -78,7 +78,7 @@ export default function DoctorMessagesScreen() {
             onPress={() => router.push({ pathname: '/chat', params: { conversationId: chat.id } })}
           >
             <View style={styles.chatAvatar}>
-              <Text style={styles.chatAvatarEmoji}>🐄</Text>
+              <Ionicons name="paw" size={22} color="#BD632F" />
             </View>
             <View style={styles.chatInfo}>
               <View style={styles.chatTopRow}>
@@ -122,21 +122,19 @@ const styles = StyleSheet.create({
   upcomingStarts: { fontSize: 12, fontWeight: '500', color: '#9C9690', marginBottom: 4 },
   upcomingOwner: { fontSize: 12, fontWeight: '500', color: '#7C7672' },
   upcomingRight: { alignItems: 'center', gap: 8 },
-  upcomingPetAvatar: { width: 64, height: 64, borderRadius: 16, backgroundColor: '#D4C4B0', justifyContent: 'center', alignItems: 'center', overflow: 'hidden' },
-  petEmoji: { fontSize: 36 },
+  upcomingPetAvatar: { width: 64, height: 64, borderRadius: 16, backgroundColor: '#FFF2EB', justifyContent: 'center', alignItems: 'center', overflow: 'hidden' },
   joinBtn: { backgroundColor: '#BD632F', borderRadius: 20, paddingHorizontal: 20, paddingVertical: 8 },
   joinBtnText: { color: '#FFFFFF', fontSize: 14, fontWeight: '700' },
   sectionTitle: { fontSize: 16, fontWeight: '700', color: '#1A1817', marginBottom: 12 },
   chatItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: '#F0ECE8' },
-  chatAvatar: { width: 48, height: 48, borderRadius: 24, backgroundColor: '#E8D5C4', justifyContent: 'center', alignItems: 'center', marginRight: 12 },
-  chatAvatarEmoji: { fontSize: 24 },
+  chatAvatar: { width: 48, height: 48, borderRadius: 24, backgroundColor: '#FFF2EB', justifyContent: 'center', alignItems: 'center', marginRight: 12 },
   chatInfo: { flex: 1 },
   chatTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
   chatName: { fontSize: 15, fontWeight: '700', color: '#1A1817' },
   chatTime: { fontSize: 12, fontWeight: '500', color: '#9C9690' },
   chatBottomRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   chatLastMessage: { fontSize: 13, fontWeight: '500', color: '#9C9690', flex: 1 },
-  pendingText: { fontSize: 13, fontWeight: '500', color: '#9C9690', flex: 1 },
-  unreadBadge: { width: 20, height: 20, borderRadius: 10, backgroundColor: '#E53935', justifyContent: 'center', alignItems: 'center', marginLeft: 8 },
+  pendingText: { fontSize: 13, fontWeight: '500', color: '#BD632F', flex: 1 },
+  unreadBadge: { width: 20, height: 20, borderRadius: 10, backgroundColor: '#BD632F', justifyContent: 'center', alignItems: 'center', marginLeft: 8 },
   unreadText: { color: '#FFFFFF', fontSize: 11, fontWeight: '700' },
 });

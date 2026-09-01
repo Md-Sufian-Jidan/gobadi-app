@@ -52,19 +52,27 @@ function getWeekDates(reference: Date): Date[] {
   return dates;
 }
 
-function formatTime(iso: string): string {
+function formatTime12h(iso: string): string {
   const d = new Date(iso);
   return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+}
+
+function formatHourLabel(hour: number): string {
+  const h = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour;
+  const ampm = hour < 12 ? 'AM' : 'PM';
+  return `${String(h).padStart(2, '0')}:00 ${ampm}`;
 }
 
 function MonthlyView({
   selectedDate,
   onSelectDate,
+  onNavigateMonth,
   appointmentDates,
   stats,
 }: {
   selectedDate: Date;
   onSelectDate: (d: Date) => void;
+  onNavigateMonth: (direction: number) => void;
   appointmentDates: Set<string>;
   stats: { openDays: number; blockedDays: number; totalAppointments: number };
 }) {
@@ -77,7 +85,16 @@ function MonthlyView({
   return (
     <View>
       <View style={styles.monthGrid}>
-        <Text style={styles.monthTitle}>{MONTH_NAMES[month]} {year}</Text>
+        <View style={styles.monthNavigation}>
+          <TouchableOpacity onPress={() => onNavigateMonth(-1)} style={styles.navBtn} activeOpacity={0.7}>
+            <Ionicons name="chevron-back" size={18} color="#BD632F" />
+          </TouchableOpacity>
+          <Text style={styles.monthTitle}>{MONTH_NAMES[month]} {year}</Text>
+          <TouchableOpacity onPress={() => onNavigateMonth(1)} style={styles.navBtn} activeOpacity={0.7}>
+            <Ionicons name="chevron-forward" size={18} color="#BD632F" />
+          </TouchableOpacity>
+        </View>
+
         <View style={styles.dayHeaderRow}>
           {DAY_LETTERS.map((d, i) => (
             <Text key={i} style={styles.dayHeaderText}>{d}</Text>
@@ -92,8 +109,8 @@ function MonthlyView({
             const date = new Date(year, month, day);
             const key = formatDateKey(date);
             const hasAppointment = appointmentDates.has(key);
-            const isToday = isSameDay(date, new Date());
             const isSelected = isSameDay(date, selectedDate);
+            const isBlocked = false;
 
             return (
               <TouchableOpacity
@@ -106,7 +123,7 @@ function MonthlyView({
                   style={[
                     styles.dayNumber,
                     hasAppointment && styles.dayNumberHasAppointment,
-                    isToday && !hasAppointment && styles.dayNumberToday,
+                    isBlocked && styles.dayNumberBlocked,
                     isSelected && styles.dayNumberSelected,
                   ]}
                 >
@@ -114,7 +131,7 @@ function MonthlyView({
                     style={[
                       styles.dayNumberText,
                       hasAppointment && styles.dayNumberTextAppointment,
-                      isToday && !hasAppointment && styles.dayNumberTextToday,
+                      isBlocked && styles.dayNumberTextBlocked,
                       isSelected && styles.dayNumberTextSelected,
                     ]}
                   >
@@ -151,10 +168,12 @@ function WeeklyView({
   selectedDate,
   onSelectDate,
   bookings,
+  onAppointmentPress,
 }: {
   selectedDate: Date;
   onSelectDate: (d: Date) => void;
   bookings: DoctorAppointment[];
+  onAppointmentPress: (appointment: DoctorAppointment) => void;
 }) {
   const weekDates = useMemo(() => getWeekDates(selectedDate), [selectedDate.getTime()]);
 
@@ -206,10 +225,12 @@ function WeeklyView({
       </View>
 
       <View style={styles.dayTimeline}>
-        <Text style={styles.dayTimelineHeader}>
-          {DAY_SHORT[selectedDate.getDay()]}, {selectedDate.getDate()} {MONTH_NAMES[selectedDate.getMonth()]}
-          <Text style={styles.appointmentCount}>   {dayAppointments.length} Appointments</Text>
-        </Text>
+        <View style={styles.dayTimelineHeaderRow}>
+          <Text style={styles.dayTimelineHeader}>
+            {DAY_SHORT[selectedDate.getDay()]}, {selectedDate.getDate()} {MONTH_NAMES[selectedDate.getMonth()]}
+          </Text>
+          <Text style={styles.appointmentCount}>{dayAppointments.length} Appointments</Text>
+        </View>
 
         {hours.map((hour) => {
           const hourAppts = dayAppointments.filter((a) => {
@@ -220,9 +241,7 @@ function WeeklyView({
           return (
             <View key={hour} style={styles.timelineRow}>
               <View style={styles.timeLabelContainer}>
-                <Text style={styles.timeLabel}>
-                  {String(hour).padStart(2, '0')}:00 {hour < 12 ? 'AM' : 'PM'}
-                </Text>
+                <Text style={styles.timeLabel}>{formatHourLabel(hour)}</Text>
               </View>
               <View style={styles.timeLine}>
                 <View style={styles.timeLineDot} />
@@ -230,7 +249,12 @@ function WeeklyView({
               </View>
               <View style={styles.timeLineContent}>
                 {hourAppts.map((appt) => (
-                  <View key={appt.id} style={styles.appointmentCard}>
+                  <TouchableOpacity
+                    key={appt.id}
+                    style={styles.appointmentCard}
+                    onPress={() => onAppointmentPress(appt)}
+                    activeOpacity={0.7}
+                  >
                     <View style={styles.appointmentAvatar}>
                       <Ionicons name="paw" size={18} color="#BD632F" />
                     </View>
@@ -247,7 +271,7 @@ function WeeklyView({
                         <Text style={styles.appointmentSymptoms}>{appt.symptoms}</Text>
                       )}
                     </View>
-                  </View>
+                  </TouchableOpacity>
                 ))}
               </View>
             </View>
@@ -259,7 +283,7 @@ function WeeklyView({
             <View style={styles.current_time_line} />
             <View style={styles.current_time_dot} />
             <Text style={styles.current_time_label}>
-              {String(currentHour).padStart(2, '0')}:{String(currentMinutes).padStart(2, '0')}
+              {String(currentHour > 12 ? currentHour - 12 : currentHour).padStart(2, '0')}:{String(currentMinutes).padStart(2, '0')}
             </Text>
             <View style={styles.current_time_line_right} />
           </View>
@@ -310,6 +334,21 @@ export default function DoctorBookingsScreen() {
     setViewMode('weekly');
   }, []);
 
+  const handleNavigateMonth = useCallback((direction: number) => {
+    setSelectedDate((prev) => {
+      const newDate = new Date(prev);
+      newDate.setMonth(newDate.getMonth() + direction);
+      return newDate;
+    });
+  }, []);
+
+  const handleAppointmentPress = useCallback((appointment: DoctorAppointment) => {
+    router.push({
+      pathname: '/appointment-details',
+      params: { id: String(appointment.id) },
+    });
+  }, [router]);
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
@@ -349,6 +388,7 @@ export default function DoctorBookingsScreen() {
           <MonthlyView
             selectedDate={selectedDate}
             onSelectDate={handleSelectDate}
+            onNavigateMonth={handleNavigateMonth}
             appointmentDates={appointmentDates}
             stats={stats}
           />
@@ -357,6 +397,7 @@ export default function DoctorBookingsScreen() {
             selectedDate={selectedDate}
             onSelectDate={setSelectedDate}
             bookings={bookings}
+            onAppointmentPress={handleAppointmentPress}
           />
         )}
 
@@ -367,21 +408,30 @@ export default function DoctorBookingsScreen() {
               <TouchableOpacity
                 onPress={() => setShowAllAppointments(!showAllAppointments)}
                 activeOpacity={0.7}
+                style={styles.viewAllBtn}
               >
-                <Text style={styles.viewAllText}>
-                  View all {showAllAppointments ? '∧' : '∨'}
-                </Text>
+                <Text style={styles.viewAllText}>View all</Text>
+                <Ionicons
+                  name={showAllAppointments ? 'chevron-up' : 'chevron-down'}
+                  size={14}
+                  color="#BD632F"
+                />
               </TouchableOpacity>
             </View>
 
             {upcomingAppointments.map((appt) => (
-              <TouchableOpacity key={appt.id} style={styles.upcomingCard} activeOpacity={0.7}>
+              <TouchableOpacity
+                key={appt.id}
+                style={styles.upcomingCard}
+                activeOpacity={0.7}
+                onPress={() => handleAppointmentPress(appt)}
+              >
                 <View style={styles.upcomingAvatar}>
                   <Ionicons name="paw" size={20} color="#BD632F" />
                 </View>
                 <View style={styles.upcomingInfo}>
                   <Text style={styles.upcomingDate}>
-                    {new Date(appt.startAt).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })} · {formatTime(appt.startAt)}
+                    {new Date(appt.startAt).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })} · {formatTime12h(appt.startAt)}
                   </Text>
                   <Text style={styles.upcomingName}>
                     {appt.animalName || appt.patientName || `Patient #${appt.patientId}`}
@@ -407,8 +457,8 @@ export default function DoctorBookingsScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FAF9F6' },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 4, paddingBottom: 12 },
-  headerTitle: { fontSize: 20, fontWeight: '800', color: '#1A1817' },
-  settingsBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#FFF2EB', justifyContent: 'center', alignItems: 'center' },
+  headerTitle: { fontSize: 24, fontWeight: '800', color: '#1A1817' },
+  settingsBtn: { width: 44, height: 44, borderRadius: 12, backgroundColor: '#FFF2EB', justifyContent: 'center', alignItems: 'center' },
   viewToggle: { flexDirection: 'row', marginHorizontal: 20, marginBottom: 12, backgroundColor: '#FFF2EB', borderRadius: 20, padding: 4 },
   viewToggleButton: { flex: 1, paddingVertical: 12, alignItems: 'center', borderRadius: 16 },
   viewToggleButtonActive: { backgroundColor: '#FFFFFF', shadowColor: '#000000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 8, elevation: 3 },
@@ -416,25 +466,27 @@ const styles = StyleSheet.create({
   viewToggleTextActive: { color: '#1A1817', fontWeight: '700' },
   scrollContainer: { paddingHorizontal: 20, paddingBottom: 100 },
   monthGrid: { marginBottom: 16 },
-  monthTitle: { fontSize: 16, fontWeight: '700', color: '#1A1817', marginBottom: 12 },
+  monthNavigation: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
+  navBtn: { width: 32, height: 32, borderRadius: 16, backgroundColor: '#FFF2EB', justifyContent: 'center', alignItems: 'center' },
+  monthTitle: { fontSize: 16, fontWeight: '700', color: '#1A1817' },
   dayHeaderRow: { flexDirection: 'row', marginBottom: 8 },
   dayHeaderText: { flex: 1, textAlign: 'center', fontSize: 13, fontWeight: '600', color: '#BD632F' },
   daysGrid: { flexDirection: 'row', flexWrap: 'wrap' },
   dayCell: { width: `${100 / 7}%`, alignItems: 'center', paddingVertical: 4 },
   dayNumber: { width: 36, height: 36, borderRadius: 18, justifyContent: 'center', alignItems: 'center' },
   dayNumberHasAppointment: { backgroundColor: '#BD632F' },
-  dayNumberToday: { backgroundColor: '#FFF2EB' },
+  dayNumberBlocked: { backgroundColor: '#F0EAE1' },
   dayNumberSelected: { backgroundColor: '#BD632F' },
   dayNumberText: { fontSize: 14, fontWeight: '500', color: '#1A1817' },
   dayNumberTextAppointment: { color: '#FFFFFF', fontWeight: '700' },
-  dayNumberTextToday: { color: '#BD632F', fontWeight: '700' },
+  dayNumberTextBlocked: { color: '#9C9690' },
   dayNumberTextSelected: { color: '#FFFFFF', fontWeight: '700' },
   statsRow: { flexDirection: 'row', backgroundColor: '#FFFFFF', borderRadius: 16, borderWidth: 1, borderColor: '#E6E1DC', padding: 16, marginBottom: 20 },
   statItem: { flex: 1, alignItems: 'center' },
   statNumber: { fontSize: 22, fontWeight: '800', color: '#1A1817' },
   statLabel: { fontSize: 12, fontWeight: '500', color: '#9C9690', marginTop: 4 },
   statDivider: { width: 1, backgroundColor: '#E6E1DC' },
-  weekStrip: { backgroundColor: '#FFFFFF', borderRadius: 16, borderWidth: 1, borderColor: '#E6E1DC', padding: 14, marginBottom: 16 },
+  weekStrip: { backgroundColor: '#FFFFFF', borderRadius: 16, borderWidth: 1, borderColor: '#E6E1DC', padding: 14, marginTop: 8, marginBottom: 16 },
   weekDayHeader: { flexDirection: 'row', marginBottom: 8 },
   weekDayLabel: { flex: 1, textAlign: 'center', fontSize: 12, fontWeight: '600', color: '#9C9690' },
   weekDateRow: { flexDirection: 'row' },
@@ -444,7 +496,8 @@ const styles = StyleSheet.create({
   weekDateNumberSelected: { color: '#FFFFFF', fontWeight: '700' },
   weekDateNumberToday: { color: '#BD632F', fontWeight: '700' },
   dayTimeline: { marginTop: 8 },
-  dayTimelineHeader: { fontSize: 16, fontWeight: '700', color: '#1A1817', marginBottom: 16 },
+  dayTimelineHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
+  dayTimelineHeader: { fontSize: 16, fontWeight: '700', color: '#1A1817' },
   appointmentCount: { fontSize: 14, fontWeight: '600', color: '#BD632F' },
   timelineRow: { flexDirection: 'row', marginBottom: 8 },
   timeLabelContainer: { width: 70 },
@@ -467,6 +520,7 @@ const styles = StyleSheet.create({
   upcomingSection: { marginTop: 20 },
   upcomingHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
   upcomingTitle: { fontSize: 16, fontWeight: '700', color: '#1A1817' },
+  viewAllBtn: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   viewAllText: { fontSize: 14, fontWeight: '600', color: '#BD632F' },
   upcomingCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFFFFF', borderRadius: 14, borderWidth: 1, borderColor: '#E6E1DC', padding: 12, marginBottom: 10, gap: 10 },
   upcomingAvatar: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#FFF2EB', justifyContent: 'center', alignItems: 'center' },

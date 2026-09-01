@@ -20,7 +20,7 @@ const TABS = [
   { key: 'treatments', label: 'Treatments', count: 2 },
   { key: 'vaccination', label: 'Vaccination', count: 4 },
   { key: 'labTests', label: 'Lab Tests', count: 3 },
-  { key: 'files', label: 'File', count: 3 },
+  { key: 'files', label: 'Files', count: 3 },
 ];
 
 const MOCK_PATIENT = {
@@ -240,7 +240,7 @@ function AllTab() {
           </View>
           {expandedId === `cons-${item.id}` && (
             <View style={tabStyles.expandedContent}>
-              <Text style={tabStyles.detailLabel}>Clinical Actions:</Text>
+              <Text style={tabStyles.detailLabelFirst}>Clinical Actions:</Text>
               {item.clinicalActions.map((action, i) => (
                 <Text key={i} style={tabStyles.bulletItem}>• {action}</Text>
               ))}
@@ -288,7 +288,7 @@ function ConsultsTab() {
           </View>
           {expandedId === item.id && (
             <View style={tabStyles.expandedContent}>
-              <Text style={tabStyles.detailLabel}>Clinical Actions:</Text>
+              <Text style={tabStyles.detailLabelFirst}>Clinical Actions:</Text>
               {item.clinicalActions.map((action, i) => (
                 <Text key={i} style={tabStyles.bulletItem}>• {action}</Text>
               ))}
@@ -339,7 +339,7 @@ function TreatmentsTab() {
           </View>
           {expandedId === item.id && item.assessment.length > 0 && (
             <View style={tabStyles.expandedContent}>
-              <Text style={tabStyles.detailLabel}>Assessment:</Text>
+              <Text style={tabStyles.detailLabelFirst}>Assessment:</Text>
               {item.assessment.map((a, i) => (
                 <Text key={i} style={tabStyles.bulletItem}>• {a}</Text>
               ))}
@@ -390,7 +390,7 @@ function VaccinationTab() {
           </View>
           {expandedId === item.id && (
             <View style={tabStyles.expandedContent}>
-              <Text style={tabStyles.detailLabel}>Purpose</Text>
+              <Text style={tabStyles.detailLabelFirst}>Purpose</Text>
               <Text style={tabStyles.detailText}>{item.purpose}</Text>
               <Text style={tabStyles.detailLabel}>Medicine given</Text>
               {item.medicine.map((m, i) => (
@@ -443,7 +443,7 @@ function LabTestsTab() {
           </View>
           {expandedId === item.id && (
             <View style={tabStyles.expandedContent}>
-              <Text style={tabStyles.detailLabel}>Sample Details</Text>
+              <Text style={tabStyles.detailLabelFirst}>Sample Details</Text>
               {item.sampleDetails.map((s, i) => (
                 <Text key={i} style={tabStyles.bulletItem}>• {s}</Text>
               ))}
@@ -476,8 +476,8 @@ function FilesTab() {
       {MOCK_FILES.map((item) => (
         <View key={item.id} style={tabStyles.fileCard}>
           <View style={tabStyles.fileIcon}>
-            <Ionicons name="document-text" size={24} color="#E53935" />
-            <Text style={tabStyles.fileType}>{item.type}</Text>
+            <Ionicons name="document-text" size={28} color="#E53935" />
+            <Text style={tabStyles.fileType}>pdf</Text>
           </View>
           <View style={tabStyles.fileInfo}>
             <Text style={tabStyles.fileName}>{item.name}</Text>
@@ -515,7 +515,7 @@ export default function PatientDetailsScreen() {
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} activeOpacity={0.7}>
-          <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
+          <Ionicons name="arrow-back" size={20} color="#BD632F" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Patient Details</Text>
         <View style={{ width: 40 }} />
@@ -530,29 +530,31 @@ export default function PatientDetailsScreen() {
           <View style={styles.patientAvatar}>
             <Ionicons name="paw" size={32} color="#BD632F" />
           </View>
-          <Text style={styles.patientName}>{MOCK_PATIENT.name}</Text>
-          <View style={styles.patientInfoRow}>
-            <View style={styles.patientInfoItem}>
-              <Text style={styles.patientInfoLabel}>Species</Text>
-              <Text style={styles.patientInfoValue}>{MOCK_PATIENT.species}</Text>
+          <View style={styles.patientInfo}>
+            <Text style={styles.patientName}>{MOCK_PATIENT.name}</Text>
+            <View style={styles.patientInfoRow}>
+              <View style={styles.patientInfoItem}>
+                <Text style={styles.patientInfoLabel}>Species</Text>
+                <Text style={styles.patientInfoValue}>{MOCK_PATIENT.species}</Text>
+              </View>
+              <View style={styles.patientInfoItem}>
+                <Text style={styles.patientInfoLabel}>Age</Text>
+                <Text style={styles.patientInfoValue}>{MOCK_PATIENT.age}</Text>
+              </View>
+              <View style={styles.patientInfoItem}>
+                <Text style={styles.patientInfoLabel}>Weight</Text>
+                <Text style={styles.patientInfoValue}>{MOCK_PATIENT.weight}</Text>
+              </View>
             </View>
-            <View style={styles.patientInfoItem}>
-              <Text style={styles.patientInfoLabel}>Age</Text>
-              <Text style={styles.patientInfoValue}>{MOCK_PATIENT.age}</Text>
-            </View>
-            <View style={styles.patientInfoItem}>
-              <Text style={styles.patientInfoLabel}>Weight</Text>
-              <Text style={styles.patientInfoValue}>{MOCK_PATIENT.weight}</Text>
-            </View>
-          </View>
-          <View style={styles.patientOwnerRow}>
-            <View style={styles.patientOwnerItem}>
-              <Text style={styles.patientInfoLabel}>Owner</Text>
-              <Text style={styles.patientInfoValue}>{MOCK_PATIENT.owner}</Text>
-            </View>
-            <View style={styles.patientOwnerItem}>
-              <Text style={styles.patientInfoLabel}>Last visited</Text>
-              <Text style={styles.patientInfoValue}>{MOCK_PATIENT.lastVisited}</Text>
+            <View style={styles.patientOwnerRow}>
+              <View style={styles.patientOwnerItem}>
+                <Text style={styles.patientInfoLabel}>Owner</Text>
+                <Text style={styles.patientInfoValue}>{MOCK_PATIENT.owner}</Text>
+              </View>
+              <View style={styles.patientOwnerItem}>
+                <Text style={styles.patientInfoLabel}>Last visited</Text>
+                <Text style={styles.patientInfoValue}>{MOCK_PATIENT.lastVisited}</Text>
+              </View>
             </View>
           </View>
         </View>
@@ -602,15 +604,15 @@ const styles = StyleSheet.create({
     paddingBottom: 12,
   },
   backBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#BD632F',
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: '#FFF2EB',
     justifyContent: 'center',
     alignItems: 'center',
   },
   headerTitle: {
-    fontSize: 20,
+    fontSize: 24,
     fontWeight: '800',
     color: '#1A1817',
   },
@@ -624,51 +626,54 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E6E1DC',
     padding: 16,
-    alignItems: 'center',
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 14,
     marginBottom: 16,
   },
   patientAvatar: {
     width: 80,
     height: 80,
-    borderRadius: 40,
+    borderRadius: 16,
     backgroundColor: '#FFF2EB',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 12,
+  },
+  patientInfo: {
+    flex: 1,
+    justifyContent: 'center',
   },
   patientName: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '700',
     color: '#1A1817',
-    marginBottom: 12,
+    marginBottom: 8,
   },
   patientInfoRow: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
-    width: '100%',
-    marginBottom: 12,
+    justifyContent: 'space-between',
+    marginBottom: 8,
   },
   patientInfoItem: {
-    alignItems: 'center',
+    flex: 1,
   },
   patientInfoLabel: {
     fontSize: 11,
     fontWeight: '600',
-    color: '#9C9690',
+    color: '#BD632F',
     marginBottom: 2,
   },
   patientInfoValue: {
     fontSize: 13,
-    fontWeight: '700',
+    fontWeight: '600',
     color: '#1A1817',
   },
   patientOwnerRow: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
-    width: '100%',
+    justifyContent: 'space-between',
   },
   patientOwnerItem: {
-    alignItems: 'center',
+    flex: 1,
   },
   tabsContainer: {
     paddingHorizontal: 20,
@@ -734,8 +739,8 @@ const tabStyles = StyleSheet.create({
     borderRadius: 14,
     borderWidth: 1,
     borderColor: '#E6E1DC',
-    padding: 14,
-    marginBottom: 10,
+    padding: 16,
+    marginBottom: 12,
   },
   activityHeader: {
     flexDirection: 'row',
@@ -746,7 +751,7 @@ const tabStyles = StyleSheet.create({
   },
   activityRight: {
     alignItems: 'flex-end',
-    gap: 4,
+    gap: 6,
   },
   activityDate: {
     fontSize: 12,
@@ -776,8 +781,8 @@ const tabStyles = StyleSheet.create({
     marginBottom: 4,
   },
   expandedContent: {
-    marginTop: 14,
-    paddingTop: 14,
+    marginTop: 16,
+    paddingTop: 16,
     borderTopWidth: 1,
     borderTopColor: '#E6E1DC',
   },
@@ -785,8 +790,15 @@ const tabStyles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
     color: '#1A1817',
-    marginBottom: 6,
-    marginTop: 8,
+    marginBottom: 8,
+    marginTop: 12,
+  },
+  detailLabelFirst: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#1A1817',
+    marginBottom: 8,
+    marginTop: 0,
   },
   detailText: {
     fontSize: 13,
@@ -798,19 +810,28 @@ const tabStyles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '500',
     color: '#7C7672',
-    lineHeight: 20,
-    paddingLeft: 4,
+    lineHeight: 22,
+    paddingLeft: 10,
+    marginBottom: 2,
   },
   followUpRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 12,
+    marginTop: 14,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#E6E1DC',
   },
   followUpDate: {
     fontSize: 14,
     fontWeight: '700',
     color: '#BD632F',
+  },
+  sectionDivider: {
+    height: 1,
+    backgroundColor: '#E6E1DC',
+    marginVertical: 8,
   },
   fileCard: {
     flexDirection: 'row',
@@ -825,14 +846,14 @@ const tabStyles = StyleSheet.create({
   },
   fileIcon: {
     width: 48,
-    height: 48,
-    borderRadius: 12,
+    height: 56,
+    borderRadius: 8,
     backgroundColor: '#FFEBEE',
     justifyContent: 'center',
     alignItems: 'center',
   },
   fileType: {
-    fontSize: 8,
+    fontSize: 9,
     fontWeight: '700',
     color: '#E53935',
     marginTop: 2,
