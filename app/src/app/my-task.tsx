@@ -269,7 +269,7 @@ export default function MyTaskScreen() {
                     onPress={() =>
                       router.push({
                         pathname: '/edit-task',
-                        params: { id: String(task.id), title: task.title, detail: task.detail },
+                        params: { id: String(task.id), title: task.title, detail: task.detail, scheduledTime: task.scheduledTime },
                       })
                     }
                     activeOpacity={0.8}

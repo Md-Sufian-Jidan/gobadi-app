@@ -40,7 +40,7 @@ export default function ResetPasswordScreen() {
 
     try {
       await resetPassword({ resetToken, newPassword: password }).unwrap();
-      router.replace('/login');
+      router.replace('/congo');
     } catch (err: any) {
       setErrorMessage(err?.data?.message || 'Could not reset password. Please try again.');
     }

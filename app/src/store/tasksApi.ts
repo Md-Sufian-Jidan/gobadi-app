@@ -71,7 +71,24 @@ export const tasksApi = createApi({
       ],
     }),
     updateTask: builder.mutation<Task, { id: number; title: string; detail?: string; scheduledTime?: string }>({
-      query: ({ id, ...body }) => ({ url: `/tasks/${id}`, method: 'PUT', body }),
+      query: ({ id, ...body }) => ({ url: `/tasks/${id}`, method: 'DELETE' }),
+      async onQueryStarted({ id, title, detail, scheduledTime }, { dispatch, queryFulfilled, getState }) {
+        try {
+          await queryFulfilled;
+          // After deleting, create a new task with the updated data
+          const result = await dispatch(
+            tasksApi.endpoints.createTask.initiate({
+              title,
+              detail,
+              scheduledTime: scheduledTime || new Date().toISOString(),
+            })
+          ).unwrap();
+          return result;
+        } catch (err) {
+          console.log('Error updating task:', err);
+          throw err;
+        }
+      },
       invalidatesTags: (_result, _error, { id }) => [
         { type: 'Task', id },
         { type: 'Task', id: 'LIST' },

@@ -1,0 +1,540 @@
+import React, { useState, useMemo, useCallback } from 'react';
+import {
+  StyleSheet,
+  View,
+  Text,
+  TouchableOpacity,
+  ScrollView,
+  TextInput,
+  Image,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter, useLocalSearchParams } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import {
+  useGetDoctorBookingsQuery,
+  type DoctorAppointment,
+} from '@/store/doctorPortalApi';
+import { useRequireDoctor } from '@/hooks/use-require-doctor';
+
+type Tab = 'today' | 'previous';
+
+function isSameDay(a: Date, b: Date): boolean {
+  return (
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate()
+  );
+}
+
+function isToday(date: Date): boolean {
+  return isSameDay(date, new Date());
+}
+
+function isYesterday(date: Date): boolean {
+  const y = new Date();
+  y.setDate(y.getDate() - 1);
+  return isSameDay(date, y);
+}
+
+function formatTimeRange(start: string, end: string): string {
+  const s = new Date(start);
+  const e = new Date(end);
+  const fmt = (d: Date) =>
+    d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+  return `${fmt(s)} - ${fmt(e)}`;
+}
+
+function formatDateLabel(date: Date): string {
+  if (isToday(date)) return "Today's";
+  if (isYesterday(date)) return 'Yesterday';
+  return date.toLocaleDateString('en-US', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
+}
+
+function getDateKey(date: Date): string {
+  return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+}
+
+function formatMinutesRemaining(start: string): string {
+  const now = new Date();
+  const startMs = new Date(start).getTime();
+  const diffMs = startMs - now.getTime();
+  const mins = Math.max(0, Math.floor(diffMs / 60000));
+  return `${mins} mins left`;
+}
+
+interface AppointmentCardProps {
+  appointment: DoctorAppointment;
+  onPress: () => void;
+}
+
+function AppointmentCard({ appointment, onPress }: AppointmentCardProps) {
+  const now = new Date();
+  const startAt = new Date(appointment.startAt);
+  const endAt = new Date(appointment.endAt);
+  const isOngoing =
+    appointment.status === 'CONFIRMED' &&
+    startAt <= now &&
+    endAt >= now;
+
+  const displayName =
+    appointment.animalName || appointment.patientName || `Patient #${appointment.patientId}`;
+
+  return (
+    <TouchableOpacity style={styles.card} activeOpacity={0.7} onPress={onPress}>
+      <View style={styles.cardImageContainer}>
+        {appointment.animalImage ? (
+          <Image source={{ uri: appointment.animalImage }} style={styles.cardImage} />
+        ) : (
+          <View style={[styles.cardImage, styles.cardImagePlaceholder]}>
+            <Ionicons name="paw" size={22} color="#BD632F" />
+          </View>
+        )}
+        <View style={styles.cardImageOverlay}>
+          <View style={styles.liveChatBadge}>
+            <Ionicons name="chatbubble" size={10} color="#FFFFFF" />
+          </View>
+        </View>
+      </View>
+
+      <View style={styles.cardContent}>
+        <View style={styles.cardTopRow}>
+          <Text style={styles.cardType}>Live Chat</Text>
+          <Text style={styles.dot}> · </Text>
+          <Text
+            style={[
+              styles.cardStatus,
+              isOngoing ? styles.statusInProgress : styles.statusUpcoming,
+            ]}
+          >
+            {isOngoing ? 'Still in Progress' : appointment.status}
+          </Text>
+          {isOngoing && (
+            <Text style={styles.timeRemaining}>
+              {formatMinutesRemaining(appointment.startAt)}
+            </Text>
+          )}
+        </View>
+
+        <Text style={styles.cardName}>{displayName}</Text>
+
+        {appointment.animalSpecies && (
+          <Text style={styles.cardSpecies}>
+            {appointment.animalSpecies}
+            {appointment.animalAge ? ` · ${appointment.animalAge}` : ''}
+            {appointment.animalBreed ? ` · ${appointment.animalBreed}` : ''}
+          </Text>
+        )}
+
+        {appointment.patientName && (
+          <Text style={styles.cardOwner}>Owner: {appointment.patientName}</Text>
+        )}
+
+        <Text style={styles.cardTime}>
+          {formatTimeRange(appointment.startAt, appointment.endAt)}
+        </Text>
+      </View>
+    </TouchableOpacity>
+  );
+}
+
+export default function AppointmentsScreen() {
+  const router = useRouter();
+  const params = useLocalSearchParams<{
+    filterDate?: string;
+    filterStatus?: string;
+    filterConsultationType?: string;
+  }>();
+  const isDoctor = useRequireDoctor();
+  if (!isDoctor) return null;
+
+  const [activeTab, setActiveTab] = useState<Tab>('today');
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const { data: bookings = [] } = useGetDoctorBookingsQuery();
+
+  const filteredBookings = useMemo(() => {
+    let result = [...bookings];
+
+    if (params.filterDate) {
+      const now = new Date();
+      if (params.filterDate === 'today') {
+        result = result.filter((b) => isSameDay(new Date(b.startAt), now));
+      } else if (params.filterDate === 'tomorrow') {
+        const tmr = new Date();
+        tmr.setDate(tmr.getDate() + 1);
+        result = result.filter((b) => isSameDay(new Date(b.startAt), tmr));
+      } else if (params.filterDate === 'this_week') {
+        const startOfWeek = new Date(now);
+        startOfWeek.setDate(now.getDate() - now.getDay());
+        startOfWeek.setHours(0, 0, 0, 0);
+        const endOfWeek = new Date(startOfWeek);
+        endOfWeek.setDate(startOfWeek.getDate() + 6);
+        endOfWeek.setHours(23, 59, 59, 999);
+        result = result.filter((b) => {
+          const d = new Date(b.startAt);
+          return d >= startOfWeek && d <= endOfWeek;
+        });
+      }
+    }
+
+    if (params.filterStatus && params.filterStatus !== 'all') {
+      result = result.filter((b) => b.status === params.filterStatus);
+    }
+
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      result = result.filter(
+        (b) =>
+          (b.animalName && b.animalName.toLowerCase().includes(q)) ||
+          (b.patientName && b.patientName.toLowerCase().includes(q))
+      );
+    }
+
+    return result;
+  }, [bookings, searchQuery, params.filterDate, params.filterStatus]);
+
+  const { todayAppointments, previousAppointments } = useMemo(() => {
+    const today: DoctorAppointment[] = [];
+    const previous: DoctorAppointment[] = [];
+    const now = new Date();
+
+    filteredBookings.forEach((b) => {
+      const start = new Date(b.startAt);
+      if (start >= new Date(now.getFullYear(), now.getMonth(), now.getDate())) {
+        today.push(b);
+      } else {
+        previous.push(b);
+      }
+    });
+
+    today.sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime());
+    previous.sort((a, b) => new Date(b.startAt).getTime() - new Date(a.startAt).getTime());
+
+    return { todayAppointments: today, previousAppointments: previous };
+  }, [filteredBookings]);
+
+  const groupedPrevious = useMemo(() => {
+    const groups: { label: string; data: DoctorAppointment[] }[] = [];
+    const map = new Map<string, DoctorAppointment[]>();
+
+    previousAppointments.forEach((b) => {
+      const date = new Date(b.startAt);
+      const key = getDateKey(date);
+      if (!map.has(key)) {
+        map.set(key, []);
+      }
+      map.get(key)!.push(b);
+    });
+
+    map.forEach((data, key) => {
+      const [y, m, d] = key.split('-').map(Number);
+      const date = new Date(y, m, d);
+      groups.push({ label: formatDateLabel(date), data });
+    });
+
+    return groups;
+  }, [previousAppointments]);
+
+  const inProgressCount = todayAppointments.filter(
+    (b) =>
+      b.status === 'CONFIRMED' &&
+      new Date(b.startAt) <= new Date() &&
+      new Date(b.endAt) >= new Date()
+  ).length;
+
+  const upcomingCount = todayAppointments.length - inProgressCount;
+
+  const handleAppointmentPress = useCallback(
+    (appointment: DoctorAppointment) => {
+      router.push({
+        pathname: '/appointment-details',
+        params: { id: String(appointment.id) },
+      });
+    },
+    [router]
+  );
+
+  const activeTabParam = params.filterDate || params.filterStatus;
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <View style={styles.header}>
+        <TouchableOpacity
+          style={styles.backBtn}
+          onPress={() => router.back()}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="arrow-back" size={20} color="#BD632F" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Appointments</Text>
+        <TouchableOpacity
+          style={styles.filterBtn}
+          onPress={() => router.push('/appointment-filter')}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="filter" size={20} color="#BD632F" />
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.searchContainer}>
+        <Ionicons name="search" size={18} color="#9C9690" />
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Search patient"
+          placeholderTextColor="#9C9690"
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+        />
+      </View>
+
+      <View style={styles.tabBar}>
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'today' && styles.tabActive]}
+          onPress={() => setActiveTab('today')}
+          activeOpacity={0.7}
+        >
+          <Text
+            style={[
+              styles.tabText,
+              activeTab === 'today' && styles.tabTextActive,
+            ]}
+          >
+            Today's
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'previous' && styles.tabActive]}
+          onPress={() => setActiveTab('previous')}
+          activeOpacity={0.7}
+        >
+          <Text
+            style={[
+              styles.tabText,
+              activeTab === 'previous' && styles.tabTextActive,
+            ]}
+          >
+            Previous
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+      >
+        {activeTab === 'today' ? (
+          <>
+            {inProgressCount > 0 && (
+              <>
+                <Text style={styles.sectionTitle}>Still in Progress</Text>
+                {todayAppointments
+                  .filter(
+                    (b) =>
+                      b.status === 'CONFIRMED' &&
+                      new Date(b.startAt) <= new Date() &&
+                      new Date(b.endAt) >= new Date()
+                  )
+                  .map((appt) => (
+                    <AppointmentCard
+                      key={appt.id}
+                      appointment={appt}
+                      onPress={() => handleAppointmentPress(appt)}
+                    />
+                  ))}
+              </>
+            )}
+
+            {upcomingCount > 0 && (
+              <>
+                <Text style={styles.sectionTitle}>
+                  Next Consults [{upcomingCount}]
+                </Text>
+                {todayAppointments
+                  .filter(
+                    (b) =>
+                      !(
+                        b.status === 'CONFIRMED' &&
+                        new Date(b.startAt) <= new Date() &&
+                        new Date(b.endAt) >= new Date()
+                      )
+                  )
+                  .map((appt) => (
+                    <AppointmentCard
+                      key={appt.id}
+                      appointment={appt}
+                      onPress={() => handleAppointmentPress(appt)}
+                    />
+                  ))}
+              </>
+            )}
+
+            {todayAppointments.length === 0 && (
+              <View style={styles.emptyContainer}>
+                <Ionicons name="calendar-outline" size={48} color="#E6E1DC" />
+                <Text style={styles.emptyText}>No appointments for today</Text>
+              </View>
+            )}
+          </>
+        ) : (
+          <>
+            {groupedPrevious.length > 0 ? (
+              groupedPrevious.map((group) => (
+                <View key={group.label}>
+                  <Text style={styles.sectionTitle}>{group.label}</Text>
+                  {group.data.map((appt) => (
+                    <AppointmentCard
+                      key={appt.id}
+                      appointment={appt}
+                      onPress={() => handleAppointmentPress(appt)}
+                    />
+                  ))}
+                </View>
+              ))
+            ) : (
+              <View style={styles.emptyContainer}>
+                <Ionicons name="calendar-outline" size={48} color="#E6E1DC" />
+                <Text style={styles.emptyText}>No previous appointments</Text>
+              </View>
+            )}
+          </>
+        )}
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: '#FAF9F6' },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingTop: 4,
+    paddingBottom: 12,
+  },
+  backBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#FFF2EB',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerTitle: { fontSize: 20, fontWeight: '800', color: '#1A1817' },
+  filterBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#FFF2EB',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: 20,
+    marginBottom: 16,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#E6E1DC',
+    paddingHorizontal: 16,
+    height: 48,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 15,
+    color: '#1A1817',
+    marginLeft: 10,
+    paddingVertical: 0,
+  },
+  tabBar: {
+    flexDirection: 'row',
+    marginHorizontal: 20,
+    marginBottom: 16,
+    backgroundColor: '#FFF2EB',
+    borderRadius: 20,
+    padding: 4,
+  },
+  tab: {
+    flex: 1,
+    paddingVertical: 12,
+    alignItems: 'center',
+    borderRadius: 16,
+  },
+  tabActive: {
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  tabText: { fontSize: 14, fontWeight: '600', color: '#9C9690' },
+  tabTextActive: { color: '#1A1817', fontWeight: '700' },
+  scrollContent: { paddingHorizontal: 20, paddingBottom: 100 },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#1A1817',
+    marginBottom: 12,
+    marginTop: 8,
+  },
+  card: {
+    flexDirection: 'row',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#E6E1DC',
+    padding: 12,
+    marginBottom: 10,
+    gap: 12,
+  },
+  cardImageContainer: { position: 'relative' },
+  cardImage: { width: 56, height: 56, borderRadius: 14 },
+  cardImagePlaceholder: {
+    backgroundColor: '#FFF2EB',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  cardImageOverlay: {
+    position: 'absolute',
+    bottom: -2,
+    right: -2,
+  },
+  liveChatBadge: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: '#4CAF50',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+  },
+  cardContent: { flex: 1 },
+  cardTopRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 4 },
+  cardType: { fontSize: 13, fontWeight: '500', color: '#7C7672' },
+  dot: { fontSize: 13, color: '#7C7672' },
+  cardStatus: { fontSize: 13, fontWeight: '600' },
+  statusInProgress: { color: '#4CAF50' },
+  statusUpcoming: { color: '#BD632F' },
+  timeRemaining: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#9C9690',
+    marginLeft: 'auto',
+  },
+  cardName: { fontSize: 15, fontWeight: '700', color: '#1A1817', marginBottom: 2 },
+  cardSpecies: { fontSize: 13, fontWeight: '500', color: '#7C7672', marginBottom: 2 },
+  cardOwner: { fontSize: 13, fontWeight: '500', color: '#7C7672', marginBottom: 2 },
+  cardTime: { fontSize: 12, fontWeight: '500', color: '#9C9690' },
+  emptyContainer: { alignItems: 'center', marginTop: 60, gap: 12 },
+  emptyText: { fontSize: 15, fontWeight: '500', color: '#9C9690' },
+});

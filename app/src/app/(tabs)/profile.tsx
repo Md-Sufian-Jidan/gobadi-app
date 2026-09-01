@@ -158,7 +158,7 @@ export default function ProfileScreen() {
               <TouchableOpacity
                 style={styles.menuItem}
                 activeOpacity={0.7}
-                onPress={() => router.push('/notifications')}
+                onPress={() => router.push(isDoctor ? '/doctor-notifications' : '/notifications')}
               >
                 <View style={styles.menuLeft}>
                   <View style={styles.iconCircle}>
@@ -235,7 +235,7 @@ export default function ProfileScreen() {
                     {userProfile?.name || user?.name || 'Michal Wilson'}
                   </Text>
                   <Text style={styles.farmerLocation} numberOfLines={1}>
-                    {userProfile?.phone || 'No phone number'}
+                    {userProfile?.phone || 'Location not added'}
                   </Text>
                 </View>
                 <TouchableOpacity
@@ -312,7 +312,7 @@ export default function ProfileScreen() {
               <TouchableOpacity
                 style={styles.menuItem}
                 activeOpacity={0.7}
-                onPress={() => router.push('/notifications')}
+                onPress={() => router.push(isDoctor ? '/doctor-notifications' : '/notifications')}
               >
                 <View style={styles.menuLeft}>
                   <View style={styles.iconCircle}>

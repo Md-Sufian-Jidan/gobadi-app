@@ -13,6 +13,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useGetClinicsQuery } from '@/store/clinicsApi';
 
 const { width } = Dimensions.get('window');
 
@@ -36,6 +37,7 @@ export default function DoctorsScreen() {
   const router = useRouter();
   const [activeSlide, setActiveSlide] = useState(0); // 0: Upcoming, 1: AI Analyze
   const [activeCategory, setActiveCategory] = useState('Medicine');
+  const { data: clinics = [] } = useGetClinicsQuery();
 
   const categories: Category[] = [
     { id: '1', name: 'General', icon: '🩺' },
@@ -270,6 +272,57 @@ export default function DoctorsScreen() {
             </View>
           </View>
         ))}
+
+        {/* Nearby Medical Centers Section */}
+        {clinics.length > 0 && (
+          <>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Nearby Medical Centers</Text>
+            </View>
+
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.clinicsRow}
+            >
+              {clinics.map((clinic) => (
+                <TouchableOpacity
+                  key={clinic.id}
+                  style={styles.clinicCard}
+                  activeOpacity={0.8}
+                  onPress={() => router.push({ pathname: '/doctor-detail', params: { id: String(clinic.doctors?.[0]?.id || clinic.id) } })}
+                >
+                  <View style={styles.clinicAvatarContainer}>
+                    {clinic.avatar ? (
+                      <Image source={{ uri: clinic.avatar }} style={styles.clinicAvatar} />
+                    ) : (
+                      <View style={styles.clinicAvatarPlaceholder}>
+                        <Text style={styles.clinicAvatarEmoji}>🏥</Text>
+                      </View>
+                    )}
+                  </View>
+                  <View style={styles.clinicInfo}>
+                    <View style={styles.clinicNameRow}>
+                      <Text style={styles.clinicName} numberOfLines={1}>{clinic.name}</Text>
+                      {clinic.isVerified && (
+                        <Ionicons name="checkmark-circle" size={14} color="#4CAF50" />
+                      )}
+                    </View>
+                    <View style={styles.clinicLocationRow}>
+                      <Text style={styles.clinicLocationPin}>📍</Text>
+                      <Text style={styles.clinicLocation} numberOfLines={1}>{clinic.location}</Text>
+                    </View>
+                    <View style={styles.clinicRatingRow}>
+                      <Text style={styles.clinicStarIcon}>⭐</Text>
+                      <Text style={styles.clinicRatingValue}>{clinic.rating}</Text>
+                      <Text style={styles.clinicDoctorCount}>| {clinic.doctors?.length || 0} Doctors</Text>
+                    </View>
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -752,5 +805,92 @@ const styles = StyleSheet.create({
     color: '#BD632F',
     fontSize: 11.5,
     fontWeight: '700',
+  },
+  clinicsRow: {
+    paddingHorizontal: 24,
+    gap: 12,
+    paddingBottom: 8,
+  },
+  clinicCard: {
+    flexDirection: 'row',
+    width: 280,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: '#E6E1DC',
+    padding: 14,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.03,
+    shadowRadius: 6,
+    elevation: 1,
+  },
+  clinicAvatarContainer: {
+    marginRight: 12,
+  },
+  clinicAvatar: {
+    width: 56,
+    height: 56,
+    borderRadius: 14,
+  },
+  clinicAvatarPlaceholder: {
+    width: 56,
+    height: 56,
+    borderRadius: 14,
+    backgroundColor: '#FFF2EB',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  clinicAvatarEmoji: {
+    fontSize: 24,
+  },
+  clinicInfo: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  clinicNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginBottom: 4,
+  },
+  clinicName: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#1A1817',
+    flex: 1,
+  },
+  clinicLocationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  clinicLocationPin: {
+    fontSize: 10,
+    color: '#9C9690',
+    marginRight: 3,
+  },
+  clinicLocation: {
+    fontSize: 11,
+    color: '#9C9690',
+    flex: 1,
+  },
+  clinicRatingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  clinicStarIcon: {
+    fontSize: 11,
+    marginRight: 3,
+  },
+  clinicRatingValue: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#1A1817',
+    marginRight: 6,
+  },
+  clinicDoctorCount: {
+    fontSize: 11,
+    color: '#9C9690',
   },
 });

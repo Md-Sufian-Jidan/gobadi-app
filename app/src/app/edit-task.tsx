@@ -30,12 +30,14 @@ const TASK_TYPES = [
 
 export default function EditTaskScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ id?: string; title?: string; detail?: string }>();
+  const params = useLocalSearchParams<{ id?: string; title?: string; detail?: string; scheduledTime?: string }>();
   const [updateTask, { isLoading: isSubmitting }] = useUpdateTaskMutation();
 
   const [selectedShed, setSelectedShed] = useState('cow');
   const [selectedType, setSelectedType] = useState('hygiene');
   const [customTask, setCustomTask] = useState(params.title || '');
+  const [repeat, setRepeat] = useState<'none' | 'daily' | 'weekly'>('none');
+  const [instruction, setInstruction] = useState('');
   const [startTime, setStartTime] = useState('07:00 PM');
   const [endTime, setEndTime] = useState('08:00 PM');
 
@@ -45,11 +47,16 @@ export default function EditTaskScreen() {
     const shedObj = SHEDS.find((s) => s.id === selectedShed);
     const title = customTask.trim() || `${typeObj?.name || 'Task'} - ${shedObj?.name || 'Farm'}`;
 
+    const detailParts = [`${shedObj?.name || 'Farm'} • ${startTime} - ${endTime}`];
+    if (repeat !== 'none') detailParts.push(`Repeat: ${repeat.charAt(0).toUpperCase() + repeat.slice(1)}`);
+    if (instruction.trim()) detailParts.push(`Instruction: ${instruction.trim()}`);
+
     try {
       await updateTask({
         id: Number(params.id),
         title,
-        detail: `${shedObj?.name || 'Farm'} • ${startTime} - ${endTime}`,
+        detail: detailParts.join(' | '),
+        scheduledTime: params.scheduledTime || new Date().toISOString(),
       }).unwrap();
 
       router.back();
@@ -154,6 +161,38 @@ export default function EditTaskScreen() {
               <Ionicons name="mic-outline" size={20} color="#BD632F" />
             </TouchableOpacity>
           </View>
+
+          {/* Repeat */}
+          <Text style={styles.sectionHeading}>Repeat</Text>
+          <View style={styles.repeatRow}>
+            {(['daily', 'weekly'] as const).map((opt) => {
+              const isSel = repeat === opt;
+              return (
+                <TouchableOpacity
+                  key={opt}
+                  style={[styles.repeatChip, isSel && styles.repeatChipSelected]}
+                  onPress={() => setRepeat(isSel ? 'none' : opt)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.repeatChipText, isSel && styles.repeatChipTextSelected]}>
+                    {opt.charAt(0).toUpperCase() + opt.slice(1)}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+
+          {/* Add Instruction */}
+          <Text style={styles.sectionHeading}>Add Instruction</Text>
+          <TextInput
+            style={styles.instructionTextarea}
+            placeholder="Write task instructions..."
+            placeholderTextColor="#A39E99"
+            value={instruction}
+            onChangeText={setInstruction}
+            multiline
+            textAlignVertical="top"
+          />
 
           {/* Set Time */}
           <Text style={styles.sectionHeading}>Set Time</Text>
@@ -401,5 +440,46 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '700',
+  },
+  repeatRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 20,
+  },
+  repeatChip: {
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#E6E1DC',
+    backgroundColor: '#FAF9F6',
+  },
+  repeatChipSelected: {
+    borderColor: '#BD632F',
+    backgroundColor: '#FFF8F4',
+    borderWidth: 1.5,
+  },
+  repeatChipText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#7C7672',
+  },
+  repeatChipTextSelected: {
+    color: '#BD632F',
+    fontWeight: '700',
+  },
+  instructionTextarea: {
+    backgroundColor: '#FAF9F6',
+    borderWidth: 1,
+    borderColor: '#E6E1DC',
+    borderRadius: 14,
+    height: 100,
+    paddingHorizontal: 14,
+    paddingTop: 14,
+    paddingBottom: 14,
+    fontSize: 14,
+    color: '#1A1817',
+    marginBottom: 20,
+    textAlignVertical: 'top',
   },
 });
