@@ -10,7 +10,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
-type FilterTab = 'all' | 'appointments' | 'patients' | 'messages';
+type FilterTab = 'all' | 'tasks' | 'hygiene' | 'health' | 'help';
 
 interface NotificationItem {
   id: string;
@@ -24,11 +24,12 @@ interface NotificationItem {
 
 const MOCK_NOTIFICATIONS: Record<string, NotificationItem[]> = {
   today: [
-    { id: '1', title: 'Appointment Starting Soon', description: "Appointment with Rahim's Cow", time: 'Today, 9:15 AM', icon: 'calendar', iconBg: '#FFF2EB', iconColor: '#BD632F' },
-    { id: '2', title: 'New Consultation Request', description: 'A farmer requested a consultation for a sick cow.', time: 'Today, 8:00 AM', icon: 'chatbubbles', iconBg: '#FFF2EB', iconColor: '#BD632F' },
+    { id: '1', title: 'Vaccination Due - Cow Shed', description: 'Yesterday was vaccination date for Donald Tramp. Did you missed it?', time: 'Today, 9:15 AM', icon: 'medical', iconBg: '#FFF2EB', iconColor: '#BD632F' },
+    { id: '2', title: 'Cleaning schedule missed at Cow Shed', description: 'Cleaning schedule missed at Cow Shed today at 4:30 PM', time: 'Today, 8:00 AM', icon: 'brush', iconBg: '#FFF2EB', iconColor: '#BD632F' },
   ],
   thisWeek: [
-    { id: '3', title: 'Patient Follow-up Due', description: 'Follow-up consultation for Donald Tramp is due today.', time: 'Mon, 8:00 PM', icon: 'checkmark-circle', iconBg: '#E8F5E9', iconColor: '#4CAF50' },
+    { id: '3', title: 'Task Completed - Mango Fertilizers', description: 'Marked Done By You at 7:30 PM', time: 'Mon, 8:00 PM', icon: 'checkmark-circle', iconBg: '#E8F5E9', iconColor: '#4CAF50' },
+    { id: '4', title: 'Hygiene Risk Detection In Cow Shed', description: 'Hygiene risk Detection, did you completed it?', time: 'Mon, 8:00 PM', icon: 'shield-checkmark', iconBg: '#FFF2EB', iconColor: '#BD632F' },
   ],
 };
 
@@ -44,13 +45,13 @@ export default function NotificationsScreen() {
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Notifications</Text>
         <TouchableOpacity style={styles.settingsBtn} onPress={() => router.push('/notification-preferences')} activeOpacity={0.7}>
-          <Ionicons name="settings-outline" size={20} color="#BD632F" />
+          <Ionicons name="settings-outline" size={20} color="#FFFFFF" />
         </TouchableOpacity>
       </View>
 
       {/* Filter Tabs */}
       <View style={styles.tabRow}>
-        {(['all', 'appointments', 'patients', 'messages'] as FilterTab[]).map((tab) => (
+        {(['all', 'tasks', 'hygiene', 'health', 'help'] as FilterTab[]).map((tab) => (
           <TouchableOpacity
             key={tab}
             style={[styles.tab, activeTab === tab && styles.tabActive]}
@@ -102,9 +103,9 @@ export default function NotificationsScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FAF9F6' },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 4, paddingBottom: 12 },
-  backBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#BD632F', justifyContent: 'center', alignItems: 'center' },
+  backBtn: { width: 40, height: 40, borderRadius: 12, backgroundColor: '#BD632F', justifyContent: 'center', alignItems: 'center' },
   headerTitle: { fontSize: 20, fontWeight: '800', color: '#1A1817' },
-  settingsBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#FFF2EB', justifyContent: 'center', alignItems: 'center' },
+  settingsBtn: { width: 40, height: 40, borderRadius: 12, backgroundColor: '#BD632F', justifyContent: 'center', alignItems: 'center' },
   tabRow: { flexDirection: 'row', paddingHorizontal: 20, gap: 8, marginBottom: 16 },
   tab: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, borderWidth: 1, borderColor: '#E6E1DC' },
   tabActive: { backgroundColor: '#FFFFFF', borderColor: '#BD632F' },

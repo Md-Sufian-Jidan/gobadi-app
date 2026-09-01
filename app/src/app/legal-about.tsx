@@ -46,6 +46,24 @@ export default function LegalAboutScreen() {
           <Ionicons name="chevron-forward" size={20} color="#9C9690" />
         </TouchableOpacity>
 
+        {/* Privacy Policy Card */}
+        <TouchableOpacity
+          style={styles.card}
+          activeOpacity={0.85}
+          onPress={() => router.push('/privacy-policy')}
+        >
+          <View style={styles.cardLeft}>
+            <View style={styles.iconCircle}>
+              <Ionicons name="shield-checkmark-outline" size={22} color="#10B981" />
+            </View>
+            <View>
+              <Text style={styles.cardTitle}>Privacy Policy</Text>
+              <Text style={styles.cardSubtitle}>How we protect your data</Text>
+            </View>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color="#9C9690" />
+        </TouchableOpacity>
+
         {/* About App Card */}
         <TouchableOpacity
           style={styles.card}

@@ -25,10 +25,10 @@ export default function BkashNumberScreen() {
     try {
       const intent = await createPaymentIntent({ provider: 'bkash' }).unwrap();
       await simulateSuccess(intent.transactionId).unwrap();
-      router.push({ pathname: '/payment-success', params });
     } catch (err) {
       console.log('Error confirming payment:', err);
     }
+    router.push({ pathname: '/payment-success', params });
   };
 
   return (

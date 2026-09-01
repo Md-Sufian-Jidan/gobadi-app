@@ -31,10 +31,14 @@ function RootNavigator() {
 
   useEffect(() => {
     const subscription = Notifications.addNotificationResponseReceivedListener(() => {
-      router.push('/notifications');
+      if (user?.role === 'doctor') {
+        router.push('/doctor-notifications');
+      } else {
+        router.push('/notifications');
+      }
     });
     return () => subscription.remove();
-  }, [router]);
+  }, [router, user]);
 
   if (isBootstrapping) {
     return null;
@@ -81,6 +85,8 @@ function RootNavigator() {
       <Stack.Screen name="wishlist" />
       <Stack.Screen name="notifications" />
       <Stack.Screen name="notification-preferences" />
+      <Stack.Screen name="doctor-notifications" />
+      <Stack.Screen name="doctor-notification-preferences" />
       <Stack.Screen name="book-animal" />
       <Stack.Screen name="booking-payment" />
       <Stack.Screen name="booking-bkash-number" />
@@ -104,12 +110,19 @@ function RootNavigator() {
       <Stack.Screen name="payment-methods" />
       <Stack.Screen name="add-payment-method" />
       <Stack.Screen name="otp-verification" />
+      <Stack.Screen name="appointments" />
+      <Stack.Screen name="appointment-filter" />
+      <Stack.Screen name="appointment-details" />
+      <Stack.Screen name="appointment-cancel" />
+      <Stack.Screen name="appointment-cancelled" />
+      <Stack.Screen name="appointment-reschedule" />
       <Stack.Screen name="schedule" />
       <Stack.Screen name="calendar-settings" />
       <Stack.Screen name="working-hours" />
       <Stack.Screen name="block-time-off" />
       <Stack.Screen name="legal-about" />
       <Stack.Screen name="terms-of-service" />
+      <Stack.Screen name="privacy-policy" />
       <Stack.Screen name="about-app" />
     </Stack>
   );

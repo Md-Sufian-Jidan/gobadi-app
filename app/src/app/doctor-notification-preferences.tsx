@@ -11,7 +11,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
-type FilterTab = 'all' | 'tasks' | 'hygiene' | 'health' | 'help';
+type FilterTab = 'all' | 'appointments' | 'patients' | 'messages';
 
 interface NotifPreference {
   id: string;
@@ -23,15 +23,15 @@ interface NotifPreference {
   enabled: boolean;
 }
 
-export default function NotificationPreferencesScreen() {
+export default function DoctorNotificationPreferencesScreen() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<FilterTab>('all');
   const [preferences, setPreferences] = useState<NotifPreference[]>([
-    { id: '1', title: 'Weather', description: 'Rain, Heat, Wind Updates', icon: 'cloudy', iconBg: '#E3F2FD', iconColor: '#2196F3', enabled: true },
-    { id: '2', title: 'Animal Health', description: 'Rain, Heat, Wind Updates', icon: 'paw', iconBg: '#E8F5E9', iconColor: '#4CAF50', enabled: true },
-    { id: '3', title: 'Task Reminder', description: 'Reminder For Schedule Task', icon: 'clipboard', iconBg: '#E8F5E9', iconColor: '#4CAF50', enabled: true },
-    { id: '4', title: 'Hygiene Reminder', description: 'Reminder For Schedule Task', icon: 'medkit', iconBg: '#E8F5E9', iconColor: '#4CAF50', enabled: true },
-    { id: '5', title: 'Help', description: 'Update About Request & Responce', icon: 'help-circle', iconBg: '#E8F5E9', iconColor: '#4CAF50', enabled: false },
+    { id: '1', title: 'Appointments Reminders', description: 'Get notified about upcoming appointments', icon: 'calendar', iconBg: '#FFF2EB', iconColor: '#BD632F', enabled: true },
+    { id: '2', title: 'Patient Messages', description: 'Get notified when patients send messages', icon: 'chatbubble-ellipses', iconBg: '#FFF2EB', iconColor: '#BD632F', enabled: true },
+    { id: '3', title: 'Follow-up Reminders', description: 'Reminders for scheduled follow-ups', icon: 'notifications', iconBg: '#FFF2EB', iconColor: '#BD632F', enabled: true },
+    { id: '4', title: 'Hygiene Reminder', description: 'Get notified about consultation payments', icon: 'medkit', iconBg: '#E8F5E9', iconColor: '#4CAF50', enabled: true },
+    { id: '5', title: 'System Updates', description: 'Important updates from the platform', icon: 'volume-high', iconBg: '#E8F5E9', iconColor: '#4CAF50', enabled: false },
   ]);
 
   const togglePreference = (id: string) => {
@@ -50,9 +50,8 @@ export default function NotificationPreferencesScreen() {
         <View style={styles.placeholder} />
       </View>
 
-      {/* Filter Tabs */}
       <View style={styles.tabRow}>
-        {(['all', 'tasks', 'hygiene', 'health', 'help'] as FilterTab[]).map((tab) => (
+        {(['all', 'appointments', 'patients', 'messages'] as FilterTab[]).map((tab) => (
           <TouchableOpacity
             key={tab}
             style={[styles.tab, activeTab === tab && styles.tabActive]}

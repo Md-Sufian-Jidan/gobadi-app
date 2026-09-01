@@ -30,7 +30,7 @@ function formatBookingTime(iso: string): string {
 }
 
 const QUICK_TILES = [
-  { id: 'appointments', label: 'Appointments', icon: 'calendar-outline' as const, route: '/doctor-bookings' },
+  { id: 'appointments', label: 'Appointments', icon: 'calendar-outline' as const, route: '/appointments' },
   { id: 'schedule', label: 'Schedule', icon: 'time-outline' as const, route: '/schedule' },
   { id: 'patients', label: 'Patients', icon: 'people-outline' as const, route: '/patient-details' },
   { id: 'discount', label: 'Apply Discount', icon: 'pricetag-outline' as const, route: '/apply-discount' },
@@ -80,7 +80,7 @@ export default function DoctorHomeScreen() {
 
               <TouchableOpacity
                 style={styles.notifBtnWhite}
-                onPress={() => router.push('/notifications')}
+                onPress={() => router.push('/doctor-notifications')}
                 activeOpacity={0.8}
               >
                 <Ionicons name="notifications-outline" size={20} color="#BD632F" />

@@ -83,7 +83,7 @@ export default function SignUpScreen() {
       >
         <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
           {/* Logo Section */}
-          <View style={styles.logoContainer}>
+          <View>
             <Image
               source={require('@/assets/images/splash-icon.png')}
               style={styles.logo}
@@ -260,23 +260,10 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
     alignItems: 'center',
   },
-  logoContainer: {
-    width: 100,
-    height: 100,
-    borderRadius: 20,
-    backgroundColor: '#FFFFFF',
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 2,
-    marginBottom: 20,
-  },
   logo: {
-    width: 70,
-    height: 70,
+    width: 120,
+    height: 120,
+    marginBottom: 10
   },
   title: {
     fontSize: 24,
@@ -429,7 +416,7 @@ const styles = StyleSheet.create({
   dividerContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: 20,
+    marginVertical: 14,
     width: '100%',
   },
   dividerLine: {
@@ -438,7 +425,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#E6E1DC',
   },
   dividerText: {
-    marginHorizontal: 12,
+    marginHorizontal: 6,
     color: '#9C9690',
     fontSize: 14,
   },
@@ -462,7 +449,7 @@ const styles = StyleSheet.create({
     height: 24,
   },
   footerContainer: {
-    marginTop: 24,
+    marginTop: 12,
     alignItems: 'center',
   },
   footerText: {
