@@ -378,7 +378,7 @@ function ListAppointmentCard({ appointment }: { appointment: DoctorAppointment }
       <View style={styles.listAppointmentDateBadge}>
         <Ionicons name="time-outline" size={14} color="#FFFFFF" />
         <Text style={styles.listAppointmentDateBadgeText}>
-          {DAY_SHORT[startDate.getDay()]} Jun {startDate.getDate()} · {formatTimeShort(appointment.startAt)} - {formatTimeShort(appointment.endAt)}
+          {DAY_SHORT[startDate.getDay()]} {MONTH_NAMES[startDate.getMonth()]} {startDate.getDate()} · {formatTimeShort(appointment.startAt)} - {formatTimeShort(appointment.endAt)}
         </Text>
       </View>
       <View style={styles.listAppointmentCardBody}>
@@ -420,6 +420,7 @@ export default function ScheduleScreen() {
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
   const [showDaySheet, setShowDaySheet] = useState(false);
+  const [showFilter, setShowFilter] = useState(false);
 
   const { data: bookings = [], isLoading } = useGetDoctorBookingsQuery();
 
@@ -493,7 +494,7 @@ export default function ScheduleScreen() {
       ) : (
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.calendarScroll}>
           <View style={styles.filterRow}>
-            <TouchableOpacity style={styles.filterBtn} activeOpacity={0.8}>
+            <TouchableOpacity style={styles.filterBtn} onPress={() => setShowFilter(!showFilter)} activeOpacity={0.8}>
               <Ionicons name="options-outline" size={14} color="#1A1817" />
               <Text style={styles.filterBtnText}>Filter</Text>
             </TouchableOpacity>
@@ -520,16 +521,27 @@ export default function ScheduleScreen() {
           </View>
 
           {granularity === 'yearly' ? (
-            Array.from({ length: 12 }, (_, i) => (
-              <MonthGrid
-                key={i}
-                year={currentYear}
-                month={i}
-                appointmentDates={appointmentDates}
-                selectedDate={selectedDate}
-                onSelectDate={handleSelectDate}
-              />
-            ))
+            <>
+              <View style={styles.yearNavigation}>
+                <TouchableOpacity onPress={() => setCurrentYear((y) => y - 1)} style={styles.navBtn} activeOpacity={0.7}>
+                  <Ionicons name="chevron-back" size={18} color="#BD632F" />
+                </TouchableOpacity>
+                <Text style={styles.yearNavTitle}>{currentYear}</Text>
+                <TouchableOpacity onPress={() => setCurrentYear((y) => y + 1)} style={styles.navBtn} activeOpacity={0.7}>
+                  <Ionicons name="chevron-forward" size={18} color="#BD632F" />
+                </TouchableOpacity>
+              </View>
+              {Array.from({ length: 12 }, (_, i) => (
+                <MonthGrid
+                  key={i}
+                  year={currentYear}
+                  month={i}
+                  appointmentDates={appointmentDates}
+                  selectedDate={selectedDate}
+                  onSelectDate={handleSelectDate}
+                />
+              ))}
+            </>
           ) : (
             <>
               <View style={styles.monthNavigation}>
@@ -548,10 +560,9 @@ export default function ScheduleScreen() {
                 selectedDate={selectedDate}
                 onSelectDate={handleSelectDate}
               />
+              <WeekStrip selectedDate={selectedDate} onSelectDate={handleSelectDate} />
             </>
           )}
-
-          <WeekStrip selectedDate={selectedDate} onSelectDate={handleSelectDate} />
         </ScrollView>
       )}
 
@@ -573,16 +584,15 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    // justifyContent: 'space-between',
-    gap: 20,
+    justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingTop: 4,
     paddingBottom: 12,
   },
   backBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 12,
     backgroundColor: '#BD632F',
     justifyContent: 'center',
     alignItems: 'center',
@@ -593,9 +603,9 @@ const styles = StyleSheet.create({
     color: '#1A1817',
   },
   settingsBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 12,
     backgroundColor: '#FFF2EB',
     justifyContent: 'center',
     alignItems: 'center',
@@ -687,6 +697,13 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     gap: 16,
   },
+  yearNavigation: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 20,
+    gap: 16,
+  },
   navBtn: {
     width: 32,
     height: 32,
@@ -698,6 +715,11 @@ const styles = StyleSheet.create({
   monthNavTitle: {
     fontSize: 16,
     fontWeight: '700',
+    color: '#1A1817',
+  },
+  yearNavTitle: {
+    fontSize: 18,
+    fontWeight: '800',
     color: '#1A1817',
   },
   monthGrid: {

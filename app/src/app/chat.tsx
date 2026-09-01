@@ -11,7 +11,7 @@ import {
   Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import PrescriptionBottomSheet from '@/components/PrescriptionBottomSheet';
 
@@ -56,10 +56,9 @@ function formatTimeRemaining(seconds: number): string {
 
 export default function ChatScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams();
   const [consultationState, setConsultationState] = useState<ConsultationState>('idle');
   const [inputText, setInputText] = useState('');
-  const [remainingTime, setRemainingTime] = useState(14 * 60 + 28);
+  const [remainingTime] = useState(14 * 60 + 28);
   const flatListRef = useRef<FlatList>(null);
   const [showPrescriptionSheet, setShowPrescriptionSheet] = useState(false);
 
@@ -85,10 +84,6 @@ export default function ChatScreen() {
 
   const handlePrescriptionSent = () => {
     setConsultationState('prescription_sent');
-  };
-
-  const handleBackToChat = () => {
-    setConsultationState('ended');
   };
 
   const handleSendMessage = () => {
@@ -125,7 +120,7 @@ export default function ChatScreen() {
       <View style={isDoctor ? styles.messageRowRight : styles.messageRowLeft}>
         {!isDoctor && (
           <View style={styles.patientAvatar}>
-            <Text style={styles.patientAvatarEmoji}>🐄</Text>
+            <Ionicons name="paw" size={16} color="#BD632F" />
           </View>
         )}
         <View style={isDoctor ? styles.doctorBubble : styles.patientBubble}>
@@ -139,55 +134,6 @@ export default function ChatScreen() {
       </View>
     );
   };
-
-  // ─── Consultation Ended Full Page (Image 6) ───
-  if (consultationState === 'ended' && params.fullPage === 'true') {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} activeOpacity={0.7}>
-            <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Consultation Ended</Text>
-          <View style={{ width: 40 }} />
-        </View>
-
-        <ScrollView contentContainerStyle={styles.endedFullContent}>
-          <View style={styles.endedCheckCircle}>
-            <Ionicons name="checkmark" size={48} color="#FFFFFF" />
-          </View>
-          <Text style={styles.endedTitle}>Consultation ended!</Text>
-          <Text style={styles.endedSubtitle}>Your consultation with Sophia Rodriguez has ended.</Text>
-
-          <View style={styles.consultationInfoCard}>
-            <Text style={styles.consultationInfoTitle}>Consultation Ended</Text>
-            <Text style={styles.consultationInfoSubtitle}>You are now in consultation with Sophia Rodriguez</Text>
-            <Text style={styles.consultationInfoBullet}>•  Start time: 10:00 AM</Text>
-            <Text style={styles.consultationInfoBullet}>•  Max Duration: 30 min</Text>
-            <Text style={styles.consultationInfoRemaining}>•  Remaining time: 30:00</Text>
-          </View>
-
-          <View style={styles.nextStepCard}>
-            <Text style={styles.nextStepTitle}>Next Step</Text>
-            <View style={styles.nextStepOption}>
-              <View style={styles.radioOuter}>
-                <View style={styles.radioInner} />
-              </View>
-              <Text style={styles.nextStepText}>Send prescription, recommendation, note</Text>
-            </View>
-          </View>
-
-          <TouchableOpacity style={styles.sendPrescriptionBtn} onPress={handleSendPrescription} activeOpacity={0.85}>
-            <Text style={styles.sendPrescriptionBtnText}>Send Prescription</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.backToChatBtn} onPress={handleBackToChat} activeOpacity={0.85}>
-            <Text style={styles.backToChatBtnText}>Back to Chat</Text>
-          </TouchableOpacity>
-        </ScrollView>
-      </SafeAreaView>
-    );
-  }
 
   // ─── Main Chat View ───
   return (
@@ -220,7 +166,7 @@ export default function ChatScreen() {
         <View style={styles.upcomingBanner}>
           <View style={styles.upcomingBannerLeft}>
             <View style={styles.upcomingBannerAvatar}>
-              <Text style={styles.upcomingBannerEmoji}>🐄</Text>
+              <Ionicons name="paw" size={24} color="#BD632F" />
             </View>
             <View>
               <Text style={styles.upcomingBannerTime}>10:00 AM · Today</Text>
@@ -251,7 +197,7 @@ export default function ChatScreen() {
       {(consultationState === 'ended' || consultationState === 'prescription_sent') && (
         <View style={styles.consultationBanner}>
           <Text style={styles.consultationBannerEndedTitle}>Consultation ended!</Text>
-          <Text style={styles.consultationBannerDesc}>You are now in consultation with Sophia Rodriguez</Text>
+          <Text style={styles.consultationBannerDesc}>Your consultation with Sophia Rodriguez has ended.</Text>
           <Text style={styles.consultationBannerBullet}>•  Start time: 10:00 AM</Text>
           <Text style={styles.consultationBannerBullet}>•  Max Duration: 30 min</Text>
           <Text style={styles.consultationBannerRemaining}>•  Remaining time: {formatTimeRemaining(remainingTime)}</Text>
@@ -368,8 +314,7 @@ const styles = StyleSheet.create({
   // Upcoming Banner
   upcomingBanner: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#E6D5C3', marginHorizontal: 20, borderRadius: 16, padding: 12, marginBottom: 12 },
   upcomingBannerLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  upcomingBannerAvatar: { width: 44, height: 44, borderRadius: 12, backgroundColor: '#D4C4B0', justifyContent: 'center', alignItems: 'center' },
-  upcomingBannerEmoji: { fontSize: 24 },
+  upcomingBannerAvatar: { width: 44, height: 44, borderRadius: 12, backgroundColor: '#FFF2EB', justifyContent: 'center', alignItems: 'center' },
   upcomingBannerTime: { fontSize: 11, fontWeight: '600', color: '#BD632F' },
   upcomingBannerName: { fontSize: 15, fontWeight: '800', color: '#1A1817' },
   upcomingBannerJoin: { backgroundColor: '#BD632F', borderRadius: 16, paddingHorizontal: 16, paddingVertical: 8 },
@@ -383,7 +328,7 @@ const styles = StyleSheet.create({
   consultationBannerBullet: { fontSize: 13, fontWeight: '500', color: '#1A1817', lineHeight: 20 },
   consultationBannerRemaining: { fontSize: 13, fontWeight: '600', color: '#BD632F', lineHeight: 20 },
   endConsultationBtn: { backgroundColor: '#E6E1DC', borderRadius: 20, paddingVertical: 10, alignItems: 'center', marginTop: 12 },
-  endConsultationBtnText: { color: '#FFFFFF', fontSize: 14, fontWeight: '700' },
+  endConsultationBtnText: { color: '#1A1817', fontSize: 14, fontWeight: '700' },
 
   // Next Step (inline)
   nextStepInline: { backgroundColor: '#FFFFFF', marginHorizontal: 20, borderRadius: 16, borderWidth: 1, borderColor: '#E6E1DC', padding: 16, marginBottom: 12 },
@@ -401,8 +346,7 @@ const styles = StyleSheet.create({
   dateSeparatorText: { fontSize: 12, fontWeight: '600', color: '#9C9690' },
   messageRowLeft: { flexDirection: 'row', alignItems: 'flex-end', marginBottom: 16, maxWidth: '85%' },
   messageRowRight: { flexDirection: 'row', justifyContent: 'flex-end', marginBottom: 16, maxWidth: '85%', alignSelf: 'flex-end' },
-  patientAvatar: { width: 32, height: 32, borderRadius: 16, backgroundColor: '#E8D5C4', justifyContent: 'center', alignItems: 'center', marginRight: 8 },
-  patientAvatarEmoji: { fontSize: 16 },
+  patientAvatar: { width: 32, height: 32, borderRadius: 16, backgroundColor: '#FFF2EB', justifyContent: 'center', alignItems: 'center', marginRight: 8 },
   patientBubble: { backgroundColor: '#F5EDE6', borderRadius: 18, borderBottomLeftRadius: 4, paddingHorizontal: 14, paddingVertical: 10, maxWidth: '100%' },
   patientBubbleText: { fontSize: 14, fontWeight: '500', color: '#1A1817', lineHeight: 19 },
   patientTimeText: { fontSize: 10, fontWeight: '500', color: '#9C9690', marginTop: 4, alignSelf: 'flex-end' },
@@ -434,23 +378,4 @@ const styles = StyleSheet.create({
   textInput: { flex: 1, fontSize: 14, color: '#1A1817', height: '100%' },
   plusBtn: { width: 32, height: 32, borderRadius: 16, borderWidth: 1.5, borderColor: '#BD632F', justifyContent: 'center', alignItems: 'center' },
   micBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#BD632F', justifyContent: 'center', alignItems: 'center' },
-
-  // Ended Full Page
-  endedFullContent: { paddingHorizontal: 20, paddingBottom: 40, alignItems: 'center' },
-  endedCheckCircle: { width: 80, height: 80, borderRadius: 40, backgroundColor: '#4CAF50', justifyContent: 'center', alignItems: 'center', marginTop: 40, marginBottom: 20 },
-  endedTitle: { fontSize: 22, fontWeight: '800', color: '#1A1817', marginBottom: 8 },
-  endedSubtitle: { fontSize: 14, fontWeight: '500', color: '#7C7672', textAlign: 'center', marginBottom: 24 },
-  consultationInfoCard: { backgroundColor: '#FFFFFF', borderRadius: 16, borderWidth: 1, borderColor: '#E6E1DC', padding: 16, width: '100%', marginBottom: 16 },
-  consultationInfoTitle: { fontSize: 15, fontWeight: '800', color: '#1A1817', marginBottom: 4 },
-  consultationInfoSubtitle: { fontSize: 13, fontWeight: '500', color: '#7C7672', marginBottom: 8 },
-  consultationInfoBullet: { fontSize: 13, fontWeight: '500', color: '#1A1817', lineHeight: 20 },
-  consultationInfoRemaining: { fontSize: 13, fontWeight: '600', color: '#BD632F', lineHeight: 20 },
-  nextStepCard: { backgroundColor: '#FFFFFF', borderRadius: 16, borderWidth: 1, borderColor: '#E6E1DC', padding: 16, width: '100%', marginBottom: 20 },
-  nextStepTitle: { fontSize: 15, fontWeight: '800', color: '#1A1817', marginBottom: 8 },
-  nextStepOption: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  nextStepText: { fontSize: 13, fontWeight: '500', color: '#7C7672', flex: 1 },
-  sendPrescriptionBtn: { backgroundColor: '#BD632F', borderRadius: 26, paddingVertical: 16, alignItems: 'center', width: '100%', marginBottom: 12 },
-  sendPrescriptionBtnText: { color: '#FFFFFF', fontSize: 16, fontWeight: '700' },
-  backToChatBtn: { borderRadius: 26, borderWidth: 1.5, borderColor: '#E6E1DC', paddingVertical: 16, alignItems: 'center', width: '100%' },
-  backToChatBtnText: { color: '#7C7672', fontSize: 16, fontWeight: '600' },
 });

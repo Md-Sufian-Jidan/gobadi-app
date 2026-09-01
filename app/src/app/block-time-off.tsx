@@ -286,6 +286,43 @@ export default function BlockTimeOffScreen() {
           <Ionicons name="chevron-down" size={18} color="#9C9690" />
         </TouchableOpacity>
 
+        {showEndCalendar && (
+          <View style={styles.miniCalendar}>
+            <View style={styles.calHeader}>
+              <TouchableOpacity onPress={() => {}} activeOpacity={0.7}>
+                <Ionicons name="chevron-back" size={18} color="#BD632F" />
+              </TouchableOpacity>
+              <Text style={styles.calMonth}>April 2026</Text>
+              <TouchableOpacity onPress={() => {}} activeOpacity={0.7}>
+                <Ionicons name="chevron-forward" size={18} color="#BD632F" />
+              </TouchableOpacity>
+            </View>
+            <View style={styles.calDayHeader}>
+              {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((d) => (
+                <Text key={d} style={styles.calDayText}>{d}</Text>
+              ))}
+            </View>
+            <View style={styles.calDays}>
+              {Array.from({ length: 30 }, (_, i) => {
+                const day = i + 1;
+                return (
+                  <TouchableOpacity
+                    key={day}
+                    style={styles.calDay}
+                    onPress={() => {
+                      setEndDate(`${day} April, 2026`);
+                      setShowEndCalendar(false);
+                    }}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.calDayNumber}>{day}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+        )}
+
         <Text style={[styles.fieldLabel, { marginTop: 20 }]}>Reason <Text style={styles.required}>(Required)</Text></Text>
         <View style={styles.reasonsCard}>
           {REASONS.map((reason) => (
@@ -338,8 +375,8 @@ export default function BlockTimeOffScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FAF9F6' },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 4, paddingBottom: 12 },
-  backBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#BD632F', justifyContent: 'center', alignItems: 'center' },
-  headerTitle: { fontSize: 20, fontWeight: '800', color: '#1A1817' },
+  backBtn: { width: 44, height: 44, borderRadius: 12, backgroundColor: '#BD632F', justifyContent: 'center', alignItems: 'center' },
+  headerTitle: { fontSize: 24, fontWeight: '800', color: '#1A1817' },
   scrollContainer: { paddingHorizontal: 20, paddingBottom: 100 },
   fieldLabel: { fontSize: 14, fontWeight: '600', color: '#1A1817', marginBottom: 8 },
   required: { color: '#BD632F' },

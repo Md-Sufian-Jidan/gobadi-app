@@ -259,8 +259,6 @@ export default function AppointmentsScreen() {
     [router]
   );
 
-  const activeTabParam = params.filterDate || params.filterStatus;
-
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
@@ -419,18 +417,18 @@ const styles = StyleSheet.create({
     paddingBottom: 12,
   },
   backBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 12,
     backgroundColor: '#FFF2EB',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  headerTitle: { fontSize: 20, fontWeight: '800', color: '#1A1817' },
+  headerTitle: { fontSize: 24, fontWeight: '800', color: '#1A1817' },
   filterBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 12,
     backgroundColor: '#FFF2EB',
     justifyContent: 'center',
     alignItems: 'center',

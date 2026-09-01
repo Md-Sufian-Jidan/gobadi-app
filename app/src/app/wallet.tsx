@@ -66,13 +66,13 @@ export default function WalletScreen() {
           <Text style={styles.paymentMethodLabel}>Payment Method</Text>
           <View style={styles.paymentMethodIcons}>
             <View style={[styles.miniIcon, { backgroundColor: '#E53935' }]}>
-              <Text style={styles.miniIconText}>b</Text>
+              <Ionicons name="paper-plane" size={12} color="#FFFFFF" />
             </View>
             <View style={[styles.miniIcon, { backgroundColor: '#FF9800' }]}>
-              <Text style={styles.miniIconText}>n</Text>
+              <Ionicons name="wallet" size={12} color="#FFFFFF" />
             </View>
             <View style={[styles.miniIcon, { backgroundColor: '#1A237E' }]}>
-              <Text style={styles.miniIconText}>V</Text>
+              <Text style={styles.miniIconText}>VISA</Text>
             </View>
           </View>
         </TouchableOpacity>
@@ -95,7 +95,7 @@ export default function WalletScreen() {
                       styles.bar,
                       {
                         height: item.value * MAX_BAR_HEIGHT,
-                        backgroundColor: index === 5 ? '#8B5E3C' : '#D4B89C',
+                        backgroundColor: '#C4956A',
                       },
                     ]}
                   />

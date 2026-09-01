@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   TextInput,
   ScrollView,
-  Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -29,13 +28,11 @@ export default function DiscountScreen() {
   const patientName = params.patientName || 'Melinda Gates';
   const ownerName = params.ownerName || 'Sophia Rodriguez';
   const existingDiscount = params.existingDiscount ? parseInt(params.existingDiscount, 10) : 0;
-  const isEditMode = existingDiscount > 0;
 
   const [selectedDiscount, setSelectedDiscount] = useState<number>(existingDiscount);
   const [customDiscount, setCustomDiscount] = useState(
     existingDiscount > 0 && !QUICK_DISCOUNTS.includes(existingDiscount) ? existingDiscount.toString() : ''
   );
-  const [showRemoveModal, setShowRemoveModal] = useState(false);
 
   const discountPercent = selectedDiscount || (customDiscount ? parseInt(customDiscount, 10) : 0);
   const appointmentFee = 1000;
@@ -44,7 +41,6 @@ export default function DiscountScreen() {
   }, [discountPercent]);
   const patientPays = appointmentFee - discountAmount;
   const hasDiscount = discountPercent > 0;
-  const hasChanges = discountPercent !== existingDiscount;
 
   const handleQuickDiscount = (percent: number) => {
     setSelectedDiscount(percent);
@@ -59,19 +55,14 @@ export default function DiscountScreen() {
     }
   };
 
-  const handleRemoveDiscount = () => {
-    setShowRemoveModal(false);
-    router.back();
-  };
-
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} activeOpacity={0.7}>
-          <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
+          <Ionicons name="arrow-back" size={20} color="#BD632F" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Discount details</Text>
-        <View style={{ width: 40 }} />
+        <View style={{ width: 44 }} />
       </View>
 
       <ScrollView
@@ -103,12 +94,12 @@ export default function DiscountScreen() {
             <Text style={styles.priceLabel}>Appointment fee</Text>
             <Text style={styles.priceValue}>৳ {appointmentFee.toLocaleString()}</Text>
           </View>
-          <View style={styles.priceDivider} />
+          <View style={styles.priceDividerDashed} />
           <View style={styles.priceRow}>
             <Text style={styles.priceLabel}>Discount ({discountPercent}%)</Text>
             <Text style={styles.priceValue}>৳ {discountAmount.toLocaleString()}</Text>
           </View>
-          <View style={styles.priceDivider} />
+          <View style={styles.priceDividerDashed} />
           <View style={styles.priceRow}>
             <Text style={styles.totalLabel}>Patient will pay</Text>
             <Text style={styles.totalValue}>৳ {patientPays.toLocaleString()}</Text>
@@ -154,99 +145,19 @@ export default function DiscountScreen() {
           </View>
         </View>
 
-        <View style={styles.infoBanner}>
-          <Ionicons name="information-circle-outline" size={20} color="#BD632F" />
-          <Text style={styles.infoText}>
-            Discounts apply to the patient's next appointment fee only. They pay the discounted amount when booking.
-          </Text>
-        </View>
       </ScrollView>
 
       <View style={styles.bottomBar}>
-        {isEditMode ? (
-          <View style={styles.editButtonsRow}>
-            <TouchableOpacity
-              style={styles.editBtn}
-              onPress={() => router.back()}
-              activeOpacity={0.85}
-            >
-              <Text style={styles.editBtnText}>Edit discount</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.removeBtn}
-              onPress={() => setShowRemoveModal(true)}
-              activeOpacity={0.85}
-            >
-              <Text style={styles.removeBtnText}>Remove discount</Text>
-            </TouchableOpacity>
-          </View>
-        ) : (
-          <TouchableOpacity
-            style={[styles.continueBtn, !hasDiscount && styles.continueBtnDisabled]}
-            onPress={() => router.back()}
-            activeOpacity={0.85}
-            disabled={!hasDiscount}
-          >
-            <Text style={styles.continueBtnText}>Continue</Text>
-          </TouchableOpacity>
-        )}
+        <TouchableOpacity
+          style={[styles.continueBtn, !hasDiscount && styles.continueBtnDisabled]}
+          onPress={() => router.back()}
+          activeOpacity={0.85}
+          disabled={!hasDiscount}
+        >
+          <Text style={styles.continueBtnText}>Continue</Text>
+        </TouchableOpacity>
       </View>
 
-      <Modal
-        visible={showRemoveModal}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowRemoveModal(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContainer}>
-            <TouchableOpacity
-              style={styles.modalCloseBtn}
-              onPress={() => setShowRemoveModal(false)}
-              activeOpacity={0.7}
-            >
-              <Ionicons name="close" size={20} color="#7C7672" />
-            </TouchableOpacity>
-
-            <View style={styles.modalPatientRow}>
-              <View style={styles.modalAvatar}>
-                <Ionicons name="paw" size={20} color="#BD632F" />
-              </View>
-              <View>
-                <Text style={styles.modalPatientName}>{patientName}</Text>
-                <Text style={styles.modalPatientOwner}>Owner: {ownerName}</Text>
-              </View>
-            </View>
-
-            <View style={styles.trashIconContainer}>
-              <View style={styles.trashCircle}>
-                <Ionicons name="trash" size={40} color="#E53935" />
-              </View>
-            </View>
-
-            <Text style={styles.modalTitle}>Remove this discount?</Text>
-            <Text style={styles.modalDescription}>
-              {discountPercent}% Discount for {patientName} will be removed and will not be applicable for the next appointment
-            </Text>
-
-            <TouchableOpacity
-              style={styles.removeConfirmBtn}
-              onPress={handleRemoveDiscount}
-              activeOpacity={0.85}
-            >
-              <Text style={styles.removeConfirmBtnText}>Remove discount</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.cancelBtn}
-              onPress={() => setShowRemoveModal(false)}
-              activeOpacity={0.85}
-            >
-              <Text style={styles.cancelBtnText}>Cancel</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
     </SafeAreaView>
   );
 }
@@ -265,15 +176,15 @@ const styles = StyleSheet.create({
     paddingBottom: 12,
   },
   backBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#BD632F',
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: '#FFF2EB',
     justifyContent: 'center',
     alignItems: 'center',
   },
   headerTitle: {
-    fontSize: 20,
+    fontSize: 24,
     fontWeight: '800',
     color: '#1A1817',
   },
@@ -341,9 +252,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 10,
   },
-  priceDivider: {
-    height: 1,
-    backgroundColor: '#E6E1DC',
+  priceDividerDashed: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#E6E1DC',
+    borderStyle: 'dashed',
+    marginVertical: 4,
   },
   priceLabel: {
     fontSize: 14,
@@ -379,7 +292,7 @@ const styles = StyleSheet.create({
   quickDiscountBtn: {
     flex: 1,
     paddingVertical: 14,
-    borderRadius: 12,
+    borderRadius: 20,
     borderWidth: 1.5,
     borderColor: '#E6E1DC',
     backgroundColor: '#FFFFFF',
@@ -427,20 +340,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#BD632F',
   },
-  infoBanner: {
-    flexDirection: 'row',
-    backgroundColor: '#FFF2EB',
-    borderRadius: 12,
-    padding: 14,
-    gap: 10,
-  },
-  infoText: {
-    flex: 1,
-    fontSize: 13,
-    fontWeight: '500',
-    color: '#7C7672',
-    lineHeight: 18,
-  },
   bottomBar: {
     position: 'absolute',
     bottom: 0,
@@ -465,134 +364,5 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '700',
-  },
-  editButtonsRow: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  editBtn: {
-    flex: 1,
-    height: 52,
-    borderRadius: 26,
-    borderWidth: 1.5,
-    borderColor: '#BD632F',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  editBtnText: {
-    color: '#BD632F',
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  removeBtn: {
-    flex: 1,
-    height: 52,
-    borderRadius: 26,
-    borderWidth: 1.5,
-    borderColor: '#E53935',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  removeBtnText: {
-    color: '#E53935',
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 40,
-  },
-  modalContainer: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    padding: 24,
-    width: '100%',
-    alignItems: 'center',
-  },
-  modalCloseBtn: {
-    position: 'absolute',
-    top: 16,
-    right: 16,
-  },
-  modalPatientRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    gap: 12,
-    marginBottom: 24,
-  },
-  modalAvatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: '#FFF2EB',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalPatientName: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#1A1817',
-  },
-  modalPatientOwner: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: '#7C7672',
-  },
-  trashIconContainer: {
-    marginBottom: 20,
-  },
-  trashCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: '#FFEBEE',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#1A1817',
-    marginBottom: 8,
-  },
-  modalDescription: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#7C7672',
-    textAlign: 'center',
-    lineHeight: 20,
-    marginBottom: 24,
-  },
-  removeConfirmBtn: {
-    width: '100%',
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: '#E53935',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  removeConfirmBtnText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  cancelBtn: {
-    width: '100%',
-    height: 52,
-    borderRadius: 26,
-    borderWidth: 1.5,
-    borderColor: '#E6E1DC',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  cancelBtnText: {
-    color: '#7C7672',
-    fontSize: 16,
-    fontWeight: '600',
   },
 });

@@ -24,10 +24,10 @@ interface PaymentMethod {
 }
 
 const PAYMENT_METHODS: PaymentMethod[] = [
-  { id: '1', type: 'bKash', label: 'Personal Account', detail: 'G•••••••', isDefault: true, isVerified: false, icon: 'b', iconBg: '#E53935', iconColor: '#FFFFFF' },
-  { id: '2', type: 'Nagad', label: 'Personal Account', detail: 'G•••••••', isDefault: false, isVerified: false, icon: 'n', iconBg: '#FF9800', iconColor: '#FFFFFF' },
-  { id: '3', type: 'Visa', label: 'Debit Card', detail: '•••• •••• •••• 3421', isDefault: false, isVerified: false, icon: 'V', iconBg: '#1A237E', iconColor: '#FFFFFF' },
-  { id: '4', type: 'Mastercard', label: 'Credit Card', detail: '•••• •••• •••• 7788', isDefault: false, isVerified: true, icon: 'M', iconBg: '#E53935', iconColor: '#FFFFFF' },
+  { id: '1', type: 'bKash', label: 'Personal Account', detail: '01•••• •••••••', isDefault: true, isVerified: true, icon: 'paper-plane', iconBg: '#E53935', iconColor: '#FFFFFF' },
+  { id: '2', type: 'Nagad', label: 'Personal Account', detail: '01•••• •••••••', isDefault: false, isVerified: false, icon: 'wallet', iconBg: '#FF9800', iconColor: '#FFFFFF' },
+  { id: '3', type: 'Visa', label: 'Debit Card', detail: '•••• •••• •••• 3421', isDefault: false, isVerified: false, icon: 'card', iconBg: '#1A237E', iconColor: '#FFFFFF' },
+  { id: '4', type: 'Mastercard', label: 'Credit Card', detail: '•••• •••• •••• 7788', isDefault: false, isVerified: true, icon: 'card', iconBg: '#E53935', iconColor: '#FFFFFF' },
 ];
 
 export default function PaymentMethodsScreen() {
@@ -53,7 +53,7 @@ export default function PaymentMethodsScreen() {
           >
             <View style={styles.methodLeft}>
               <View style={[styles.methodIcon, { backgroundColor: method.iconBg }]}>
-                <Text style={[styles.methodIconText, { color: method.iconColor }]}>{method.icon}</Text>
+                <Ionicons name={method.icon as any} size={18} color={method.iconColor} />
               </View>
               <View style={styles.methodInfo}>
                 <View style={styles.methodTypeRow}>
@@ -63,7 +63,7 @@ export default function PaymentMethodsScreen() {
                       <Text style={styles.defaultText}>Default</Text>
                     </View>
                   )}
-                  {method.isVerified && (
+                  {(method.isDefault || method.isVerified) && (
                     <Ionicons name="checkmark-circle" size={14} color="#4CAF50" />
                   )}
                 </View>
