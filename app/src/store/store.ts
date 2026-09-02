@@ -24,6 +24,24 @@ import { servicesApi } from './servicesApi';
 import { aiDiagnosisApi } from './aiDiagnosisApi';
 import { reviewsApi } from './reviewsApi';
 import { notificationsApi } from './notificationsApi';
+import { addressesApi } from './addressesApi';
+import { walletApi } from './walletApi';
+import { discountsApi } from './discountsApi';
+import { blockTimesApi } from './blockTimesApi';
+import { calendarApi } from './calendarApi';
+import { prescriptionsApi } from './prescriptionsApi';
+import { vaccinationsApi } from './vaccinationsApi';
+import { labTestsApi } from './labTestsApi';
+import { consultationsApi } from './consultationsApi';
+import { medicalEventsApi } from './medicalEventsApi';
+import { paymentMethodsApi } from './paymentMethodsApi';
+import { faqsApi } from './faqsApi';
+import { supportApi } from './supportApi';
+import { subscriptionsApi } from './subscriptionsApi';
+import { marketRatesApi } from './marketRatesApi';
+import { fieldsApi } from './fieldsApi';
+import { badgesApi } from './badgesApi';
+import { notificationPreferencesApi } from './notificationPreferencesApi';
 import { getToken, getRefreshToken } from '@/constants/api';
 import { decodeJwt } from './decode-jwt';
 import type { AuthUser } from './authSlice';
@@ -55,6 +73,24 @@ export const store = configureStore({
     [aiDiagnosisApi.reducerPath]: aiDiagnosisApi.reducer,
     [reviewsApi.reducerPath]: reviewsApi.reducer,
     [notificationsApi.reducerPath]: notificationsApi.reducer,
+    [addressesApi.reducerPath]: addressesApi.reducer,
+    [walletApi.reducerPath]: walletApi.reducer,
+    [discountsApi.reducerPath]: discountsApi.reducer,
+    [blockTimesApi.reducerPath]: blockTimesApi.reducer,
+    [calendarApi.reducerPath]: calendarApi.reducer,
+    [prescriptionsApi.reducerPath]: prescriptionsApi.reducer,
+    [vaccinationsApi.reducerPath]: vaccinationsApi.reducer,
+    [labTestsApi.reducerPath]: labTestsApi.reducer,
+    [consultationsApi.reducerPath]: consultationsApi.reducer,
+    [medicalEventsApi.reducerPath]: medicalEventsApi.reducer,
+    [paymentMethodsApi.reducerPath]: paymentMethodsApi.reducer,
+    [faqsApi.reducerPath]: faqsApi.reducer,
+    [supportApi.reducerPath]: supportApi.reducer,
+    [subscriptionsApi.reducerPath]: subscriptionsApi.reducer,
+    [marketRatesApi.reducerPath]: marketRatesApi.reducer,
+    [fieldsApi.reducerPath]: fieldsApi.reducer,
+    [badgesApi.reducerPath]: badgesApi.reducer,
+    [notificationPreferencesApi.reducerPath]: notificationPreferencesApi.reducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware().concat(
@@ -82,6 +118,24 @@ export const store = configureStore({
       aiDiagnosisApi.middleware,
       reviewsApi.middleware,
       notificationsApi.middleware,
+      addressesApi.middleware,
+      walletApi.middleware,
+      discountsApi.middleware,
+      blockTimesApi.middleware,
+      calendarApi.middleware,
+      prescriptionsApi.middleware,
+      vaccinationsApi.middleware,
+      labTestsApi.middleware,
+      consultationsApi.middleware,
+      medicalEventsApi.middleware,
+      paymentMethodsApi.middleware,
+      faqsApi.middleware,
+      supportApi.middleware,
+      subscriptionsApi.middleware,
+      marketRatesApi.middleware,
+      fieldsApi.middleware,
+      badgesApi.middleware,
+      notificationPreferencesApi.middleware,
     ),
 });
 

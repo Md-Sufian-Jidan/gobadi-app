@@ -40,20 +40,22 @@ export default function WalletScreen() {
 
       <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
         {/* Earnings Card */}
-        <Text style={styles.totalLabel}>Total Earnings</Text>
-        <Text style={styles.totalAmount}>$999</Text>
+        <View style={styles.earningsCard}>
+          <Text style={styles.totalLabel}>Total Earnings</Text>
+          <Text style={styles.totalAmount}>$999</Text>
 
-        <View style={styles.earningsRow}>
-          <View>
-            <Text style={styles.earningsLabel}>This Month</Text>
-            <View style={styles.earningsValue}>
-              <Ionicons name="arrow-up" size={14} color="#4CAF50" />
-              <Text style={styles.earningsGreen}>$450</Text>
+          <View style={styles.earningsRow}>
+            <View>
+              <Text style={styles.earningsLabel}>This Month</Text>
+              <View style={styles.earningsValue}>
+                <Ionicons name="arrow-up" size={14} color="#4CAF50" />
+                <Text style={styles.earningsGreen}>$450</Text>
+              </View>
             </View>
-          </View>
-          <View>
-            <Text style={styles.earningsLabel}>Last Transactions</Text>
-            <Text style={styles.earningsValueText}>$150</Text>
+            <View>
+              <Text style={styles.earningsLabel}>Last Transactions</Text>
+              <Text style={styles.earningsValueText}>$150</Text>
+            </View>
           </View>
         </View>
 
@@ -133,7 +135,8 @@ const styles = StyleSheet.create({
   scrollContainer: { paddingHorizontal: 20, paddingBottom: 100 },
   totalLabel: { fontSize: 14, fontWeight: '500', color: '#7C7672', marginBottom: 4 },
   totalAmount: { fontSize: 36, fontWeight: '800', color: '#BD632F', marginBottom: 12 },
-  earningsRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 20 },
+  earningsCard: { backgroundColor: '#FFFFFF', borderRadius: 16, borderWidth: 1, borderColor: '#E6E1DC', padding: 16, marginBottom: 20 },
+  earningsRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 12 },
   earningsLabel: { fontSize: 12, fontWeight: '500', color: '#9C9690', marginBottom: 4 },
   earningsValue: { flexDirection: 'row', alignItems: 'center', gap: 2 },
   earningsGreen: { fontSize: 16, fontWeight: '700', color: '#4CAF50' },
