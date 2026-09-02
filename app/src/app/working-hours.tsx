@@ -1,46 +1,134 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRequireDoctor } from '@/hooks/use-require-doctor';
-import { StyleSheet, View, Text, TouchableOpacity, ScrollView, Switch } from 'react-native';
+import { StyleSheet, View, Text, TouchableOpacity, ScrollView, Switch, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import {
+  useGetMyDoctorProfileQuery,
+  useGetAvailabilityQuery,
+  useSetAvailabilityMutation,
+  type Availability,
+} from '@/store/doctorPortalApi';
+
+const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const DAY_INDEX: Record<string, number> = {
+  Sunday: 0, Monday: 1, Tuesday: 2, Wednesday: 3, Thursday: 4, Friday: 5, Saturday: 6,
+};
 
 interface DaySchedule {
   day: string;
+  dayOfWeek: number;
   enabled: boolean;
   startTime: string;
   endTime: string;
+  availabilityId?: number;
 }
 
-const INITIAL_SCHEDULE: DaySchedule[] = [
-  { day: 'Saturday', enabled: false, startTime: '09:00 AM', endTime: '06:00 PM' },
-  { day: 'Sunday', enabled: true, startTime: '09:00 AM', endTime: '05:00 PM' },
-  { day: 'Monday', enabled: true, startTime: '09:00 AM', endTime: '05:00 PM' },
-  { day: 'Tuesday', enabled: true, startTime: '09:00 AM', endTime: '05:00 PM' },
-  { day: 'Wednesday', enabled: true, startTime: '09:00 AM', endTime: '05:00 PM' },
-  { day: 'Thursday', enabled: true, startTime: '09:00 AM', endTime: '05:00 PM' },
-  { day: 'Friday', enabled: false, startTime: '09:00 AM', endTime: '10:00 AM' },
-];
+function formatTime12h(time24: string): string {
+  const [h, m] = time24.split(':').map(Number);
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  const hour12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
+  return `${String(hour12).padStart(2, '0')}:${String(m).padStart(2, '0')} ${ampm}`;
+}
+
+function time12to24(time12: string): string {
+  const match = time12.match(/(\d{2}):(\d{2})\s*(AM|PM)/i);
+  if (!match) return '09:00';
+  let [, h, m, ampm] = match;
+  let hour = parseInt(h, 10);
+  if (ampm.toUpperCase() === 'PM' && hour !== 12) hour += 12;
+  if (ampm.toUpperCase() === 'AM' && hour === 12) hour = 0;
+  return `${String(hour).padStart(2, '0')}:${m}`;
+}
+
+function buildEmptySchedule(): DaySchedule[] {
+  return DAY_NAMES.map((day, idx) => ({
+    day,
+    dayOfWeek: idx,
+    enabled: false,
+    startTime: '09:00 AM',
+    endTime: '05:00 PM',
+  }));
+}
 
 export default function WorkingHoursScreen() {
   const router = useRouter();
   const isDoctor = useRequireDoctor();
   if (!isDoctor) return null;
-  const [schedule, setSchedule] = useState<DaySchedule[]>(INITIAL_SCHEDULE);
+
+  const { data: profile } = useGetMyDoctorProfileQuery();
+  const doctorId = profile?.id;
+  const { data: availability, isLoading: loadingAvailability } = useGetAvailabilityQuery(doctorId!, { skip: !doctorId });
+  const [setAvailability, { isLoading: saving }] = useSetAvailabilityMutation();
+
+  const [schedule, setSchedule] = useState<DaySchedule[]>(buildEmptySchedule());
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
+  const [hasChanges, setHasChanges] = useState(false);
+
+  useEffect(() => {
+    if (availability && availability.length > 0) {
+      const mapped: DaySchedule[] = DAY_NAMES.map((day, idx) => {
+        const entry = availability.find((a) => a.dayOfWeek === idx);
+        if (entry) {
+          return {
+            day,
+            dayOfWeek: idx,
+            enabled: entry.isActive,
+            startTime: formatTime12h(entry.startTime),
+            endTime: formatTime12h(entry.endTime),
+            availabilityId: entry.id,
+          };
+        }
+        return { day, dayOfWeek: idx, enabled: false, startTime: '09:00 AM', endTime: '05:00 PM' };
+      });
+      setSchedule(mapped);
+    }
+  }, [availability]);
 
   const toggleDay = (index: number) => {
     setSchedule((prev) =>
       prev.map((item, i) => (i === index ? { ...item, enabled: !item.enabled } : item))
     );
+    setHasChanges(true);
   };
 
   const handleDayPress = (day: string) => {
     setSelectedDay(day);
   };
 
+  const handleSaveDay = (daySchedule: DaySchedule) => {
+    setSchedule((prev) =>
+      prev.map((item) => (item.day === daySchedule.day ? daySchedule : item))
+    );
+    setHasChanges(true);
+    setSelectedDay(null);
+  };
+
+  const handleSaveAll = async () => {
+    if (!doctorId) return;
+    const entries = schedule.map((s) => ({
+      dayOfWeek: s.dayOfWeek,
+      startTime: time12to24(s.startTime),
+      endTime: time12to24(s.endTime),
+      isActive: s.enabled,
+    }));
+    try {
+      await setAvailability({ doctorId, entries }).unwrap();
+      setHasChanges(false);
+      Alert.alert('Saved', 'Working hours updated successfully.');
+    } catch {
+      Alert.alert('Error', 'Failed to save working hours.');
+    }
+  };
+
   if (selectedDay) {
-    const dayData = schedule.find((d) => d.day === selectedDay);
+    const dayData = schedule.find((d) => d.day === selectedDay) || schedule[0];
+    const startHour12 = dayData.startTime;
+    const endHour12 = dayData.endTime;
+    const startIsAM = startHour12.includes('AM');
+    const endIsAM = endHour12.includes('AM');
+
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
@@ -55,14 +143,28 @@ export default function WorkingHoursScreen() {
           <Text style={styles.timeLabel}>Start</Text>
           <View style={styles.timePickerRow}>
             <View style={styles.timeBox}>
-              <Text style={styles.timeValue}>{dayData?.startTime.split(' ')[0]}</Text>
+              <Text style={styles.timeValue}>{startHour12.split(' ')[0]}</Text>
             </View>
             <View style={styles.ampmRow}>
-              <TouchableOpacity style={[styles.ampmBtn, styles.ampmBtnActive]} activeOpacity={0.8}>
-                <Text style={[styles.ampmText, styles.ampmTextActive]}>am</Text>
+              <TouchableOpacity
+                style={[styles.ampmBtn, startIsAM && styles.ampmBtnActive]}
+                activeOpacity={0.8}
+                onPress={() => {
+                  const time = startHour12.split(' ')[0];
+                  handleSaveDay({ ...dayData, startTime: `${time} AM` });
+                }}
+              >
+                <Text style={[styles.ampmText, startIsAM && styles.ampmTextActive]}>am</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.ampmBtn} activeOpacity={0.8}>
-                <Text style={styles.ampmText}>pm</Text>
+              <TouchableOpacity
+                style={[styles.ampmBtn, !startIsAM && styles.ampmBtnActive]}
+                activeOpacity={0.8}
+                onPress={() => {
+                  const time = startHour12.split(' ')[0];
+                  handleSaveDay({ ...dayData, startTime: `${time} PM` });
+                }}
+              >
+                <Text style={[styles.ampmText, !startIsAM && styles.ampmTextActive]}>pm</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -70,23 +172,48 @@ export default function WorkingHoursScreen() {
           <Text style={[styles.timeLabel, { marginTop: 32 }]}>End</Text>
           <View style={styles.timePickerRow}>
             <View style={styles.timeBox}>
-              <Text style={styles.timeValue}>{dayData?.endTime.split(' ')[0]}</Text>
+              <Text style={styles.timeValue}>{endHour12.split(' ')[0]}</Text>
             </View>
             <View style={styles.ampmRow}>
-              <TouchableOpacity style={styles.ampmBtn} activeOpacity={0.8}>
-                <Text style={styles.ampmText}>am</Text>
+              <TouchableOpacity
+                style={[styles.ampmBtn, endIsAM && styles.ampmBtnActive]}
+                activeOpacity={0.8}
+                onPress={() => {
+                  const time = endHour12.split(' ')[0];
+                  handleSaveDay({ ...dayData, endTime: `${time} AM` });
+                }}
+              >
+                <Text style={[styles.ampmText, endIsAM && styles.ampmTextActive]}>am</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[styles.ampmBtn, styles.ampmBtnActive]} activeOpacity={0.8}>
-                <Text style={[styles.ampmText, styles.ampmTextActive]}>pm</Text>
+              <TouchableOpacity
+                style={[styles.ampmBtn, !endIsAM && styles.ampmBtnActive]}
+                activeOpacity={0.8}
+                onPress={() => {
+                  const time = endHour12.split(' ')[0];
+                  handleSaveDay({ ...dayData, endTime: `${time} PM` });
+                }}
+              >
+                <Text style={[styles.ampmText, !endIsAM && styles.ampmTextActive]}>pm</Text>
               </TouchableOpacity>
             </View>
           </View>
         </ScrollView>
+      </SafeAreaView>
+    );
+  }
 
-        <View style={styles.bottomBar}>
-          <TouchableOpacity style={styles.saveBtn} activeOpacity={0.85}>
-            <Text style={styles.saveBtnText}>Save</Text>
+  if (loadingAvailability) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} activeOpacity={0.7}>
+            <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
           </TouchableOpacity>
+          <Text style={styles.headerTitle}>Working hours</Text>
+          <View style={{ width: 40 }} />
+        </View>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#BD632F" />
         </View>
       </SafeAreaView>
     );
@@ -125,8 +252,17 @@ export default function WorkingHoursScreen() {
       </ScrollView>
 
       <View style={styles.bottomBar}>
-        <TouchableOpacity style={styles.saveBtn} activeOpacity={0.85}>
-          <Text style={styles.saveBtnText}>Save</Text>
+        <TouchableOpacity
+          style={[styles.saveBtn, (!hasChanges || saving) && styles.saveBtnDisabled]}
+          onPress={handleSaveAll}
+          activeOpacity={0.85}
+          disabled={!hasChanges || saving}
+        >
+          {saving ? (
+            <ActivityIndicator size="small" color="#FFFFFF" />
+          ) : (
+            <Text style={styles.saveBtnText}>Save</Text>
+          )}
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -153,6 +289,8 @@ const styles = StyleSheet.create({
   ampmText: { fontSize: 14, fontWeight: '600', color: '#7C7672' },
   ampmTextActive: { color: '#FFFFFF' },
   bottomBar: { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: '#FAF9F6', paddingHorizontal: 20, paddingVertical: 16, paddingBottom: 30 },
-  saveBtn: { backgroundColor: '#E6E1DC', height: 52, borderRadius: 26, justifyContent: 'center', alignItems: 'center' },
+  saveBtn: { backgroundColor: '#BD632F', height: 52, borderRadius: 26, justifyContent: 'center', alignItems: 'center' },
+  saveBtnDisabled: { backgroundColor: '#E6E1DC' },
   saveBtnText: { color: '#FFFFFF', fontSize: 16, fontWeight: '700' },
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
 });

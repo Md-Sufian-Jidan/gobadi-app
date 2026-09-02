@@ -7,64 +7,14 @@ import {
   TouchableOpacity,
   TextInput,
   ScrollView,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useGetMyPatientsQuery } from '@/store/discountsApi';
 
 type TabType = 'all' | 'discountGiven';
-
-const MOCK_PATIENTS = [
-  {
-    id: '1',
-    name: 'Donald Tramp',
-    owner: 'Habib Ullah Bashar',
-    lastAppointment: 'Today',
-    discount: 10,
-  },
-  {
-    id: '2',
-    name: 'Melinda Gates',
-    owner: 'Sophia Rodriguez',
-    lastAppointment: '14th August',
-    discount: 12,
-  },
-  {
-    id: '3',
-    name: 'Melinda Gates',
-    owner: 'Sophia Rodriguez',
-    lastAppointment: '14th August',
-    discount: 10,
-  },
-  {
-    id: '4',
-    name: 'Melinda Gates',
-    owner: 'Sophia Rodriguez',
-    lastAppointment: '14th August',
-    discount: 5,
-  },
-  {
-    id: '5',
-    name: 'Donald Tramp',
-    owner: 'Habib Ullah Bashar',
-    lastAppointment: 'Yesterday',
-    discount: 0,
-  },
-  {
-    id: '6',
-    name: 'Courtney Henry',
-    owner: 'Sophia Rodriguez',
-    lastAppointment: '14th August',
-    discount: 15,
-  },
-  {
-    id: '7',
-    name: 'Theresa Webb',
-    owner: 'Sophia Rodriguez',
-    lastAppointment: '14th August',
-    discount: 10,
-  },
-];
 
 export default function ApplyDiscountScreen() {
   const router = useRouter();
@@ -73,17 +23,13 @@ export default function ApplyDiscountScreen() {
   const [activeTab, setActiveTab] = useState<TabType>('all');
   const [searchQuery, setSearchQuery] = useState('');
 
-  const filteredPatients = MOCK_PATIENTS.filter((p) => {
-    const matchesSearch =
-      p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      p.owner.toLowerCase().includes(searchQuery.toLowerCase());
-    if (activeTab === 'discountGiven') {
-      return matchesSearch && p.discount > 0;
-    }
-    return matchesSearch;
+  const { data: patients, isLoading } = useGetMyPatientsQuery({
+    search: searchQuery || undefined,
+    discountGiven: activeTab === 'discountGiven' ? 'true' : undefined,
   });
 
-  const discountGivenCount = MOCK_PATIENTS.filter((p) => p.discount > 0).length;
+  const filteredPatients = patients || [];
+  const discountGivenCount = patients?.filter((p) => p.hasActiveDiscount).length || 0;
 
   return (
     <SafeAreaView style={styles.container}>
@@ -126,7 +72,7 @@ export default function ApplyDiscountScreen() {
             activeOpacity={0.8}
           >
             <Text style={[styles.tabText, activeTab === 'all' && styles.tabTextActive]}>
-              All ({MOCK_PATIENTS.length})
+              All ({filteredPatients.length})
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -140,41 +86,45 @@ export default function ApplyDiscountScreen() {
           </TouchableOpacity>
         </View>
 
-        {filteredPatients.map((patient) => (
-          <TouchableOpacity
-            key={patient.id}
-            style={styles.patientCard}
-            onPress={() =>
-              router.push({
-                pathname: '/discount',
-                params: {
-                  patientId: patient.id,
-                  patientName: patient.name,
-                  ownerName: patient.owner,
-                  existingDiscount: patient.discount.toString(),
-                },
-              })
-            }
-            activeOpacity={0.7}
-          >
-            <View style={styles.patientAvatar}>
-              <Ionicons name="paw" size={20} color="#BD632F" />
-            </View>
-            <View style={styles.patientInfo}>
-              <Text style={styles.patientName}>{patient.name}</Text>
-              <Text style={styles.patientOwner}>Owner: {patient.owner}</Text>
-              <Text style={styles.patientLastAppointment}>
-                Last appointment: {patient.lastAppointment}
-              </Text>
-            </View>
-            {patient.discount > 0 && (
-              <View style={styles.discountBadge}>
-                <Text style={styles.discountBadgeText}>{patient.discount}%</Text>
+        {isLoading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#BD632F" />
+          </View>
+        ) : (
+          filteredPatients.map((patient) => (
+            <TouchableOpacity
+              key={patient.id}
+              style={styles.patientCard}
+              onPress={() =>
+                router.push({
+                  pathname: '/discount',
+                  params: {
+                    patientId: patient.id.toString(),
+                    patientName: patient.name,
+                    ownerName: patient.animalName || '',
+                    existingDiscount: patient.discountPercent?.toString() || '0',
+                  },
+                })
+              }
+              activeOpacity={0.7}
+            >
+              <View style={styles.patientAvatar}>
+                <Ionicons name="paw" size={20} color="#BD632F" />
               </View>
-            )}
-            <Ionicons name="chevron-forward" size={18} color="#9C9690" />
-          </TouchableOpacity>
-        ))}
+              <View style={styles.patientInfo}>
+                <Text style={styles.patientName}>{patient.name}</Text>
+                <Text style={styles.patientOwner}>Owner: {patient.animalName || 'N/A'}</Text>
+                <Text style={styles.patientPhone}>Phone: {patient.phone}</Text>
+              </View>
+              {patient.hasActiveDiscount && patient.discountPercent ? (
+                <View style={styles.discountBadge}>
+                  <Text style={styles.discountBadgeText}>{patient.discountPercent}%</Text>
+                </View>
+              ) : null}
+              <Ionicons name="chevron-forward" size={18} color="#9C9690" />
+            </TouchableOpacity>
+          ))
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -306,7 +256,7 @@ const styles = StyleSheet.create({
     color: '#7C7672',
     marginTop: 2,
   },
-  patientLastAppointment: {
+  patientPhone: {
     fontSize: 12,
     fontWeight: '500',
     color: '#9C9690',
@@ -322,5 +272,11 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
     color: '#BD632F',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 40,
   },
 });

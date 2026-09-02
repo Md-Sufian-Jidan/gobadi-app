@@ -1,65 +1,162 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   StyleSheet,
   View,
   Text,
   TouchableOpacity,
   ScrollView,
-  Image,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useGetNotificationsQuery, useMarkNotificationReadMutation } from '@/store/notificationsApi';
+import type { Notification } from '@/store/notificationsApi';
 
 type FilterTab = 'all' | 'appointments' | 'patients' | 'messages';
 
-interface NotificationItem {
-  id: string;
-  title: string;
-  description: string;
-  time: string;
-  icon: any;
-  iconBg: string;
-  iconColor: string;
+const TYPE_CONFIG: Record<string, { icon: string; iconBg: string; iconColor: string }> = {
+  booking: { icon: 'calendar', iconBg: '#FFF2EB', iconColor: '#BD632F' },
+  message: { icon: 'chatbubble-ellipses', iconBg: '#FFF2EB', iconColor: '#BD632F' },
+  payment: { icon: 'wallet', iconBg: '#E8F5E9', iconColor: '#4CAF50' },
+  reminder: { icon: 'notifications', iconBg: '#FFF2EB', iconColor: '#BD632F' },
+  prescription_ready: { icon: 'medkit', iconBg: '#E8F5E9', iconColor: '#4CAF50' },
+  system: { icon: 'volume-high', iconBg: '#E8F5E9', iconColor: '#4CAF50' },
+  order: { icon: 'cart', iconBg: '#E3F2FD', iconColor: '#2196F3' },
+  delivery: { icon: 'bicycle', iconBg: '#E3F2FD', iconColor: '#2196F3' },
+  ai_ready: { icon: 'sparkles', iconBg: '#F3E5F5', iconColor: '#9C27B0' },
+  promotion: { icon: 'pricetag', iconBg: '#FFF9C4', iconColor: '#F9A825' },
+  referral: { icon: 'people', iconBg: '#E8F5E9', iconColor: '#4CAF50' },
+};
+
+const TAB_FILTER_MAP: Record<FilterTab, string[]> = {
+  all: [],
+  appointments: ['booking', 'reminder'],
+  patients: ['message', 'prescription_ready'],
+  messages: ['message'],
+};
+
+function isToday(dateStr: string): boolean {
+  const date = new Date(dateStr);
+  const now = new Date();
+  return date.toDateString() === now.toDateString();
 }
 
-const MOCK_NOTIFICATIONS: Record<string, { today: NotificationItem[]; thisWeek: NotificationItem[] }> = {
-  all: {
-    today: [
-      { id: '1', title: 'Appointment Starting Soon', description: 'Appointment with Rahim\'s Cow', time: 'Today, 9:15 AM', icon: require('@/assets/images/doctor.png'), iconBg: '#FFF2EB', iconColor: '#BD632F' },
-      { id: '2', title: 'New Consultation Request', description: 'A farmer requested a consultation for a sick cow.', time: 'Today, 8:00 AM', icon: require('@/assets/images/doctor.png'), iconBg: '#FFF2EB', iconColor: '#BD632F' },
-    ],
-    thisWeek: [
-      { id: '3', title: 'Patient Follow-up Due', description: 'Follow-up consultation for Donald Tramp is due today.', time: 'Mon, 8:00 PM', icon: 'checkmark-circle', iconBg: '#E8F5E9', iconColor: '#4CAF50' },
-    ],
-  },
-  appointments: {
-    today: [
-      { id: '1', title: 'Appointment Starting Soon', description: 'Appointment with Rahim\'s Cow', time: 'Today, 9:15 AM', icon: require('@/assets/images/doctor.png'), iconBg: '#FFF2EB', iconColor: '#BD632F' },
-    ],
-    thisWeek: [],
-  },
-  patients: {
-    today: [
-      { id: '2', title: 'New Consultation Request', description: 'A farmer requested a consultation for a sick cow.', time: 'Today, 8:00 AM', icon: require('@/assets/images/doctor.png'), iconBg: '#FFF2EB', iconColor: '#BD632F' },
-    ],
-    thisWeek: [
-      { id: '3', title: 'Patient Follow-up Due', description: 'Follow-up consultation for Donald Tramp is due today.', time: 'Mon, 8:00 PM', icon: 'checkmark-circle', iconBg: '#E8F5E9', iconColor: '#4CAF50' },
-    ],
-  },
-  messages: {
-    today: [
-      { id: '2', title: 'New Consultation Request', description: 'A farmer requested a consultation for a sick cow.', time: 'Today, 8:00 AM', icon: require('@/assets/images/doctor.png'), iconBg: '#FFF2EB', iconColor: '#BD632F' },
-    ],
-    thisWeek: [],
-  },
-};
+function isThisWeek(dateStr: string): boolean {
+  const date = new Date(dateStr);
+  const now = new Date();
+  const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+  return date >= weekAgo && !isToday(dateStr);
+}
+
+function formatTime(dateStr: string): string {
+  const date = new Date(dateStr);
+  if (isToday(dateStr)) {
+    return `Today, ${date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}`;
+  }
+  return date.toLocaleDateString('en-US', { weekday: 'short', hour: 'numeric', minute: '2-digit', hour12: true });
+}
 
 export default function DoctorNotificationsScreen() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<FilterTab>('all');
+  const { data: notifications, isLoading, isError } = useGetNotificationsQuery();
+  const [markAsRead] = useMarkNotificationReadMutation();
 
-  const filteredNotifications = MOCK_NOTIFICATIONS[activeTab] || MOCK_NOTIFICATIONS.all;
+  const filteredNotifications = useMemo(() => {
+    if (!notifications) return { today: [], thisWeek: [], older: [] };
+
+    let filtered = notifications;
+    const tabTypes = TAB_FILTER_MAP[activeTab];
+    if (tabTypes.length > 0) {
+      filtered = notifications.filter((n) => tabTypes.includes(n.type));
+    }
+
+    const today: Notification[] = [];
+    const thisWeek: Notification[] = [];
+    const older: Notification[] = [];
+
+    for (const notif of filtered) {
+      if (isToday(notif.createdAt)) {
+        today.push(notif);
+      } else if (isThisWeek(notif.createdAt)) {
+        thisWeek.push(notif);
+      } else {
+        older.push(notif);
+      }
+    }
+
+    return { today, thisWeek, older };
+  }, [notifications, activeTab]);
+
+  const handlePress = (notif: Notification) => {
+    if (!notif.isRead) {
+      markAsRead(notif.id);
+    }
+  };
+
+  const renderNotification = (item: Notification) => {
+    const config = TYPE_CONFIG[item.type] || TYPE_CONFIG.system;
+    return (
+      <TouchableOpacity
+        key={item.id}
+        style={[styles.notificationCard, !item.isRead && styles.notificationCardUnread]}
+        onPress={() => handlePress(item)}
+        activeOpacity={0.7}
+      >
+        <View style={[styles.notifIcon, { backgroundColor: config.iconBg }]}>
+          <Ionicons name={config.icon as any} size={20} color={config.iconColor} />
+        </View>
+        <View style={styles.notifInfo}>
+          <Text style={styles.notifTitle}>{item.title}</Text>
+          <Text style={styles.notifDesc}>{item.body}</Text>
+          <Text style={styles.notifTime}>{formatTime(item.createdAt)}</Text>
+        </View>
+        {!item.isRead && <View style={styles.unreadDot} />}
+      </TouchableOpacity>
+    );
+  };
+
+  if (isLoading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} activeOpacity={0.7}>
+            <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Notifications</Text>
+          <TouchableOpacity style={styles.settingsBtn} onPress={() => router.push('/doctor-notification-preferences')} activeOpacity={0.7}>
+            <Ionicons name="settings-outline" size={20} color="#FFFFFF" />
+          </TouchableOpacity>
+        </View>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#BD632F" />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (isError) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} activeOpacity={0.7}>
+            <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Notifications</Text>
+          <TouchableOpacity style={styles.settingsBtn} onPress={() => router.push('/doctor-notification-preferences')} activeOpacity={0.7}>
+            <Ionicons name="settings-outline" size={20} color="#FFFFFF" />
+          </TouchableOpacity>
+        </View>
+        <View style={styles.loadingContainer}>
+          <Ionicons name="cloud-offline-outline" size={48} color="#9C9690" />
+          <Text style={styles.errorText}>Failed to load notifications</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  const hasNotifications = filteredNotifications.today.length > 0 || filteredNotifications.thisWeek.length > 0 || filteredNotifications.older.length > 0;
 
   return (
     <SafeAreaView style={styles.container}>
@@ -89,47 +186,31 @@ export default function DoctorNotificationsScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
+        {!hasNotifications && (
+          <View style={styles.emptyContainer}>
+            <Ionicons name="notifications-off-outline" size={48} color="#9C9690" />
+            <Text style={styles.emptyText}>No notifications yet</Text>
+          </View>
+        )}
+
         {filteredNotifications.today.length > 0 && (
           <>
             <Text style={styles.sectionTitle}>Today</Text>
-            {filteredNotifications.today.map((item) => (
-              <View key={item.id} style={styles.notificationCard}>
-                {typeof item.icon === 'number' ? (
-                  <Image source={item.icon} style={styles.notifAvatar} />
-                ) : (
-                  <View style={[styles.notifIcon, { backgroundColor: item.iconBg }]}>
-                    <Ionicons name={item.icon as any} size={20} color={item.iconColor} />
-                  </View>
-                )}
-                <View style={styles.notifInfo}>
-                  <Text style={styles.notifTitle}>{item.title}</Text>
-                  <Text style={styles.notifDesc}>{item.description}</Text>
-                  <Text style={styles.notifTime}>{item.time}</Text>
-                </View>
-              </View>
-            ))}
+            {filteredNotifications.today.map(renderNotification)}
           </>
         )}
 
         {filteredNotifications.thisWeek.length > 0 && (
           <>
             <Text style={[styles.sectionTitle, { marginTop: 20 }]}>This Week</Text>
-            {filteredNotifications.thisWeek.map((item) => (
-              <View key={item.id} style={styles.notificationCard}>
-                {typeof item.icon === 'number' ? (
-                  <Image source={item.icon} style={styles.notifAvatar} />
-                ) : (
-                  <View style={[styles.notifIcon, { backgroundColor: item.iconBg }]}>
-                    <Ionicons name={item.icon as any} size={20} color={item.iconColor} />
-                  </View>
-                )}
-                <View style={styles.notifInfo}>
-                  <Text style={styles.notifTitle}>{item.title}</Text>
-                  <Text style={styles.notifDesc}>{item.description}</Text>
-                  <Text style={styles.notifTime}>{item.time}</Text>
-                </View>
-              </View>
-            ))}
+            {filteredNotifications.thisWeek.map(renderNotification)}
+          </>
+        )}
+
+        {filteredNotifications.older.length > 0 && (
+          <>
+            <Text style={[styles.sectionTitle, { marginTop: 20 }]}>Earlier</Text>
+            {filteredNotifications.older.map(renderNotification)}
           </>
         )}
       </ScrollView>
@@ -150,11 +231,16 @@ const styles = StyleSheet.create({
   tabTextActive: { color: '#BD632F' },
   scrollContainer: { paddingHorizontal: 20, paddingBottom: 40 },
   sectionTitle: { fontSize: 16, fontWeight: '700', color: '#1A1817', marginBottom: 12 },
-  notificationCard: { flexDirection: 'row', backgroundColor: '#FFFFFF', borderRadius: 14, borderWidth: 1, borderColor: '#E6E1DC', padding: 14, marginBottom: 10, gap: 12 },
-  notifAvatar: { width: 40, height: 40, borderRadius: 20 },
+  notificationCard: { flexDirection: 'row', backgroundColor: '#FFFFFF', borderRadius: 14, borderWidth: 1, borderColor: '#E6E1DC', padding: 14, marginBottom: 10, gap: 12, alignItems: 'center' },
+  notificationCardUnread: { backgroundColor: '#FFF8F4', borderColor: '#F0D9C8' },
   notifIcon: { width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center' },
   notifInfo: { flex: 1 },
   notifTitle: { fontSize: 14, fontWeight: '700', color: '#1A1817', marginBottom: 2 },
   notifDesc: { fontSize: 12, fontWeight: '500', color: '#7C7672', marginBottom: 4 },
   notifTime: { fontSize: 11, fontWeight: '500', color: '#9C9690' },
+  unreadDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#BD632F' },
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12 },
+  errorText: { fontSize: 14, fontWeight: '500', color: '#9C9690' },
+  emptyContainer: { alignItems: 'center', paddingVertical: 60, gap: 12 },
+  emptyText: { fontSize: 14, fontWeight: '500', color: '#9C9690' },
 });

@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   StyleSheet,
   View,
@@ -9,15 +9,20 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { io } from 'socket.io-client';
 import PrescriptionBottomSheet from '@/components/PrescriptionBottomSheet';
+import { useGetMessagesQuery, useSendMessageMutation } from '@/store/chatApi';
+import { useGetByIdQuery as useGetConsultationQuery } from '@/store/consultationsApi';
+import { API_URL } from '@/constants/api';
 
 type ConsultationState = 'idle' | 'active' | 'ended' | 'prescription_sent';
 
-interface ChatMessage {
+interface ChatMessageUI {
   id: string;
   sender: 'patient' | 'doctor';
   text: string;
@@ -27,27 +32,6 @@ interface ChatMessage {
   prescriptionSize?: string;
 }
 
-const MOCK_MESSAGES: ChatMessage[] = [
-  { id: '1', sender: 'patient', text: 'Assalamualaikum dr.  My cow is sick for 3 days and not eating at all.', time: '09:55' },
-  { id: '2', sender: 'doctor', text: 'Walaikumassalam, I have noted the issue. I will check during consultation', time: '09:55' },
-];
-
-const CONSULTATION_MESSAGES: ChatMessage[] = [
-  { id: '1', sender: 'patient', text: 'My cattle is been sick for almost 3 days straight and not eating anything at all.', time: '09:55' },
-  { id: '2', sender: 'doctor', text: 'What was the temperature?', time: '09:55' },
-];
-
-const ENDED_MESSAGES: ChatMessage[] = [
-  { id: '1', sender: 'patient', text: 'My cattle is been sick for almost 3 days straight and not eating anything at all.', time: '09:55' },
-  { id: '2', sender: 'doctor', text: 'What was the temperature?', time: '09:55' },
-];
-
-const PRESCRIPTION_MESSAGES: ChatMessage[] = [
-  { id: '1', sender: 'patient', text: 'My cattle is been sick for almost 3 days straight and not eating anything at all.', time: '09:55' },
-  { id: '2', sender: 'doctor', text: 'What was the temperature?', time: '09:55' },
-  { id: '3', sender: 'doctor', text: '', time: '09:55', isPrescription: true, prescriptionDate: '18 Aug 2026', prescriptionSize: '420 KB' },
-];
-
 function formatTimeRemaining(seconds: number): string {
   const m = Math.floor(seconds / 60);
   const s = seconds % 60;
@@ -56,19 +40,69 @@ function formatTimeRemaining(seconds: number): string {
 
 export default function ChatScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams<{
+    consultationId?: string;
+    conversationId?: string;
+    patientName?: string;
+  }>();
+
+  const consultationId = params.consultationId || '';
+  const conversationId = params.conversationId ? parseInt(params.conversationId, 10) : undefined;
+  const patientName = params.patientName || 'Patient';
+
+  const { data: consultation } = useGetConsultationQuery(consultationId, { skip: !consultationId });
+  const { data: apiMessages, isLoading: messagesLoading } = useGetMessagesQuery(conversationId, { skip: !conversationId });
+  const [sendMessage, { isLoading: sending }] = useSendMessageMutation();
+
   const [consultationState, setConsultationState] = useState<ConsultationState>('idle');
   const [inputText, setInputText] = useState('');
   const [remainingTime] = useState(14 * 60 + 28);
   const flatListRef = useRef<FlatList>(null);
   const [showPrescriptionSheet, setShowPrescriptionSheet] = useState(false);
+  const [localMessages, setLocalMessages] = useState<ChatMessageUI[]>([]);
 
-  const messages = consultationState === 'prescription_sent'
-    ? PRESCRIPTION_MESSAGES
-    : consultationState === 'ended'
-    ? ENDED_MESSAGES
-    : consultationState === 'active'
-    ? CONSULTATION_MESSAGES
-    : MOCK_MESSAGES;
+  useEffect(() => {
+    if (consultation) {
+      if (consultation.status === 'ENDED') {
+        setConsultationState('ended');
+      } else if (consultation.status === 'IN_PROGRESS') {
+        setConsultationState('active');
+      }
+    }
+  }, [consultation]);
+
+  useEffect(() => {
+    if (apiMessages) {
+      const mapped: ChatMessageUI[] = apiMessages.map((msg) => ({
+        id: msg.id.toString(),
+        sender: msg.sender === 'doctor' ? 'doctor' : 'patient',
+        text: msg.text,
+        time: new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        isPrescription: !!msg.attachmentUrl,
+        prescriptionDate: msg.attachmentUrl ? new Date(msg.createdAt).toLocaleDateString() : undefined,
+        prescriptionSize: msg.attachmentUrl ? 'PDF' : undefined,
+      }));
+      setLocalMessages(mapped);
+    }
+  }, [apiMessages]);
+
+  useEffect(() => {
+    if (!conversationId) return;
+    const socket = io(API_URL, { transports: ['websocket'] });
+    socket.on('connect', () => {
+      socket.emit('joinConversation', conversationId);
+    });
+    socket.on('newMessage', (msg: any) => {
+      const newMsg: ChatMessageUI = {
+        id: msg.id?.toString() || Date.now().toString(),
+        sender: msg.sender === 'doctor' ? 'doctor' : 'patient',
+        text: msg.text,
+        time: new Date(msg.createdAt || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      };
+      setLocalMessages((prev) => [...prev, newMsg]);
+    });
+    return () => { socket.disconnect(); };
+  }, [conversationId]);
 
   const handleStartConsultation = () => {
     setConsultationState('active');
@@ -86,12 +120,25 @@ export default function ChatScreen() {
     setConsultationState('prescription_sent');
   };
 
-  const handleSendMessage = () => {
-    if (!inputText.trim()) return;
+  const handleSendMessage = async () => {
+    if (!inputText.trim() || sending) return;
+    const text = inputText.trim();
     setInputText('');
+    const optimistic: ChatMessageUI = {
+      id: `temp-${Date.now()}`,
+      sender: 'doctor',
+      text,
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    };
+    setLocalMessages((prev) => [...prev, optimistic]);
+    try {
+      await sendMessage({ text, conversationId }).unwrap();
+    } catch {
+      setLocalMessages((prev) => prev.filter((m) => m.id !== optimistic.id));
+    }
   };
 
-  const renderMessage = ({ item }: { item: ChatMessage }) => {
+  const renderMessage = ({ item }: { item: ChatMessageUI }) => {
     const isDoctor = item.sender === 'doctor';
 
     if (item.isPrescription) {
@@ -135,7 +182,6 @@ export default function ChatScreen() {
     );
   };
 
-  // ─── Main Chat View ───
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
@@ -143,7 +189,7 @@ export default function ChatScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} activeOpacity={0.7}>
           <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Donald Tramp</Text>
+        <Text style={styles.headerTitle}>{patientName}</Text>
         <View style={styles.headerActions}>
           <TouchableOpacity style={styles.headerActionBtn} activeOpacity={0.7} onPress={() => router.push('/video-call')}>
             <Ionicons name="call" size={18} color="#1A1817" />
@@ -162,15 +208,17 @@ export default function ChatScreen() {
       </View>
 
       {/* Upcoming Appointment Banner (idle & active states) */}
-      {(consultationState === 'idle' || consultationState === 'active') && (
+      {(consultationState === 'idle' || consultationState === 'active') && consultation && (
         <View style={styles.upcomingBanner}>
           <View style={styles.upcomingBannerLeft}>
             <View style={styles.upcomingBannerAvatar}>
               <Ionicons name="paw" size={24} color="#BD632F" />
             </View>
             <View>
-              <Text style={styles.upcomingBannerTime}>10:00 AM · Today</Text>
-              <Text style={styles.upcomingBannerName}>Donald Tramp</Text>
+              <Text style={styles.upcomingBannerTime}>
+                {new Date(consultation.startedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} · Today
+              </Text>
+              <Text style={styles.upcomingBannerName}>{patientName}</Text>
             </View>
           </View>
           <TouchableOpacity style={styles.upcomingBannerJoin} activeOpacity={0.85}>
@@ -183,8 +231,8 @@ export default function ChatScreen() {
       {consultationState === 'active' && (
         <View style={styles.consultationBanner}>
           <Text style={styles.consultationBannerTitle}>Consultation started</Text>
-          <Text style={styles.consultationBannerDesc}>You are now in consultation with Sophia Rodriguez</Text>
-          <Text style={styles.consultationBannerBullet}>•  Start time: 10:00 AM</Text>
+          <Text style={styles.consultationBannerDesc}>You are now in consultation with {patientName}</Text>
+          <Text style={styles.consultationBannerBullet}>•  Start time: {consultation ? new Date(consultation.startedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}</Text>
           <Text style={styles.consultationBannerBullet}>•  Max Duration: 30 min</Text>
           <Text style={styles.consultationBannerRemaining}>•  Remaining time: {formatTimeRemaining(remainingTime)}</Text>
           <TouchableOpacity style={styles.endConsultationBtn} onPress={handleEndConsultation} activeOpacity={0.85}>
@@ -197,8 +245,8 @@ export default function ChatScreen() {
       {(consultationState === 'ended' || consultationState === 'prescription_sent') && (
         <View style={styles.consultationBanner}>
           <Text style={styles.consultationBannerEndedTitle}>Consultation ended!</Text>
-          <Text style={styles.consultationBannerDesc}>Your consultation with Sophia Rodriguez has ended.</Text>
-          <Text style={styles.consultationBannerBullet}>•  Start time: 10:00 AM</Text>
+          <Text style={styles.consultationBannerDesc}>Your consultation with {patientName} has ended.</Text>
+          <Text style={styles.consultationBannerBullet}>•  Start time: {consultation ? new Date(consultation.startedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}</Text>
           <Text style={styles.consultationBannerBullet}>•  Max Duration: 30 min</Text>
           <Text style={styles.consultationBannerRemaining}>•  Remaining time: {formatTimeRemaining(remainingTime)}</Text>
         </View>
@@ -227,19 +275,25 @@ export default function ChatScreen() {
       )}
 
       {/* Messages */}
-      <FlatList
-        ref={flatListRef}
-        data={messages}
-        keyExtractor={(item) => item.id}
-        renderItem={renderMessage}
-        contentContainerStyle={styles.messagesList}
-        showsVerticalScrollIndicator={false}
-        ListHeaderComponent={
-          <View style={styles.dateSeparator}>
-            <Text style={styles.dateSeparatorText}>Today</Text>
-          </View>
-        }
-      />
+      {messagesLoading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#BD632F" />
+        </View>
+      ) : (
+        <FlatList
+          ref={flatListRef}
+          data={localMessages}
+          keyExtractor={(item) => item.id}
+          renderItem={renderMessage}
+          contentContainerStyle={styles.messagesList}
+          showsVerticalScrollIndicator={false}
+          ListHeaderComponent={
+            <View style={styles.dateSeparator}>
+              <Text style={styles.dateSeparatorText}>Today</Text>
+            </View>
+          }
+        />
+      )}
 
       {/* Quick Actions (active state) */}
       {consultationState === 'active' && (
@@ -284,8 +338,17 @@ export default function ChatScreen() {
             <TouchableOpacity style={styles.plusBtn} activeOpacity={0.8}>
               <Ionicons name="add" size={22} color="#BD632F" />
             </TouchableOpacity>
-            <TouchableOpacity style={styles.micBtn} activeOpacity={0.8}>
-              <Ionicons name="mic" size={18} color="#FFFFFF" />
+            <TouchableOpacity
+              style={[styles.micBtn, sending && { opacity: 0.5 }]}
+              activeOpacity={0.8}
+              onPress={handleSendMessage}
+              disabled={sending}
+            >
+              {sending ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <Ionicons name="mic" size={18} color="#FFFFFF" />
+              )}
             </TouchableOpacity>
           </View>
         </KeyboardAvoidingView>
@@ -378,4 +441,6 @@ const styles = StyleSheet.create({
   textInput: { flex: 1, fontSize: 14, color: '#1A1817', height: '100%' },
   plusBtn: { width: 32, height: 32, borderRadius: 16, borderWidth: 1.5, borderColor: '#BD632F', justifyContent: 'center', alignItems: 'center' },
   micBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#BD632F', justifyContent: 'center', alignItems: 'center' },
+
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
 });

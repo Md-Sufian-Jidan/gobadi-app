@@ -7,10 +7,16 @@ import {
   TouchableOpacity,
   TextInput,
   ScrollView,
+  ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import {
+  useGetDiscountForPatientQuery,
+  useEditDiscountMutation,
+} from '@/store/discountsApi';
 
 const QUICK_DISCOUNTS = [5, 10, 15, 20];
 
@@ -25,13 +31,22 @@ export default function DiscountScreen() {
     existingDiscount?: string;
   }>();
 
-  const patientName = params.patientName || 'Melinda Gates';
-  const ownerName = params.ownerName || 'Sophia Rodriguez';
-  const existingDiscount = params.existingDiscount ? parseInt(params.existingDiscount, 10) : 0;
+  const patientId = params.patientId || '';
+  const patientName = params.patientName || 'Patient';
+  const ownerName = params.ownerName || 'Owner';
 
-  const [selectedDiscount, setSelectedDiscount] = useState<number>(existingDiscount);
+  const { data: existingDiscount, isLoading: discountLoading } = useGetDiscountForPatientQuery(
+    patientId,
+    { skip: !patientId }
+  );
+  const [editDiscount, { isLoading: saving }] = useEditDiscountMutation();
+
+  const initialPercent = existingDiscount?.percent || 0;
+  const [selectedDiscount, setSelectedDiscount] = useState<number>(
+    QUICK_DISCOUNTS.includes(initialPercent) ? initialPercent : 0
+  );
   const [customDiscount, setCustomDiscount] = useState(
-    existingDiscount > 0 && !QUICK_DISCOUNTS.includes(existingDiscount) ? existingDiscount.toString() : ''
+    initialPercent > 0 && !QUICK_DISCOUNTS.includes(initialPercent) ? initialPercent.toString() : ''
   );
 
   const discountPercent = selectedDiscount || (customDiscount ? parseInt(customDiscount, 10) : 0);
@@ -54,6 +69,38 @@ export default function DiscountScreen() {
       setSelectedDiscount(0);
     }
   };
+
+  const handleSave = async () => {
+    if (!hasDiscount || !existingDiscount) return;
+    try {
+      await editDiscount({
+        id: existingDiscount.id,
+        data: { percent: discountPercent },
+      }).unwrap();
+      Alert.alert('Success', 'Discount updated successfully', [
+        { text: 'OK', onPress: () => router.back() },
+      ]);
+    } catch {
+      Alert.alert('Error', 'Failed to update discount');
+    }
+  };
+
+  if (discountLoading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} activeOpacity={0.7}>
+            <Ionicons name="arrow-back" size={20} color="#BD632F" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Discount details</Text>
+          <View style={{ width: 44 }} />
+        </View>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#BD632F" />
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -87,7 +134,9 @@ export default function DiscountScreen() {
           </View>
         </View>
 
-        <Text style={styles.lastAppointment}>Last appointment: 14th August</Text>
+        <Text style={styles.lastAppointment}>
+          {existingDiscount ? `Current discount: ${existingDiscount.percent}%` : 'No active discount'}
+        </Text>
 
         <View style={styles.priceCard}>
           <View style={styles.priceRow}>
@@ -144,20 +193,22 @@ export default function DiscountScreen() {
             <Text style={styles.percentIcon}>%</Text>
           </View>
         </View>
-
       </ScrollView>
 
       <View style={styles.bottomBar}>
         <TouchableOpacity
-          style={[styles.continueBtn, !hasDiscount && styles.continueBtnDisabled]}
-          onPress={() => router.back()}
+          style={[styles.continueBtn, (!hasDiscount || saving) && styles.continueBtnDisabled]}
+          onPress={handleSave}
           activeOpacity={0.85}
-          disabled={!hasDiscount}
+          disabled={!hasDiscount || saving}
         >
-          <Text style={styles.continueBtnText}>Continue</Text>
+          {saving ? (
+            <ActivityIndicator size="small" color="#FFFFFF" />
+          ) : (
+            <Text style={styles.continueBtnText}>Continue</Text>
+          )}
         </TouchableOpacity>
       </View>
-
     </SafeAreaView>
   );
 }
@@ -364,5 +415,10 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '700',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });

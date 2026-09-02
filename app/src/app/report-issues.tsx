@@ -7,10 +7,12 @@ import {
   TouchableOpacity,
   ScrollView,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useCreateTicketMutation } from '@/store/supportApi';
 
 const ISSUE_TYPES = [
   'App Not Working',
@@ -25,21 +27,27 @@ export default function ReportIssuesScreen() {
   const [selectedIssue, setSelectedIssue] = useState('E.g App Not Working');
   const [description, setDescription] = useState('');
   const [showDropdown, setShowDropdown] = useState(false);
-  const [fileName, setFileName] = useState<string | null>(null);
-
-  function handleBrowseFile() {
-    setFileName('screenshot_bug_log.png');
-    Alert.alert('File Attached', 'Screenshot attached successfully.');
-  }
+  const [createTicket, { isLoading }] = useCreateTicketMutation();
 
   function handleSubmit() {
     if (!description.trim()) {
       Alert.alert('Missing Info', 'Please describe the issue in detail.');
       return;
     }
-    Alert.alert('Report Submitted', 'Thank you for reporting. Our team will inspect it promptly.', [
-      { text: 'OK', onPress: () => router.back() },
-    ]);
+    if (selectedIssue === 'E.g App Not Working') {
+      Alert.alert('Missing Info', 'Please select an issue type.');
+      return;
+    }
+    createTicket({ subject: selectedIssue, message: description })
+      .unwrap()
+      .then(() => {
+        Alert.alert('Report Submitted', 'Thank you for reporting. Our team will inspect it promptly.', [
+          { text: 'OK', onPress: () => router.back() },
+        ]);
+      })
+      .catch(() => {
+        Alert.alert('Error', 'Failed to submit report. Please try again.');
+      });
   }
 
   return (
@@ -102,35 +110,18 @@ export default function ReportIssuesScreen() {
           />
         </View>
 
-        {/* File Upload Box */}
-        <View style={styles.uploadCard}>
-          <View style={styles.uploadIconBadge}>
-            <Ionicons name="camera-outline" size={24} color="#2B6CB0" />
-          </View>
-          <Text style={styles.uploadTitle}>Drag & Drop</Text>
-          <Text style={styles.uploadSubtitle}>Select File and Upload Here</Text>
-
-          {fileName && <Text style={styles.attachedFileName}>📎 {fileName}</Text>}
-
-          <View style={styles.dashedDivider} />
-
-          <TouchableOpacity
-            style={styles.browseBtn}
-            onPress={handleBrowseFile}
-            activeOpacity={0.8}
-          >
-            <Ionicons name="add" size={18} color="#2B6CB0" style={{ marginRight: 4 }} />
-            <Text style={styles.browseBtnText}>Browse File</Text>
-          </TouchableOpacity>
-        </View>
-
         {/* Submit Button */}
         <TouchableOpacity
-          style={styles.submitBtn}
+          style={[styles.submitBtn, isLoading && styles.submitBtnDisabled]}
           onPress={handleSubmit}
           activeOpacity={0.85}
+          disabled={isLoading}
         >
-          <Text style={styles.submitBtnText}>Submit Report</Text>
+          {isLoading ? (
+            <ActivityIndicator size="small" color="#FFFFFF" />
+          ) : (
+            <Text style={styles.submitBtnText}>Submit Report</Text>
+          )}
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
@@ -230,67 +221,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#1A1817',
   },
-  uploadCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 24,
-    borderWidth: 1,
-    borderColor: '#E6E1DC',
-    padding: 24,
-    alignItems: 'center',
-    marginBottom: 28,
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.02,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  uploadIconBadge: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: '#EDF4FE',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  uploadTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#1A1817',
-    marginBottom: 4,
-  },
-  uploadSubtitle: {
-    fontSize: 12,
-    color: '#7C7672',
-    marginBottom: 12,
-  },
-  attachedFileName: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#BD632F',
-    marginBottom: 10,
-  },
-  dashedDivider: {
-    width: '100%',
-    height: 1,
-    borderWidth: 1,
-    borderColor: '#E6E1DC',
-    borderStyle: 'dashed',
-    marginBottom: 16,
-  },
-  browseBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#EDF4FE',
-    borderRadius: 14,
-    height: 44,
-    paddingHorizontal: 28,
-  },
-  browseBtnText: {
-    color: '#2B6CB0',
-    fontSize: 14,
-    fontWeight: '700',
-  },
   submitBtn: {
     backgroundColor: '#BD632F',
     height: 52,
@@ -302,6 +232,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.15,
     shadowRadius: 6,
     elevation: 3,
+  },
+  submitBtnDisabled: {
+    opacity: 0.7,
   },
   submitBtnText: {
     color: '#FFFFFF',

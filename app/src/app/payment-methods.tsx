@@ -6,34 +6,102 @@ import {
   Text,
   TouchableOpacity,
   ScrollView,
+  ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import {
+  useGetPaymentMethodsQuery,
+  useSetDefaultPaymentMethodMutation,
+  useRemovePaymentMethodMutation,
+} from '@/store/paymentMethodsApi';
 
-interface PaymentMethod {
-  id: string;
-  type: string;
-  label: string;
-  detail: string;
-  isDefault: boolean;
-  isVerified: boolean;
-  icon: string;
-  iconBg: string;
-  iconColor: string;
+const PROVIDER_ICONS: Record<string, { icon: string; bg: string; color: string }> = {
+  bkash: { icon: 'paper-plane', bg: '#E53935', color: '#FFFFFF' },
+  nagad: { icon: 'wallet', bg: '#FF9800', color: '#FFFFFF' },
+  upay: { icon: 'phone-portrait', bg: '#4CAF50', color: '#FFFFFF' },
+  rocket: { icon: 'rocket', bg: '#7B1FA2', color: '#FFFFFF' },
+  visa: { icon: 'card', bg: '#1A237E', color: '#FFFFFF' },
+  mastercard: { icon: 'card', bg: '#E53935', color: '#FFFFFF' },
+  stripe: { icon: 'card', bg: '#635BFF', color: '#FFFFFF' },
+  paypal: { icon: 'logo-paypal', bg: '#003087', color: '#FFFFFF' },
+};
+
+function getProviderConfig(type: string, provider: string) {
+  const key = provider?.toLowerCase() || type?.toLowerCase() || '';
+  return PROVIDER_ICONS[key] || { icon: 'card', bg: '#9C9690', color: '#FFFFFF' };
 }
-
-const PAYMENT_METHODS: PaymentMethod[] = [
-  { id: '1', type: 'bKash', label: 'Personal Account', detail: '01•••• •••••••', isDefault: true, isVerified: true, icon: 'paper-plane', iconBg: '#E53935', iconColor: '#FFFFFF' },
-  { id: '2', type: 'Nagad', label: 'Personal Account', detail: '01•••• •••••••', isDefault: false, isVerified: false, icon: 'wallet', iconBg: '#FF9800', iconColor: '#FFFFFF' },
-  { id: '3', type: 'Visa', label: 'Debit Card', detail: '•••• •••• •••• 3421', isDefault: false, isVerified: false, icon: 'card', iconBg: '#1A237E', iconColor: '#FFFFFF' },
-  { id: '4', type: 'Mastercard', label: 'Credit Card', detail: '•••• •••• •••• 7788', isDefault: false, isVerified: true, icon: 'card', iconBg: '#E53935', iconColor: '#FFFFFF' },
-];
 
 export default function PaymentMethodsScreen() {
   const router = useRouter();
   const isDoctor = useRequireDoctor();
   if (!isDoctor) return null;
+
+  const { data: methods, isLoading, isError } = useGetPaymentMethodsQuery();
+  const [setDefault] = useSetDefaultPaymentMethodMutation();
+  const [removeMethod] = useRemovePaymentMethodMutation();
+
+  const handleSetDefault = async (id: number) => {
+    try {
+      await setDefault(id).unwrap();
+    } catch {
+      Alert.alert('Error', 'Failed to set as default');
+    }
+  };
+
+  const handleRemove = (id: number) => {
+    Alert.alert('Remove Payment Method', 'Are you sure you want to remove this payment method?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Remove',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await removeMethod(id).unwrap();
+          } catch {
+            Alert.alert('Error', 'Failed to remove payment method');
+          }
+        },
+      },
+    ]);
+  };
+
+  if (isLoading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} activeOpacity={0.7}>
+            <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Payment Method</Text>
+          <View style={{ width: 40 }} />
+        </View>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#BD632F" />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (isError) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} activeOpacity={0.7}>
+            <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Payment Method</Text>
+          <View style={{ width: 40 }} />
+        </View>
+        <View style={styles.loadingContainer}>
+          <Ionicons name="cloud-offline-outline" size={48} color="#9C9690" />
+          <Text style={styles.errorText}>Failed to load payment methods</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -46,36 +114,54 @@ export default function PaymentMethodsScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
-        {PAYMENT_METHODS.map((method) => (
-          <View
-            key={method.id}
-            style={[styles.methodCard, method.isDefault && styles.methodCardDefault]}
-          >
-            <View style={styles.methodLeft}>
-              <View style={[styles.methodIcon, { backgroundColor: method.iconBg }]}>
-                <Ionicons name={method.icon as any} size={18} color={method.iconColor} />
-              </View>
-              <View style={styles.methodInfo}>
-                <View style={styles.methodTypeRow}>
-                  <Text style={styles.methodType}>{method.type}</Text>
-                  {method.isDefault && (
-                    <View style={styles.defaultBadge}>
-                      <Text style={styles.defaultText}>Default</Text>
-                    </View>
-                  )}
-                  {(method.isDefault || method.isVerified) && (
-                    <Ionicons name="checkmark-circle" size={14} color="#4CAF50" />
-                  )}
-                </View>
-                <Text style={styles.methodLabel}>{method.label}</Text>
-                <Text style={styles.methodDetail}>{method.detail}</Text>
-              </View>
-            </View>
-            <TouchableOpacity style={styles.menuBtn} activeOpacity={0.7}>
-              <Ionicons name="ellipsis-vertical" size={16} color="#9C9690" />
-            </TouchableOpacity>
+        {!methods || methods.length === 0 ? (
+          <View style={styles.emptyContainer}>
+            <Ionicons name="card-outline" size={48} color="#9C9690" />
+            <Text style={styles.emptyText}>No payment methods added yet</Text>
           </View>
-        ))}
+        ) : (
+          methods.map((method) => {
+            const config = getProviderConfig(method.type, method.provider);
+            return (
+              <TouchableOpacity
+                key={method.id}
+                style={[styles.methodCard, method.isDefault && styles.methodCardDefault]}
+                onLongPress={() => {
+                  const options = [];
+                  if (!method.isDefault) options.push({ text: 'Set as Default', onPress: () => handleSetDefault(method.id) });
+                  options.push({ text: 'Remove', style: 'destructive' as const, onPress: () => handleRemove(method.id) });
+                  options.push({ text: 'Cancel', style: 'cancel' as const });
+                  Alert.alert('Payment Method', method.provider || method.type, options);
+                }}
+                activeOpacity={0.7}
+              >
+                <View style={styles.methodLeft}>
+                  <View style={[styles.methodIcon, { backgroundColor: config.bg }]}>
+                    <Ionicons name={config.icon as any} size={18} color={config.color} />
+                  </View>
+                  <View style={styles.methodInfo}>
+                    <View style={styles.methodTypeRow}>
+                      <Text style={styles.methodType}>{method.provider || method.type}</Text>
+                      {method.isDefault && (
+                        <View style={styles.defaultBadge}>
+                          <Text style={styles.defaultText}>Default</Text>
+                        </View>
+                      )}
+                      {method.isVerified && (
+                        <Ionicons name="checkmark-circle" size={14} color="#4CAF50" />
+                      )}
+                    </View>
+                    <Text style={styles.methodLabel}>{method.type}</Text>
+                    <Text style={styles.methodDetail}>{method.maskedNumber}</Text>
+                  </View>
+                </View>
+                <TouchableOpacity style={styles.menuBtn} activeOpacity={0.7}>
+                  <Ionicons name="ellipsis-vertical" size={16} color="#9C9690" />
+                </TouchableOpacity>
+              </TouchableOpacity>
+            );
+          })
+        )}
 
         <TouchableOpacity
           style={styles.addBtn}
@@ -100,7 +186,6 @@ const styles = StyleSheet.create({
   methodCardDefault: { borderColor: '#BD632F', backgroundColor: '#FFF8F4' },
   methodLeft: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 },
   methodIcon: { width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center' },
-  methodIconText: { fontSize: 16, fontWeight: '800' },
   methodInfo: { flex: 1 },
   methodTypeRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 },
   methodType: { fontSize: 14, fontWeight: '700', color: '#1A1817' },
@@ -111,4 +196,8 @@ const styles = StyleSheet.create({
   menuBtn: { width: 32, height: 32, borderRadius: 16, justifyContent: 'center', alignItems: 'center' },
   addBtn: { flexDirection: 'row', backgroundColor: '#BD632F', borderRadius: 26, paddingVertical: 16, justifyContent: 'center', alignItems: 'center', gap: 6, marginTop: 10 },
   addBtnText: { color: '#FFFFFF', fontSize: 16, fontWeight: '700' },
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12 },
+  errorText: { fontSize: 14, fontWeight: '500', color: '#9C9690' },
+  emptyContainer: { alignItems: 'center', paddingVertical: 60, gap: 12 },
+  emptyText: { fontSize: 14, fontWeight: '500', color: '#9C9690' },
 });
