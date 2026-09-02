@@ -5,43 +5,73 @@ import {
   Text,
   TouchableOpacity,
   ScrollView,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useGetFaqsQuery } from '@/store/faqsApi';
 
 type FaqTab = 'general' | 'doctor' | 'photo';
 
-interface FAQItem {
-  id: string;
-  question: string;
-  answer: string;
-}
+const TAB_MAP: Record<FaqTab, string> = {
+  general: 'general',
+  doctor: 'doctor',
+  photo: 'photo',
+};
 
-const FAQS: Record<FaqTab, FAQItem[]> = {
-  general: [
-    { id: '1', question: 'What is the Smart Farming App?', answer: 'The Smart Farming App helps farmers manage daily agricultural activities such as crop planning, weather tracking, pest alerts, marketplace trading, and equipment sharing—all in one place.' },
-    { id: '2', question: 'How accurate is the weather forecast?', answer: 'Our weather forecasts use data from multiple meteorological sources and are updated every hour for maximum accuracy in your local area.' },
-    { id: '3', question: 'How can I add my farm or field details?', answer: 'You can add your farm details by navigating to the Farms section and tapping the "Add Farm" button. Fill in the required information and save.' },
-    { id: '4', question: 'Can I share my equipment with others?', answer: 'Yes! Our equipment sharing feature allows you to list your farming equipment for rent or shared use with other farmers in your area.' },
-  ],
-  doctor: [
-    { id: '5', question: 'How do I connect with a veterinarian?', answer: 'You can browse available veterinarians in the Doctors tab and book a consultation directly through the app.' },
-    { id: '6', question: 'Can I get prescriptions through the app?', answer: 'Yes, after a consultation, the veterinarian can send prescriptions directly through the chat feature.' },
-  ],
-  photo: [
-    { id: '7', question: 'How does photo diagnosis work?', answer: 'Upload a clear photo of your animal\'s condition and our AI-powered system will provide an initial assessment within minutes.' },
-  ],
+const TAB_LABELS: Record<FaqTab, string> = {
+  general: 'General',
+  doctor: 'Doctor Connection',
+  photo: 'Photo Diagnosis',
 };
 
 export default function FAQsScreen() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<FaqTab>('general');
-  const [expandedId, setExpandedId] = useState<string>('1');
+  const [expandedId, setExpandedId] = useState<number | null>(null);
+  const { data: faqs, isLoading, isError } = useGetFaqsQuery({ category: TAB_MAP[activeTab] });
 
-  const toggleExpand = (id: string) => {
-    setExpandedId(expandedId === id ? '' : id);
+  const toggleExpand = (id: number) => {
+    setExpandedId(expandedId === id ? null : id);
   };
+
+  if (isLoading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} activeOpacity={0.7}>
+            <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>FAQs</Text>
+          <View style={{ width: 40 }} />
+        </View>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#BD632F" />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (isError) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} activeOpacity={0.7}>
+            <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>FAQs</Text>
+          <View style={{ width: 40 }} />
+        </View>
+        <View style={styles.loadingContainer}>
+          <Ionicons name="cloud-offline-outline" size={48} color="#9C9690" />
+          <Text style={styles.errorText}>Failed to load FAQs</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  const sortedFaqs = faqs ? [...faqs].sort((a, b) => a.sortOrder - b.sortOrder) : [];
 
   return (
     <SafeAreaView style={styles.container}>
@@ -53,24 +83,30 @@ export default function FAQsScreen() {
         <View style={{ width: 40 }} />
       </View>
 
-      {/* Tab Row */}
       <View style={styles.tabRow}>
         {(['general', 'doctor', 'photo'] as FaqTab[]).map((tab) => (
           <TouchableOpacity
             key={tab}
             style={[styles.tab, activeTab === tab && styles.tabActive]}
-            onPress={() => setActiveTab(tab)}
+            onPress={() => { setActiveTab(tab); setExpandedId(null); }}
             activeOpacity={0.7}
           >
             <Text style={[styles.tabText, activeTab === tab && styles.tabTextActive]}>
-              {tab === 'general' ? 'General' : tab === 'doctor' ? 'Doctor Connection' : 'Photo Diagnosis'}
+              {TAB_LABELS[tab]}
             </Text>
           </TouchableOpacity>
         ))}
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
-        {FAQS[activeTab].map((item) => (
+        {sortedFaqs.length === 0 && (
+          <View style={styles.emptyContainer}>
+            <Ionicons name="document-text-outline" size={48} color="#9C9690" />
+            <Text style={styles.emptyText}>No FAQs in this category</Text>
+          </View>
+        )}
+
+        {sortedFaqs.map((item) => (
           <TouchableOpacity
             key={item.id}
             style={styles.faqCard}
@@ -110,4 +146,8 @@ const styles = StyleSheet.create({
   faqHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   faqQuestion: { fontSize: 14, fontWeight: '700', color: '#1A1817', flex: 1, marginRight: 8 },
   faqAnswer: { fontSize: 13, fontWeight: '500', color: '#7C7672', lineHeight: 19, marginTop: 10 },
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12 },
+  errorText: { fontSize: 14, fontWeight: '500', color: '#9C9690' },
+  emptyContainer: { alignItems: 'center', paddingVertical: 60, gap: 12 },
+  emptyText: { fontSize: 14, fontWeight: '500', color: '#9C9690' },
 });

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import {
   StyleSheet,
   View,
@@ -6,39 +6,95 @@ import {
   TouchableOpacity,
   ScrollView,
   Switch,
+  ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import {
+  useGetPreferencesQuery,
+  useUpdatePreferencesMutation,
+} from '@/store/notificationPreferencesApi';
+import type { NotificationPreference } from '@/store/notificationPreferencesApi';
 
 type FilterTab = 'all' | 'tasks' | 'hygiene' | 'health' | 'help';
 
-interface NotifPreference {
-  id: string;
+interface PreferenceItem {
+  key: keyof Pick<NotificationPreference, 'weatherAlerts' | 'taskReminders' | 'chatMessages' | 'promotionalOffers' | 'systemUpdates'>;
   title: string;
   description: string;
   icon: string;
   iconBg: string;
   iconColor: string;
-  enabled: boolean;
+  tab: FilterTab;
 }
+
+const PREFERENCES: PreferenceItem[] = [
+  { key: 'weatherAlerts', title: 'Weather', description: 'Rain, Heat, Wind Updates', icon: 'cloudy', iconBg: '#E3F2FD', iconColor: '#2196F3', tab: 'health' },
+  { key: 'chatMessages', title: 'Animal Health', description: 'Health alerts and updates', icon: 'paw', iconBg: '#E8F5E9', iconColor: '#4CAF50', tab: 'health' },
+  { key: 'taskReminders', title: 'Task Reminder', description: 'Reminder For Schedule Task', icon: 'clipboard', iconBg: '#E8F5E9', iconColor: '#4CAF50', tab: 'tasks' },
+  { key: 'systemUpdates', title: 'Hygiene Reminder', description: 'Hygiene and safety reminders', icon: 'medkit', iconBg: '#E8F5E9', iconColor: '#4CAF50', tab: 'hygiene' },
+  { key: 'promotionalOffers', title: 'Promotions', description: 'Deals and promotional offers', icon: 'help-circle', iconBg: '#E8F5E9', iconColor: '#4CAF50', tab: 'help' },
+];
 
 export default function NotificationPreferencesScreen() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<FilterTab>('all');
-  const [preferences, setPreferences] = useState<NotifPreference[]>([
-    { id: '1', title: 'Weather', description: 'Rain, Heat, Wind Updates', icon: 'cloudy', iconBg: '#E3F2FD', iconColor: '#2196F3', enabled: true },
-    { id: '2', title: 'Animal Health', description: 'Rain, Heat, Wind Updates', icon: 'paw', iconBg: '#E8F5E9', iconColor: '#4CAF50', enabled: true },
-    { id: '3', title: 'Task Reminder', description: 'Reminder For Schedule Task', icon: 'clipboard', iconBg: '#E8F5E9', iconColor: '#4CAF50', enabled: true },
-    { id: '4', title: 'Hygiene Reminder', description: 'Reminder For Schedule Task', icon: 'medkit', iconBg: '#E8F5E9', iconColor: '#4CAF50', enabled: true },
-    { id: '5', title: 'Help', description: 'Update About Request & Responce', icon: 'help-circle', iconBg: '#E8F5E9', iconColor: '#4CAF50', enabled: false },
-  ]);
+  const { data: preferences, isLoading, isError } = useGetPreferencesQuery();
+  const [updatePreferences, { isLoading: isUpdating }] = useUpdatePreferencesMutation();
 
-  const togglePreference = (id: string) => {
-    setPreferences((prev) =>
-      prev.map((p) => (p.id === id ? { ...p, enabled: !p.enabled } : p))
+  const filteredPreferences = useMemo(() => {
+    if (activeTab === 'all') return PREFERENCES;
+    return PREFERENCES.filter((p) => p.tab === activeTab);
+  }, [activeTab]);
+
+  const handleToggle = useCallback(
+    async (pref: PreferenceItem) => {
+      if (!preferences) return;
+      try {
+        await updatePreferences({ [pref.key]: !preferences[pref.key] }).unwrap();
+      } catch {
+        Alert.alert('Error', 'Failed to update preference');
+      }
+    },
+    [preferences, updatePreferences]
+  );
+
+  if (isLoading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} activeOpacity={0.7}>
+            <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Notifications Settings</Text>
+          <View style={styles.placeholder} />
+        </View>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#BD632F" />
+        </View>
+      </SafeAreaView>
     );
-  };
+  }
+
+  if (isError) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} activeOpacity={0.7}>
+            <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Notifications Settings</Text>
+          <View style={styles.placeholder} />
+        </View>
+        <View style={styles.loadingContainer}>
+          <Ionicons name="cloud-offline-outline" size={48} color="#9C9690" />
+          <Text style={styles.errorText}>Failed to load preferences</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -50,7 +106,6 @@ export default function NotificationPreferencesScreen() {
         <View style={styles.placeholder} />
       </View>
 
-      {/* Filter Tabs */}
       <View style={styles.tabRow}>
         {(['all', 'tasks', 'hygiene', 'health', 'help'] as FilterTab[]).map((tab) => (
           <TouchableOpacity
@@ -67,8 +122,8 @@ export default function NotificationPreferencesScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
-        {preferences.map((pref) => (
-          <View key={pref.id} style={styles.prefCard}>
+        {filteredPreferences.map((pref) => (
+          <View key={pref.key} style={styles.prefCard}>
             <View style={styles.prefLeft}>
               <View style={[styles.prefIcon, { backgroundColor: pref.iconBg }]}>
                 <Ionicons name={pref.icon as any} size={20} color={pref.iconColor} />
@@ -79,8 +134,9 @@ export default function NotificationPreferencesScreen() {
               </View>
             </View>
             <Switch
-              value={pref.enabled}
-              onValueChange={() => togglePreference(pref.id)}
+              value={preferences ? preferences[pref.key] : false}
+              onValueChange={() => handleToggle(pref)}
+              disabled={isUpdating}
               trackColor={{ true: '#BD632F', false: '#E6E1DC' }}
               thumbColor="#FFFFFF"
             />
@@ -109,4 +165,6 @@ const styles = StyleSheet.create({
   prefInfo: { flex: 1 },
   prefTitle: { fontSize: 14, fontWeight: '700', color: '#1A1817', marginBottom: 2 },
   prefDesc: { fontSize: 11, fontWeight: '500', color: '#7C7672' },
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12 },
+  errorText: { fontSize: 14, fontWeight: '500', color: '#9C9690' },
 });

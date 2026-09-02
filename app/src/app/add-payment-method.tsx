@@ -7,10 +7,13 @@ import {
   TextInput,
   TouchableOpacity,
   ScrollView,
+  ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useCreatePaymentMethodMutation } from '@/store/paymentMethodsApi';
 
 type Step = 'select' | 'mobile_banking';
 
@@ -53,6 +56,30 @@ export default function AddPaymentMethodScreen() {
   const [pin, setPin] = useState('');
   const [showPin, setShowPin] = useState(false);
 
+  const [createPaymentMethod, { isLoading }] = useCreatePaymentMethodMutation();
+
+  const handleContinue = async () => {
+    if (!phoneNumber.trim()) {
+      Alert.alert('Error', 'Please enter a phone number');
+      return;
+    }
+
+    const providerName = PROVIDERS.find((p) => p.id === selectedProvider)?.name || selectedProvider;
+
+    try {
+      await createPaymentMethod({
+        type: 'mobile_banking',
+        provider: providerName,
+        maskedNumber: phoneNumber.replace(/(\d{2})\d+(\d{2})/, '$1•••••$2'),
+      }).unwrap();
+      Alert.alert('Success', 'Payment method added successfully', [
+        { text: 'OK', onPress: () => router.back() },
+      ]);
+    } catch {
+      Alert.alert('Error', 'Failed to add payment method');
+    }
+  };
+
   if (step === 'mobile_banking') {
     return (
       <SafeAreaView style={styles.container}>
@@ -65,7 +92,6 @@ export default function AddPaymentMethodScreen() {
         </View>
 
         <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-          {/* Provider Icons */}
           <View style={styles.providerRow}>
             {PROVIDERS.map((p) => (
               <TouchableOpacity
@@ -84,7 +110,6 @@ export default function AddPaymentMethodScreen() {
             ))}
           </View>
 
-          {/* Phone Number */}
           <Text style={styles.fieldLabel}>Phone Number</Text>
           <View style={styles.phoneRow}>
             <View style={styles.countryCode}>
@@ -101,12 +126,11 @@ export default function AddPaymentMethodScreen() {
             />
           </View>
 
-          {/* Pin Number */}
           <Text style={styles.fieldLabel}>Pin Number</Text>
           <View style={styles.pinRow}>
             <TextInput
               style={styles.pinInput}
-              placeholder="152@##PAss"
+              placeholder="Enter PIN"
               placeholderTextColor="#A39E99"
               secureTextEntry={!showPin}
               value={pin}
@@ -117,7 +141,6 @@ export default function AddPaymentMethodScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* Security Notice */}
           <View style={styles.securityNotice}>
             <Ionicons name="shield-checkmark-outline" size={18} color="#BD632F" />
             <Text style={styles.securityText}>
@@ -125,9 +148,17 @@ export default function AddPaymentMethodScreen() {
             </Text>
           </View>
 
-          {/* Continue Button */}
-          <TouchableOpacity style={styles.continueBtn} activeOpacity={0.85} onPress={() => router.push('/otp-verification')}>
-            <Text style={styles.continueBtnText}>Continue</Text>
+          <TouchableOpacity
+            style={[styles.continueBtn, isLoading && styles.continueBtnDisabled]}
+            activeOpacity={0.85}
+            onPress={handleContinue}
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              <ActivityIndicator size="small" color="#FFFFFF" />
+            ) : (
+              <Text style={styles.continueBtnText}>Continue</Text>
+            )}
           </TouchableOpacity>
         </ScrollView>
       </SafeAreaView>
@@ -165,7 +196,6 @@ export default function AddPaymentMethodScreen() {
           </TouchableOpacity>
         ))}
 
-        {/* Security Notice */}
         <View style={styles.securityNoticeBottom}>
           <Ionicons name="shield-checkmark-outline" size={18} color="#BD632F" />
           <Text style={styles.securityText}>
@@ -183,8 +213,6 @@ const styles = StyleSheet.create({
   backBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#BD632F', justifyContent: 'center', alignItems: 'center' },
   headerTitle: { fontSize: 20, fontWeight: '800', color: '#1A1817' },
   scrollContainer: { paddingHorizontal: 20, paddingBottom: 40 },
-
-  // Select Step
   optionCard: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#FFFFFF', borderRadius: 16, borderWidth: 1, borderColor: '#E6E1DC', padding: 16, marginBottom: 10 },
   optionLeft: { flexDirection: 'row', alignItems: 'center', gap: 14, flex: 1 },
   optionIcon: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#FFF2EB', justifyContent: 'center', alignItems: 'center' },
@@ -192,8 +220,6 @@ const styles = StyleSheet.create({
   optionSubtitle: { fontSize: 12, fontWeight: '500', color: '#7C7672', marginTop: 2 },
   securityNoticeBottom: { flexDirection: 'row', gap: 8, marginTop: 16 },
   securityText: { flex: 1, fontSize: 12, fontWeight: '500', color: '#BD632F', lineHeight: 17 },
-
-  // Mobile Banking Step
   providerRow: { flexDirection: 'row', gap: 12, marginBottom: 24 },
   providerItem: { alignItems: 'center', gap: 4, flex: 1 },
   providerItemActive: {},
@@ -211,6 +237,7 @@ const styles = StyleSheet.create({
   pinInput: { flex: 1, fontSize: 14, color: '#1A1817', height: '100%' },
   eyeBtn: { padding: 4 },
   securityNotice: { flexDirection: 'row', gap: 8, backgroundColor: '#FFF2EB', borderRadius: 12, padding: 12, marginBottom: 24 },
-  continueBtn: { backgroundColor: '#E6E1DC', borderRadius: 26, paddingVertical: 16, alignItems: 'center' },
+  continueBtn: { backgroundColor: '#BD632F', borderRadius: 26, paddingVertical: 16, alignItems: 'center' },
+  continueBtnDisabled: { opacity: 0.6 },
   continueBtnText: { color: '#FFFFFF', fontSize: 16, fontWeight: '700' },
 });
