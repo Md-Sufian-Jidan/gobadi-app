@@ -1,5 +1,13 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsNotEmpty, IsNumber, IsOptional, IsString } from 'class-validator';
+import {
+  IsArray,
+  IsEnum,
+  IsNotEmpty,
+  IsNumber,
+  IsOptional,
+  IsString,
+} from 'class-validator';
+import { ConsultationType } from '../appointment.entity';
 
 export class BookSlotDto {
   @ApiProperty({ example: '1' })
@@ -17,6 +25,14 @@ export class BookSlotDto {
   @IsNumber()
   serviceId?: number;
 
+  @ApiPropertyOptional({
+    example: 1,
+    description: 'The animal being treated — must be owned by the booking user',
+  })
+  @IsOptional()
+  @IsNumber()
+  animalId?: number;
+
   @ApiProperty({ example: '2026-08-01' })
   @IsString()
   @IsNotEmpty()
@@ -26,4 +42,23 @@ export class BookSlotDto {
   @IsString()
   @IsNotEmpty()
   time: string;
+
+  @ApiPropertyOptional({
+    enum: ConsultationType,
+    example: ConsultationType.PHYSICAL,
+  })
+  @IsOptional()
+  @IsEnum(ConsultationType)
+  consultationType?: ConsultationType;
+
+  @ApiPropertyOptional({ example: 'High fever for 3 days' })
+  @IsOptional()
+  @IsString()
+  reasonForConsultation?: string;
+
+  @ApiPropertyOptional({ example: ['Fever', 'weakness', 'reduced appetite'] })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  symptoms?: string[];
 }

@@ -15,6 +15,13 @@ export enum AppointmentStatus {
   COMPLETED = 'COMPLETED',
 }
 
+export enum ConsultationType {
+  ONLINE_VIDEO = 'online_video',
+  ONLINE_VOICE = 'online_voice',
+  ONLINE_CHAT = 'online_chat',
+  PHYSICAL = 'physical',
+}
+
 @Entity('appointments')
 @Index(['doctorId', 'startAt'], {
   unique: true,
@@ -36,9 +43,19 @@ export class Appointment {
   @Column('int', { nullable: true })
   serviceId?: number | null;
 
+  /** The human owner who booked (User.id) */
   @Index()
   @Column()
   patientId: number;
+
+  /**
+   * The animal being treated (Animal.id). Nullable for backward compatibility
+   * with rows booked before this field existed — new bookings should always
+   * set it, since the doctor-app UI treats the animal as "the patient."
+   */
+  @Index()
+  @Column('int', { nullable: true })
+  animalId?: number | null;
 
   @Column('timestamptz')
   startAt: Date;
@@ -64,6 +81,16 @@ export class Appointment {
   @Column('text', { nullable: true })
   notes?: string;
 
+  @Index()
+  @Column({ type: 'enum', enum: ConsultationType, nullable: true })
+  consultationType?: ConsultationType | null;
+
+  @Column('text', { nullable: true })
+  reasonForConsultation?: string;
+
+  @Column('text', { array: true, nullable: true })
+  symptoms?: string[];
+
   @Column('int', { nullable: true })
   followUpId?: number | null;
 
@@ -85,6 +112,26 @@ export class Appointment {
 
   @Column('int', { nullable: true })
   cancelledByUserId?: number | null;
+
+  /** Free-text cancellation reason (replaces the old CancellationReason enum) */
+  @Column('text', { nullable: true })
+  cancellationReason?: string | null;
+
+  @Column('decimal', { precision: 10, scale: 2, default: 0 })
+  cancellationFee: number;
+
+  @Column('decimal', { precision: 10, scale: 2, default: 0 })
+  refundAmount: number;
+
+  /** FK -> wallet_transactions.id */
+  @Column({ nullable: true })
+  walletTransactionId?: string;
+
+  @Column('text', { nullable: true })
+  consultationNotes?: string;
+
+  @Column({ type: 'date', nullable: true })
+  followUpDate?: Date;
 
   @Column('timestamptz', { nullable: true })
   originalStartAt?: Date | null;

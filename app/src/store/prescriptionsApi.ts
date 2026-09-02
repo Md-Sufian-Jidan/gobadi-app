@@ -1,23 +1,20 @@
 import { createApi } from '@reduxjs/toolkit/query/react';
 import { baseQueryWithReauth } from './base-query-with-reauth';
 
-export interface Medication {
+export interface Medicine {
   name: string;
   dosage: string;
-  frequency: string;
   duration: string;
-  quantity: string;
-  instructions?: string;
+  notes?: string;
 }
 
 export interface Prescription {
   id: number;
   doctorId: number;
   patientId: number;
-  appointmentId?: number;
+  appointmentId: number;
   animalId: number;
-  medications: Medication[];
-  notes?: string;
+  medicines: Medicine[];
   attachmentUrl?: string;
   status: string;
   createdAt: string;
@@ -25,11 +22,9 @@ export interface Prescription {
 }
 
 export interface CreatePrescriptionInput {
-  patientId: number;
-  appointmentId?: number;
+  appointmentId: number;
   animalId: number;
-  medications: Medication[];
-  notes?: string;
+  medicines: Medicine[];
 }
 
 export const prescriptionsApi = createApi({
@@ -49,7 +44,7 @@ export const prescriptionsApi = createApi({
       query: (appointmentId) => `/prescriptions/by-appointment/${appointmentId}`,
       providesTags: (_result, _error, appointmentId) => [{ type: 'Prescription', id: appointmentId }],
     }),
-    getByAnimal: builder.query<Prescription[], string>({
+    getByAnimalPrescriptions: builder.query<Prescription[], string>({
       query: (animalId) => `/prescriptions/by-animal/${animalId}`,
       providesTags: (_result, _error, animalId) => [{ type: 'Prescription', id: animalId }],
     }),
@@ -82,7 +77,7 @@ export const prescriptionsApi = createApi({
 export const {
   useCreatePrescriptionMutation,
   useGetByAppointmentQuery,
-  useGetByAnimalQuery,
+  useGetByAnimalPrescriptionsQuery,
   useUpdatePrescriptionMutation,
   useAddAttachmentMutation,
   useSendPrescriptionMutation,

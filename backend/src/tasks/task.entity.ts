@@ -7,6 +7,12 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 
+export enum TaskPriority {
+  LOW = 'low',
+  MEDIUM = 'medium',
+  HIGH = 'high',
+}
+
 @Entity('tasks')
 export class Task {
   @PrimaryGeneratedColumn()
@@ -28,6 +34,16 @@ export class Task {
 
   @Column({ default: false })
   isDone: boolean;
+
+  /** 'field' | 'animal' | 'appointment' | 'other' */
+  @Column({ nullable: true })
+  category?: string;
+
+  @Column({ type: 'enum', enum: TaskPriority, default: TaskPriority.MEDIUM })
+  priority: TaskPriority;
+
+  @Column({ type: 'date', nullable: true })
+  dueDate?: Date;
 
   @CreateDateColumn()
   createdAt: Date;

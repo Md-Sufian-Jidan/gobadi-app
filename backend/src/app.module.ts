@@ -40,6 +40,19 @@ import { ServicesModule } from './services/services.module';
 import { AiDiagnosisModule } from './ai-diagnosis/ai-diagnosis.module';
 import { ReviewsModule } from './reviews/reviews.module';
 import { NotificationsModule } from './notifications/notifications.module';
+import { WalletModule } from './wallet/wallet.module';
+import { DiscountsModule } from './discounts/discounts.module';
+import { TimeOffModule } from './time-off/time-off.module';
+import { MedicalEventsModule } from './medical-events/medical-events.module';
+import { PrescriptionsModule } from './prescriptions/prescriptions.module';
+import { PaymentMethodsModule } from './payment-methods/payment-methods.module';
+import { CalendarModule } from './calendar/calendar.module';
+import { SubscriptionsModule } from './subscriptions/subscriptions.module';
+import { FaqsModule } from './faqs/faqs.module';
+import { SupportModule } from './support/support.module';
+import { FieldsModule } from './fields/fields.module';
+import { MarketRatesModule } from './market-rates/market-rates.module';
+import { BadgesModule } from './badges/badges.module';
 
 @Module({
   imports: [
@@ -52,11 +65,14 @@ import { NotificationsModule } from './notifications/notifications.module';
       database: process.env.DB_DATABASE || 'gobadi',
       autoLoadEntities: true,
       synchronize: true,
+      ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false,
     }),
     BullModule.forRoot({
       connection: {
         host: process.env.REDIS_HOST || 'localhost',
         port: parseInt(process.env.REDIS_PORT || '6379', 10),
+        password: process.env.REDIS_PASSWORD,
+        tls: process.env.REDIS_TLS === 'true' ? {} : undefined,
       },
     }),
     ThrottlerModule.forRoot([
@@ -97,6 +113,19 @@ import { NotificationsModule } from './notifications/notifications.module';
     AiDiagnosisModule,
     ReviewsModule,
     NotificationsModule,
+    WalletModule,
+    DiscountsModule,
+    TimeOffModule,
+    MedicalEventsModule,
+    PrescriptionsModule,
+    PaymentMethodsModule,
+    CalendarModule,
+    SubscriptionsModule,
+    FaqsModule,
+    SupportModule,
+    FieldsModule,
+    MarketRatesModule,
+    BadgesModule,
   ],
   controllers: [AppController, HealthController],
   providers: [

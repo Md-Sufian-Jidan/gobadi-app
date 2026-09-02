@@ -3,24 +3,16 @@ import { baseQueryWithReauth } from './base-query-with-reauth';
 
 export interface Vaccination {
   id: number;
+  appointmentId: number;
   animalId: number;
-  vaccineName: string;
-  dateGiven: string;
-  nextDueDate?: string;
-  doseNumber?: number;
-  veterinarian?: string;
-  notes?: string;
+  data: Record<string, any>;
   createdAt: string;
 }
 
 export interface CreateVaccinationInput {
+  appointmentId: number;
   animalId: number;
-  vaccineName: string;
-  dateGiven: string;
-  nextDueDate?: string;
-  doseNumber?: number;
-  veterinarian?: string;
-  notes?: string;
+  data: Record<string, any>;
 }
 
 export const vaccinationsApi = createApi({
@@ -28,11 +20,11 @@ export const vaccinationsApi = createApi({
   baseQuery: baseQueryWithReauth,
   tagTypes: ['Vaccination'],
   endpoints: (builder) => ({
-    getByAnimal: builder.query<Vaccination[], string>({
+    getByAnimalVaccinations: builder.query<Vaccination[], string>({
       query: (animalId) => `/vaccinations/animal/${animalId}`,
       providesTags: (_result, _error, animalId) => [{ type: 'Vaccination', id: animalId }],
     }),
-    create: builder.mutation<Vaccination, CreateVaccinationInput>({
+    createVaccination: builder.mutation<Vaccination, CreateVaccinationInput>({
       query: (body) => ({
         url: '/vaccinations',
         method: 'POST',
@@ -42,7 +34,7 @@ export const vaccinationsApi = createApi({
         { type: 'Vaccination', id: animalId },
       ],
     }),
-    update: builder.mutation<Vaccination, { id: number; data: Partial<Vaccination> }>({
+    updateVaccination: builder.mutation<Vaccination, { id: number; data: Partial<Vaccination> }>({
       query: ({ id, data }) => ({
         url: `/vaccinations/${id}`,
         method: 'PUT',
@@ -50,7 +42,7 @@ export const vaccinationsApi = createApi({
       }),
       invalidatesTags: ['Vaccination'],
     }),
-    remove: builder.mutation<void, number>({
+    removeVaccination: builder.mutation<void, number>({
       query: (id) => ({
         url: `/vaccinations/${id}`,
         method: 'DELETE',
@@ -61,8 +53,8 @@ export const vaccinationsApi = createApi({
 });
 
 export const {
-  useGetByAnimalQuery,
-  useCreateMutation,
-  useUpdateMutation,
-  useRemoveMutation,
+  useGetByAnimalVaccinationsQuery,
+  useCreateVaccinationMutation,
+  useUpdateVaccinationMutation,
+  useRemoveVaccinationMutation,
 } = vaccinationsApi;

@@ -41,6 +41,33 @@ export class User {
   @Column({ default: false })
   verified: boolean;
 
+  @Column({ nullable: true })
+  profilePhoto?: string;
+
+  @Column({ type: 'date', nullable: true })
+  dateOfBirth?: Date;
+
+  @Column({ nullable: true })
+  bloodGroup?: string;
+
+  @Column({ type: 'text', nullable: true })
+  allergies?: string;
+
+  @Column({ nullable: true })
+  emergencyContactName?: string;
+
+  @Column({ nullable: true })
+  emergencyContactPhone?: string;
+
+  @Column({ default: 'en' })
+  language: string;
+
+  @Column({ default: false })
+  isDoctorVerified: boolean;
+
+  @Column('simple-array', { nullable: true })
+  verificationDocuments?: string[];
+
   @Index({ unique: true, where: '"googleId" IS NOT NULL' })
   @Column({ nullable: true })
   googleId?: string;

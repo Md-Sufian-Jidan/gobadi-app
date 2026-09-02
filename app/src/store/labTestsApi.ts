@@ -3,27 +3,16 @@ import { baseQueryWithReauth } from './base-query-with-reauth';
 
 export interface LabTest {
   id: number;
+  appointmentId: number;
   animalId: number;
-  testType: string;
-  testName: string;
-  result?: string;
-  normalRange?: string;
-  dateConducted?: string;
-  orderedBy?: string;
-  status: string;
-  notes?: string;
+  data: Record<string, any>;
   createdAt: string;
 }
 
 export interface CreateLabTestInput {
+  appointmentId: number;
   animalId: number;
-  testType: string;
-  testName: string;
-  result?: string;
-  normalRange?: string;
-  dateConducted?: string;
-  orderedBy?: string;
-  notes?: string;
+  data: Record<string, any>;
 }
 
 export const labTestsApi = createApi({
@@ -31,11 +20,11 @@ export const labTestsApi = createApi({
   baseQuery: baseQueryWithReauth,
   tagTypes: ['LabTest'],
   endpoints: (builder) => ({
-    getByAnimal: builder.query<LabTest[], string>({
+    getByAnimalLabTests: builder.query<LabTest[], string>({
       query: (animalId) => `/lab-tests/animal/${animalId}`,
       providesTags: (_result, _error, animalId) => [{ type: 'LabTest', id: animalId }],
     }),
-    create: builder.mutation<LabTest, CreateLabTestInput>({
+    createLabTest: builder.mutation<LabTest, CreateLabTestInput>({
       query: (body) => ({
         url: '/lab-tests',
         method: 'POST',
@@ -45,7 +34,7 @@ export const labTestsApi = createApi({
         { type: 'LabTest', id: animalId },
       ],
     }),
-    update: builder.mutation<LabTest, { id: number; data: Partial<LabTest> }>({
+    updateLabTest: builder.mutation<LabTest, { id: number; data: Partial<LabTest> }>({
       query: ({ id, data }) => ({
         url: `/lab-tests/${id}`,
         method: 'PUT',
@@ -57,7 +46,7 @@ export const labTestsApi = createApi({
 });
 
 export const {
-  useGetByAnimalQuery,
-  useCreateMutation,
-  useUpdateMutation,
+  useGetByAnimalLabTestsQuery,
+  useCreateLabTestMutation,
+  useUpdateLabTestMutation,
 } = labTestsApi;

@@ -4,6 +4,7 @@ import {
   Get,
   Param,
   Post,
+  SetMetadata,
   UseGuards,
 } from '@nestjs/common';
 import {
@@ -49,20 +50,28 @@ export class PaymentsController {
   }
 
   @Post('simulate-success')
+  @SetMetadata('isProduction', process.env.NODE_ENV === 'production')
   @ApiOperation({ summary: 'Gateway simulation callback: Force success status' })
   @ApiResponse({ status: 200, description: 'Transaction marked successful' })
   async simulateSuccess(
     @Body() body: { transactionId: string; gatewayTxId?: string },
   ): Promise<Transaction> {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('Simulate routes are disabled in production');
+    }
     return this.paymentsService.simulateSuccess(body.transactionId, body.gatewayTxId);
   }
 
   @Post('simulate-fail')
+  @SetMetadata('isProduction', process.env.NODE_ENV === 'production')
   @ApiOperation({ summary: 'Gateway simulation callback: Force fail status' })
   @ApiResponse({ status: 200, description: 'Transaction marked failed' })
   async simulateFail(
     @Body() body: { transactionId: string },
   ): Promise<Transaction> {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('Simulate routes are disabled in production');
+    }
     return this.paymentsService.simulateFail(body.transactionId);
   }
 }

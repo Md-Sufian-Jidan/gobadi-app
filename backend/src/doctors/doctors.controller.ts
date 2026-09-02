@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Post,
+  Patch,
   Param,
   Body,
   Query,
@@ -18,6 +19,7 @@ import {
 } from '@nestjs/swagger';
 import { DoctorsService, Doctor, Availability } from './doctors.service';
 import { SetAvailabilityDto } from './dto/set-availability.dto';
+import { UpdateSingleDayDto } from './dto/update-single-day.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -99,5 +101,32 @@ export class DoctorsController {
       throw new ForbiddenException('You may only manage your own availability');
     }
     return this.doctorsService.setAvailability(doctor.id, body.entries);
+  }
+
+  @Patch(':id/availability/:dayId')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.DOCTOR)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: "Update a single day's availability without resending the whole week",
+  })
+  @ApiParam({ name: 'id', example: '1' })
+  @ApiParam({ name: 'dayId', example: '1' })
+  @ApiResponse({ status: 200, description: 'Availability day updated' })
+  async updateSingleDay(
+    @Param('id') id: string,
+    @Param('dayId') dayId: string,
+    @Body() body: UpdateSingleDayDto,
+    @CurrentUser() user: JwtPayload,
+  ): Promise<Availability> {
+    const doctor = await this.doctorsService.getDoctorByUserId(user.sub);
+    if (!doctor || doctor.id !== parseInt(id, 10)) {
+      throw new ForbiddenException('You may only manage your own availability');
+    }
+    return this.doctorsService.updateSingleDay(
+      doctor.id,
+      parseInt(dayId, 10),
+      body,
+    );
   }
 }

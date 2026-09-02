@@ -20,15 +20,18 @@ import {
   AppointmentsService,
   AppointmentWithPatient,
 } from './appointments.service';
+import type { AppointmentListFilter } from './appointments.service';
 import { BookSlotDto } from './dto/book-slot.dto';
 import { RescheduleAppointmentDto } from './dto/reschedule-appointment.dto';
-import { Appointment } from './appointment.entity';
+import { CancelAppointmentDto } from './dto/cancel-appointment.dto';
+import { Appointment, ConsultationType } from './appointment.entity';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { UserRole } from '../users/user.entity';
 import type { JwtPayload } from '../auth/jwt-payload.interface';
+import { PaginatedResult } from '../common/paginated-result.interface';
 
 @ApiTags('appointments')
 @Controller('doctors')
@@ -67,6 +70,10 @@ export class AppointmentsController {
       body.time,
       body.clinicId,
       body.serviceId,
+      body.animalId,
+      body.consultationType,
+      body.reasonForConsultation,
+      body.symptoms,
     );
   }
 
@@ -75,13 +82,43 @@ export class AppointmentsController {
   @ApiBearerAuth()
   @ApiOperation({
     summary:
-      "List the current user's appointments (patient: own bookings, doctor: their bookings)",
+      "List the current user's appointments (patient: own bookings, doctor: their bookings). Without page/limit, returns the full unpaginated list for backward compatibility.",
   })
+  @ApiQuery({
+    name: 'filter',
+    required: false,
+    enum: ['today', 'previous', 'upcoming', 'completed', 'cancelled'],
+  })
+  @ApiQuery({
+    name: 'consultationType',
+    required: false,
+    enum: ConsultationType,
+  })
+  @ApiQuery({
+    name: 'search',
+    required: false,
+    description: 'Filters by animal (patient) name',
+  })
+  @ApiQuery({ name: 'page', required: false })
+  @ApiQuery({ name: 'limit', required: false })
   @ApiResponse({ status: 200, description: 'List of appointments' })
   async getBookings(
     @CurrentUser() user: JwtPayload,
-  ): Promise<AppointmentWithPatient[]> {
-    return this.appointmentsService.listForUser(user.sub, user.role);
+    @Query('filter') filter?: AppointmentListFilter,
+    @Query('consultationType') consultationType?: ConsultationType,
+    @Query('search') search?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ): Promise<
+    AppointmentWithPatient[] | PaginatedResult<AppointmentWithPatient>
+  > {
+    return this.appointmentsService.listForUser(user.sub, user.role, {
+      filter,
+      consultationType,
+      search,
+      page: page ? parseInt(page, 10) : undefined,
+      limit: limit ? parseInt(limit, 10) : undefined,
+    });
   }
 
   @Patch('bookings/:id/reschedule')
@@ -108,16 +145,21 @@ export class AppointmentsController {
   @Patch('bookings/:id/cancel')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Cancel an appointment (must be >2h before start)' })
+  @ApiOperation({
+    summary:
+      'Cancel an appointment (must be >2h before start). Refunds the patient wallet if the appointment was paid.',
+  })
   @ApiResponse({ status: 200, description: 'Appointment cancelled' })
   async cancel(
     @Param('id') id: string,
+    @Body() body: CancelAppointmentDto,
     @CurrentUser() user: JwtPayload,
-  ): Promise<Appointment> {
+  ): Promise<Appointment & { walletDeduction: number }> {
     return this.appointmentsService.cancelAppointment(
       parseInt(id, 10),
       user.sub,
       user.role,
+      body,
     );
   }
 
@@ -134,6 +176,25 @@ export class AppointmentsController {
     return this.appointmentsService.completeAppointment(
       parseInt(id, 10),
       user.sub,
+    );
+  }
+
+  @Post('bookings/:id/join')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary:
+      'Get a join URL for an online consultation (placeholder pending video provider selection)',
+  })
+  @ApiResponse({ status: 200, description: 'Join URL' })
+  async join(
+    @Param('id') id: string,
+    @CurrentUser() user: JwtPayload,
+  ): Promise<{ url: string }> {
+    return this.appointmentsService.getJoinInfo(
+      parseInt(id, 10),
+      user.sub,
+      user.role,
     );
   }
 }

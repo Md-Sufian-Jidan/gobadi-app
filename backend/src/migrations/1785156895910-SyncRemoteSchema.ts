@@ -4,7 +4,7 @@ export class SyncRemoteSchema1785156895910 implements MigrationInterface {
     name = 'SyncRemoteSchema1785156895910'
 
     public async up(queryRunner: QueryRunner): Promise<void> {
-        await queryRunner.query(`DROP INDEX "public"."IDX_a000cca60bcf04454e72769949"`);
+        await queryRunner.query(`DROP INDEX IF EXISTS "public"."IDX_a000cca60bcf04454e72769949"`);
         await queryRunner.query(`CREATE TABLE "addresses" ("id" SERIAL NOT NULL, "userId" integer NOT NULL, "label" character varying NOT NULL, "contactName" character varying NOT NULL, "phone" character varying NOT NULL, "division" character varying NOT NULL, "district" character varying NOT NULL, "upazila" character varying NOT NULL, "postalCode" character varying NOT NULL, "latitude" double precision, "longitude" double precision, "isDefault" boolean NOT NULL DEFAULT false, "createdAt" TIMESTAMP NOT NULL DEFAULT now(), "updatedAt" TIMESTAMP NOT NULL DEFAULT now(), CONSTRAINT "PK_745d8f43d3af10ab8247465e450" PRIMARY KEY ("id"))`);
         await queryRunner.query(`CREATE INDEX "IDX_95c93a584de49f0b0e13f75363" ON "addresses"  ("userId") `);
         await queryRunner.query(`CREATE TABLE "ai_diagnoses" ("id" SERIAL NOT NULL, "userId" integer NOT NULL, "images" text array NOT NULL DEFAULT '{}', "symptoms" text array NOT NULL DEFAULT '{}', "analysisResult" text NOT NULL, "confidenceScore" double precision NOT NULL, "recommendations" jsonb, "recommendedDoctorIds" integer array NOT NULL DEFAULT '{}', "prescriptionId" integer, "createdAt" TIMESTAMP NOT NULL DEFAULT now(), CONSTRAINT "PK_f3e2ee5af390139b5bf25eb2fed" PRIMARY KEY ("id"))`);
@@ -99,7 +99,7 @@ export class SyncRemoteSchema1785156895910 implements MigrationInterface {
         await queryRunner.query(`ALTER TABLE "orders" ALTER COLUMN "userId" SET NOT NULL`);
         await queryRunner.query(`ALTER TABLE "orders" DROP COLUMN "deliveryAddress"`);
         await queryRunner.query(`ALTER TABLE "orders" ADD "deliveryAddress" jsonb NOT NULL`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_775c9f06fc27ae3ff8fb26f2c4"`);
+        await queryRunner.query(`DROP INDEX IF EXISTS "public"."IDX_775c9f06fc27ae3ff8fb26f2c4"`);
         await queryRunner.query(`ALTER TABLE "orders" DROP COLUMN "status"`);
         await queryRunner.query(`CREATE TYPE "public"."orders_status_enum" AS ENUM('pending', 'confirmed', 'preparing', 'packed', 'shipped', 'delivered', 'completed', 'cancelled', 'refunded', 'returned', 'failed')`);
         await queryRunner.query(`ALTER TABLE "orders" ADD "status" "public"."orders_status_enum" NOT NULL DEFAULT 'pending'`);
@@ -153,10 +153,10 @@ export class SyncRemoteSchema1785156895910 implements MigrationInterface {
         await queryRunner.query(`ALTER TABLE "products" DROP CONSTRAINT "FK_ea86d0c514c4ecbb5694cbf57df"`);
         await queryRunner.query(`ALTER TABLE "ai_diagnoses" DROP CONSTRAINT "FK_b695bcc34ef950d6feb42f3b5a3"`);
         await queryRunner.query(`ALTER TABLE "addresses" DROP CONSTRAINT "FK_95c93a584de49f0b0e13f753630"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_775c9f06fc27ae3ff8fb26f2c4"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_f77953c373efb8ab146d98e90c"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_040a7ee2072d45bc98efddf3c0"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_302009a9251b22c777904d6d7b"`);
+        await queryRunner.query(`DROP INDEX IF EXISTS "public"."IDX_775c9f06fc27ae3ff8fb26f2c4"`);
+        await queryRunner.query(`DROP INDEX IF EXISTS "public"."IDX_f77953c373efb8ab146d98e90c"`);
+        await queryRunner.query(`DROP INDEX IF EXISTS "public"."IDX_040a7ee2072d45bc98efddf3c0"`);
+        await queryRunner.query(`DROP INDEX IF EXISTS "public"."IDX_302009a9251b22c777904d6d7b"`);
         await queryRunner.query(`ALTER TABLE "orders" ALTER COLUMN "paymentStatus" SET DEFAULT 'Pending'`);
         await queryRunner.query(`ALTER TABLE "orders" DROP COLUMN "status"`);
         await queryRunner.query(`DROP TYPE "public"."orders_status_enum"`);

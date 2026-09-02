@@ -7,14 +7,14 @@ export interface Patient {
   phone: string;
   animalName?: string;
   hasActiveDiscount?: boolean;
-  discountPercentage?: number;
+  discountPercent?: number;
 }
 
 export interface Discount {
   id: number;
   patientId: number;
   doctorId: number;
-  percentage: number;
+  percent: number;
   type: string;
   expiresAt?: string;
   isActive: boolean;
@@ -25,7 +25,7 @@ export interface AvailableDiscount {
   id: number;
   code: string;
   description: string;
-  percentage: number;
+  percent: number;
   type: string;
   expiresAt: string;
   isActive: boolean;
@@ -34,17 +34,10 @@ export interface AvailableDiscount {
 export interface MyDiscount {
   id: number;
   code: string;
-  percentage: number;
+  percent: number;
   type: string;
   usedAt?: string;
   expiresAt: string;
-}
-
-export interface ApplyDiscountInput {
-  patientId: number;
-  percentage: number;
-  type: string;
-  expiresAt?: string;
 }
 
 export interface DiscountValidation {
@@ -69,7 +62,7 @@ export const discountsApi = createApi({
       query: (patientId) => `/discounts/${patientId}`,
       providesTags: (_result, _error, patientId) => [{ type: 'Discount', id: patientId }],
     }),
-    applyDiscount: builder.mutation<Discount, ApplyDiscountInput>({
+    applyDiscount: builder.mutation<Discount, { code: string }>({
       query: (body) => ({
         url: '/discounts',
         method: 'POST',
@@ -77,7 +70,7 @@ export const discountsApi = createApi({
       }),
       invalidatesTags: ['Discount', 'PatientDiscount'],
     }),
-    editDiscount: builder.mutation<Discount, { id: number; data: Partial<Discount> }>({
+    editDiscount: builder.mutation<Discount, { id: number; data: { percent: number } }>({
       query: ({ id, data }) => ({
         url: `/discounts/${id}`,
         method: 'PUT',

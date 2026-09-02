@@ -57,11 +57,21 @@ export class UsersService {
 
   async updateProfile(
     userId: number,
-    data: { name?: string; email?: string },
+    data: {
+      name?: string;
+      email?: string;
+      profilePhoto?: string;
+      dateOfBirth?: string;
+      bloodGroup?: string;
+      allergies?: string;
+      emergencyContactName?: string;
+      emergencyContactPhone?: string;
+    },
   ): Promise<User> {
-    if (data.name === undefined && data.email === undefined) {
+    const hasData = Object.values(data).some((v) => v !== undefined);
+    if (!hasData) {
       throw new BadRequestException(
-        'At least one of name or email must be provided.',
+        'At least one field must be provided.',
       );
     }
     const user = await this.userRepository.findOneBy({ id: userId });

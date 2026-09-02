@@ -12,14 +12,10 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     this.client = new Redis({
       host,
       port,
-      // Avoid failing immediately during local development/testing if Redis is down
-      maxRetriesPerRequest: 3,
-      retryStrategy(times) {
-        if (times > 3) {
-          return null; // Stop retrying
-        }
-        return Math.min(times * 100, 2000);
-      },
+      password: process.env.REDIS_PASSWORD,
+      tls: process.env.REDIS_TLS === 'true' ? {} : undefined,
+      maxRetriesPerRequest: null,
+      enableReadyCheck: false,
     });
 
     this.client.on('error', (err) => {

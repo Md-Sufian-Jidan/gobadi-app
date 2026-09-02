@@ -5,23 +5,17 @@ export interface Field {
   id: number;
   userId: number;
   name: string;
-  area: number;
-  cropType: string;
-  location: string;
-  soilType?: string;
-  irrigationType?: string;
-  notes?: string;
+  sizeAcres: number;
+  cropType?: string;
+  location?: string;
   createdAt: string;
 }
 
 export interface CreateFieldInput {
   name: string;
-  area: number;
-  cropType: string;
-  location: string;
-  soilType?: string;
-  irrigationType?: string;
-  notes?: string;
+  sizeAcres: number;
+  cropType?: string;
+  location?: string;
 }
 
 export const fieldsApi = createApi({
@@ -36,7 +30,7 @@ export const fieldsApi = createApi({
           ? [...result.map((f) => ({ type: 'Field' as const, id: f.id })), { type: 'Field', id: 'LIST' }]
           : [{ type: 'Field', id: 'LIST' }],
     }),
-    create: builder.mutation<Field, CreateFieldInput>({
+    createField: builder.mutation<Field, CreateFieldInput>({
       query: (body) => ({
         url: '/fields',
         method: 'POST',
@@ -44,7 +38,7 @@ export const fieldsApi = createApi({
       }),
       invalidatesTags: [{ type: 'Field', id: 'LIST' }],
     }),
-    update: builder.mutation<Field, { id: number; data: Partial<Field> }>({
+    updateField: builder.mutation<Field, { id: number; data: Partial<Field> }>({
       query: ({ id, data }) => ({
         url: `/fields/${id}`,
         method: 'PUT',
@@ -55,7 +49,7 @@ export const fieldsApi = createApi({
         { type: 'Field', id: 'LIST' },
       ],
     }),
-    remove: builder.mutation<void, number>({
+    removeField: builder.mutation<void, number>({
       query: (id) => ({
         url: `/fields/${id}`,
         method: 'DELETE',
@@ -70,7 +64,7 @@ export const fieldsApi = createApi({
 
 export const {
   useGetFieldsQuery,
-  useCreateMutation,
-  useUpdateMutation,
-  useRemoveMutation,
+  useCreateFieldMutation,
+  useUpdateFieldMutation,
+  useRemoveFieldMutation,
 } = fieldsApi;

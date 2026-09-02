@@ -1,7 +1,8 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Put, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { NotificationsService } from './notifications.service';
 import { Notification } from './notification.entity';
+import { NotificationPreference } from './notification-preference.entity';
 import { RegisterPushTokenDto } from './dto/register-push-token.dto';
 import { UnregisterPushTokenDto } from './dto/unregister-push-token.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -61,5 +62,22 @@ export class NotificationsController {
   ): Promise<{ success: boolean }> {
     await this.notificationsService.unregisterPushToken(user.sub, body.token);
     return { success: true };
+  }
+
+  @Get('preferences')
+  @ApiOperation({ summary: 'Get notification preferences (creates default on first access)' })
+  async getPreferences(
+    @CurrentUser() user: JwtPayload,
+  ): Promise<NotificationPreference> {
+    return this.notificationsService.getPreferences(user.sub);
+  }
+
+  @Put('preferences')
+  @ApiOperation({ summary: 'Update notification preferences' })
+  async updatePreferences(
+    @CurrentUser() user: JwtPayload,
+    @Body() body: Partial<NotificationPreference>,
+  ): Promise<NotificationPreference> {
+    return this.notificationsService.updatePreferences(user.sub, body);
   }
 }
