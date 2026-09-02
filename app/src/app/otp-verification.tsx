@@ -152,6 +152,7 @@ export default function OtpVerificationScreen() {
         </View>
 
         {/* Resend */}
+        <Text style={styles.resendQuestion}>Didn't receive an OTP?</Text>
         {timer > 0 ? (
           <Text style={styles.timerText}>Resend OTP in {timer}s</Text>
         ) : (
@@ -199,6 +200,7 @@ const styles = StyleSheet.create({
   otpBox: { width: 56, height: 56, borderRadius: 14, borderWidth: 2, borderColor: '#E6E1DC', backgroundColor: '#FFFFFF', fontSize: 22, fontWeight: '700', color: '#1A1817' },
   otpBoxActive: { borderColor: '#BD632F' },
 
+  resendQuestion: { fontSize: 14, fontWeight: '600', color: '#7C7672', textAlign: 'center', marginBottom: 8 },
   timerText: { fontSize: 13, fontWeight: '500', color: '#7C7672', textAlign: 'center', marginBottom: 24 },
   resendText: { fontSize: 13, fontWeight: '700', color: '#BD632F', textAlign: 'center', marginBottom: 24, textDecorationLine: 'underline' },
 

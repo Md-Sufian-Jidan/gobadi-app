@@ -69,7 +69,7 @@ export const livestockApi = createApi({
       providesTags: [{ type: 'Livestock', id: 'FEATURED' }],
     }),
     getMyListings: builder.query<Livestock[], void>({
-      query: () => '/livestock/my-listings',
+      query: () => '/livestock/my',
       providesTags: [{ type: 'MyLivestock', id: 'LIST' }],
     }),
     createListing: builder.mutation<Livestock, Partial<Livestock>>({
