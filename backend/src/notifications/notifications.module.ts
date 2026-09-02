@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Notification } from './notification.entity';
 import { PushToken } from './push-token.entity';
+import { NotificationPreference } from './notification-preference.entity';
 import { NotificationsService } from './notifications.service';
 import { NotificationsController } from './notifications.controller';
 import { NotificationsProcessor } from './notifications.processor';
@@ -12,7 +13,7 @@ import { UsersModule } from '../users/users.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Notification, PushToken]),
+    TypeOrmModule.forFeature([Notification, PushToken, NotificationPreference]),
     BullModule.registerQueue({
       name: 'notifications-queue',
     }),

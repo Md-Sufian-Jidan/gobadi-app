@@ -2,7 +2,7 @@ import { createApi } from '@reduxjs/toolkit/query/react';
 import { baseQueryWithReauth } from './base-query-with-reauth';
 
 export interface SubscriptionPlan {
-  id: string;
+  id: number;
   name: string;
   price: number;
   duration: string;
@@ -11,8 +11,8 @@ export interface SubscriptionPlan {
 }
 
 export interface MySubscription {
-  id: string;
-  planId: string;
+  id: number;
+  planId: number;
   planName: string;
   status: string;
   startDate: string;
@@ -25,7 +25,7 @@ export const subscriptionsApi = createApi({
   baseQuery: baseQueryWithReauth,
   tagTypes: ['Subscription', 'SubscriptionPlan'],
   endpoints: (builder) => ({
-    getPlans: builder.query<SubscriptionPlan[], void>({
+    getSubscriptionPlans: builder.query<SubscriptionPlan[], void>({
       query: () => '/subscriptions/plans',
       providesTags: ['SubscriptionPlan'],
     }),
@@ -33,7 +33,7 @@ export const subscriptionsApi = createApi({
       query: () => '/subscriptions/my',
       providesTags: ['Subscription'],
     }),
-    subscribe: builder.mutation<any, { planId: string }>({
+    subscribe: builder.mutation<any, { planId: number; paymentMethodId: number }>({
       query: (body) => ({
         url: '/subscriptions/subscribe',
         method: 'POST',
@@ -41,7 +41,7 @@ export const subscriptionsApi = createApi({
       }),
       invalidatesTags: ['Subscription'],
     }),
-    cancel: builder.mutation<any, void>({
+    cancelSubscription: builder.mutation<any, void>({
       query: () => ({
         url: '/subscriptions/cancel',
         method: 'POST',
@@ -52,8 +52,8 @@ export const subscriptionsApi = createApi({
 });
 
 export const {
-  useGetPlansQuery,
+  useGetSubscriptionPlansQuery,
   useGetMySubscriptionQuery,
   useSubscribeMutation,
-  useCancelMutation,
+  useCancelSubscriptionMutation,
 } = subscriptionsApi;

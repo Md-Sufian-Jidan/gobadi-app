@@ -6,7 +6,7 @@ export interface PaymentMethod {
   userId: number;
   type: string;
   provider: string;
-  accountNumber: string;
+  maskedNumber: string;
   isDefault: boolean;
   isVerified: boolean;
   createdAt: string;
@@ -14,9 +14,8 @@ export interface PaymentMethod {
 
 export interface CreatePaymentMethodInput {
   type: string;
-  provider: string;
-  accountNumber: string;
-  otpCode?: string;
+  maskedNumber: string;
+  provider?: string;
 }
 
 export const paymentMethodsApi = createApi({
@@ -31,7 +30,7 @@ export const paymentMethodsApi = createApi({
           ? [...result.map((m) => ({ type: 'PaymentMethod' as const, id: m.id })), { type: 'PaymentMethod', id: 'LIST' }]
           : [{ type: 'PaymentMethod', id: 'LIST' }],
     }),
-    create: builder.mutation<PaymentMethod, CreatePaymentMethodInput>({
+    createPaymentMethod: builder.mutation<PaymentMethod, CreatePaymentMethodInput>({
       query: (body) => ({
         url: '/payment-methods',
         method: 'POST',
@@ -39,7 +38,7 @@ export const paymentMethodsApi = createApi({
       }),
       invalidatesTags: [{ type: 'PaymentMethod', id: 'LIST' }],
     }),
-    update: builder.mutation<PaymentMethod, { id: number; data: Partial<PaymentMethod> }>({
+    updatePaymentMethod: builder.mutation<PaymentMethod, { id: number; data: Partial<PaymentMethod> }>({
       query: ({ id, data }) => ({
         url: `/payment-methods/${id}`,
         method: 'PUT',
@@ -50,7 +49,7 @@ export const paymentMethodsApi = createApi({
         { type: 'PaymentMethod', id: 'LIST' },
       ],
     }),
-    remove: builder.mutation<void, number>({
+    removePaymentMethod: builder.mutation<void, number>({
       query: (id) => ({
         url: `/payment-methods/${id}`,
         method: 'DELETE',
@@ -60,14 +59,14 @@ export const paymentMethodsApi = createApi({
         { type: 'PaymentMethod', id: 'LIST' },
       ],
     }),
-    setDefault: builder.mutation<any, number>({
+    setDefaultPaymentMethod: builder.mutation<any, number>({
       query: (id) => ({
         url: `/payment-methods/${id}/default`,
         method: 'PATCH',
       }),
       invalidatesTags: [{ type: 'PaymentMethod', id: 'LIST' }],
     }),
-    verifyOtp: builder.mutation<any, { id: number; code: string }>({
+    verifyPaymentMethodOtp: builder.mutation<any, { id: number; code: string }>({
       query: ({ id, code }) => ({
         url: `/payment-methods/${id}/verify-otp`,
         method: 'POST',
@@ -80,9 +79,9 @@ export const paymentMethodsApi = createApi({
 
 export const {
   useGetPaymentMethodsQuery,
-  useCreateMutation,
-  useUpdateMutation,
-  useRemoveMutation,
-  useSetDefaultMutation,
-  useVerifyOtpMutation,
+  useCreatePaymentMethodMutation,
+  useUpdatePaymentMethodMutation,
+  useRemovePaymentMethodMutation,
+  useSetDefaultPaymentMethodMutation,
+  useVerifyPaymentMethodOtpMutation,
 } = paymentMethodsApi;

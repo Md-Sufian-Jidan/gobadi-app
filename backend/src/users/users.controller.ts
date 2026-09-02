@@ -2,15 +2,23 @@ import { Body, Controller, Get, Patch, UseGuards } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiOperation,
+  ApiProperty,
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
+import { IsIn } from 'class-validator';
 import { UsersService } from './users.service';
 import { User } from './user.entity';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { JwtPayload } from '../auth/jwt-payload.interface';
+
+class UpdateLanguageDto {
+  @ApiProperty({ example: 'en', enum: ['en', 'bn'] })
+  @IsIn(['en', 'bn'])
+  language: string;
+}
 
 @ApiTags('users')
 @ApiBearerAuth()
@@ -37,5 +45,16 @@ export class UsersController {
     @CurrentUser() user: JwtPayload,
   ): Promise<Omit<User, 'password'>> {
     return this.usersService.updateProfile(user.sub, body);
+  }
+
+  @Patch('me/language')
+  @ApiOperation({ summary: 'Update preferred language' })
+  @ApiResponse({ status: 200, description: 'Language updated' })
+  async updateLanguage(
+    @Body() body: UpdateLanguageDto,
+    @CurrentUser() user: JwtPayload,
+  ): Promise<{ success: boolean; language: string }> {
+    await this.usersService.updateProfile(user.sub, { language: body.language } as any);
+    return { success: true, language: body.language };
   }
 }

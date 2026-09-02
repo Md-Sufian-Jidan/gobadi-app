@@ -18,8 +18,13 @@ export class TasksService {
     private readonly redisService: RedisService,
   ) {}
 
-  async getTasksForDate(userId: number, date: string): Promise<Task[]> {
-    const cacheKey = this.buildCacheKey(userId, date);
+  async getTasksForDate(
+    userId: number,
+    date: string,
+    category?: string,
+    priority?: string,
+  ): Promise<Task[]> {
+    const cacheKey = this.buildCacheKey(userId, date, category, priority);
     try {
       const cached = await this.redisService.get(cacheKey);
       if (cached) {
@@ -30,8 +35,12 @@ export class TasksService {
     }
 
     const { start, end } = this.dayBounds(date);
+    const where: Record<string, unknown> = { userId, scheduledTime: Between(start, end) };
+    if (category) where.category = category;
+    if (priority) where.priority = priority;
+
     const tasks = await this.taskRepository.find({
-      where: { userId, scheduledTime: Between(start, end) },
+      where,
       order: { scheduledTime: 'ASC' },
     });
 
@@ -50,6 +59,9 @@ export class TasksService {
       title: dto.title,
       detail: dto.detail,
       scheduledTime: new Date(dto.scheduledTime),
+      category: dto.category,
+      priority: dto.priority,
+      dueDate: dto.dueDate ? new Date(dto.dueDate) : undefined,
     });
     const saved = await this.taskRepository.save(task);
     await this.invalidateCacheForTask(saved);
@@ -90,8 +102,11 @@ export class TasksService {
     }
   }
 
-  private buildCacheKey(userId: number, date: string): string {
-    return `cache:tasks:user:${userId}:date:${date}`;
+  private buildCacheKey(userId: number, date: string, category?: string, priority?: string): string {
+    const parts = [`cache:tasks:user:${userId}:date:${date}`];
+    if (category) parts.push(`cat:${category}`);
+    if (priority) parts.push(`pri:${priority}`);
+    return parts.join(':');
   }
 
   private toDateKey(date: Date): string {

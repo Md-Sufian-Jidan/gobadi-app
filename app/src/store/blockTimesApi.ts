@@ -7,7 +7,7 @@ export interface BlockTime {
   startDate: string;
   endDate: string;
   reason?: string;
-  notes?: string;
+  note?: string;
   createdAt: string;
 }
 
@@ -15,7 +15,7 @@ export interface CreateBlockTimeInput {
   startDate: string;
   endDate: string;
   reason?: string;
-  notes?: string;
+  note?: string;
   force?: boolean;
 }
 

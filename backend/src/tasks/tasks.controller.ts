@@ -34,12 +34,16 @@ export class TasksController {
   @Get()
   @ApiOperation({ summary: "Get the current user's tasks for a given day" })
   @ApiQuery({ name: 'date', required: true, example: '2026-07-27' })
+  @ApiQuery({ name: 'category', required: false, example: 'field' })
+  @ApiQuery({ name: 'priority', required: false, example: 'high' })
   @ApiResponse({ status: 200, description: 'List of tasks for the date' })
   async getTasks(
     @Query('date') date: string,
     @CurrentUser() user: JwtPayload,
+    @Query('category') category?: string,
+    @Query('priority') priority?: string,
   ): Promise<Task[]> {
-    return this.tasksService.getTasksForDate(user.sub, date);
+    return this.tasksService.getTasksForDate(user.sub, date, category, priority);
   }
 
   @Post()

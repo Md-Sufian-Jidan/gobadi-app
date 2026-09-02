@@ -1,10 +1,11 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { ILike, Repository } from 'typeorm';
+import { ILike, IsNull, Repository } from 'typeorm';
 import { Doctor } from './doctor.entity';
 import { Availability } from './availability.entity';
 import { PaginatedResult } from '../common/paginated-result.interface';
 import { MeilisearchService } from '../meilisearch/meilisearch.service';
+import { UpdateSingleDayDto } from './dto/update-single-day.dto';
 export { Doctor } from './doctor.entity';
 export { Availability } from './availability.entity';
 
@@ -136,14 +137,78 @@ export class DoctorsService {
     return this.availabilityRepository.save(created);
   }
 
+  /** Update a single availability entry (by dayId) without replacing the whole week. */
+  async updateSingleDay(
+    doctorId: number,
+    dayId: number,
+    dto: UpdateSingleDayDto,
+  ): Promise<Availability> {
+    const existing = await this.availabilityRepository.findOne({
+      where: { id: dayId, doctorId },
+    });
+    if (!existing) {
+      throw new NotFoundException('Availability entry not found');
+    }
+
+    if (dto.startTime !== undefined) existing.startTime = dto.startTime;
+    if (dto.endTime !== undefined) existing.endTime = dto.endTime;
+    if (dto.slotDurationMinutes !== undefined)
+      existing.slotDurationMinutes = dto.slotDurationMinutes;
+    if (dto.bufferMinutes !== undefined)
+      existing.bufferMinutes = dto.bufferMinutes;
+    if (dto.isActive !== undefined) existing.isActive = dto.isActive;
+    if (dto.specificDate !== undefined)
+      existing.specificDate = dto.specificDate ? new Date(dto.specificDate) : (null as any);
+    if (dto.isAvailable !== undefined) existing.isAvailable = dto.isAvailable;
+    if (dto.overrideSlots !== undefined) existing.overrideSlots = dto.overrideSlots;
+
+    return this.availabilityRepository.save(existing);
+  }
+
   /** Finds the active availability window covering the time-of-day of `at` for the doctor's day-of-week. */
   async findAvailabilityWindow(
     doctorId: number,
     at: Date,
   ): Promise<Availability | null> {
     const dayOfWeek = at.getDay();
+    const specificDate = at.toISOString().split('T')[0];
+
+    // Check for a date-specific override first
+    const dateOverride = await this.availabilityRepository.findOne({
+      where: {
+        doctorId,
+        specificDate: specificDate as any,
+        isActive: true,
+      },
+    });
+
+    if (dateOverride) {
+      // If doctor marked this date as unavailable, return null
+      if (!dateOverride.isAvailable) {
+        return null;
+      }
+      // If there are override slots, check if the time falls within one
+      if (dateOverride.overrideSlots && dateOverride.overrideSlots.length > 0) {
+        const minutesOfDay = at.getHours() * 60 + at.getMinutes();
+        for (const slot of dateOverride.overrideSlots) {
+          const [startStr, endStr] = slot.split('-');
+          const [startH, startM] = startStr.split(':').map(Number);
+          const [endH, endM] = endStr.split(':').map(Number);
+          const startMinutes = startH * 60 + startM;
+          const endMinutes = endH * 60 + endM;
+          if (minutesOfDay >= startMinutes && minutesOfDay < endMinutes) {
+            return dateOverride;
+          }
+        }
+        return null;
+      }
+      // No override slots, fall through to use the override's time window as-is
+      return dateOverride;
+    }
+
+    // No date-specific override, use recurring weekly availability
     const windows = await this.availabilityRepository.find({
-      where: { doctorId, dayOfWeek, isActive: true },
+      where: { doctorId, dayOfWeek, isActive: true, specificDate: IsNull() },
     });
 
     const minutesOfDay = at.getHours() * 60 + at.getMinutes();
@@ -157,5 +222,37 @@ export class DoctorsService {
       }
     }
     return null;
+  }
+
+  /** Get all availability entries for a doctor, including date-specific overrides */
+  async getAvailabilityForDate(
+    doctorId: number,
+    date: Date,
+  ): Promise<Availability[]> {
+    const specificDate = date.toISOString().split('T')[0];
+    const dayOfWeek = date.getDay();
+
+    // Get recurring weekly entries
+    const recurring = await this.availabilityRepository.find({
+      where: { doctorId, dayOfWeek, isActive: true, specificDate: IsNull() },
+    });
+
+    // Get date-specific override if exists
+    const override = await this.availabilityRepository.findOne({
+      where: {
+        doctorId,
+        specificDate: specificDate as any,
+        isActive: true,
+      },
+    });
+
+    if (override) {
+      if (!override.isAvailable) {
+        return [];
+      }
+      return [override];
+    }
+
+    return recurring;
   }
 }

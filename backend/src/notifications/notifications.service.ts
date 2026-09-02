@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { FindOptionsWhere, Repository } from 'typeorm';
 import { Notification, NotificationType } from './notification.entity';
 import { PushToken } from './push-token.entity';
+import { NotificationPreference } from './notification-preference.entity';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { UsersService } from '../users/users.service';
@@ -16,6 +17,8 @@ export class NotificationsService {
     private readonly notificationRepository: Repository<Notification>,
     @InjectRepository(PushToken)
     private readonly pushTokenRepository: Repository<PushToken>,
+    @InjectRepository(NotificationPreference)
+    private readonly preferenceRepository: Repository<NotificationPreference>,
     @InjectQueue('notifications-queue')
     private readonly notificationsQueue: Queue,
     private readonly usersService: UsersService,
@@ -180,5 +183,33 @@ export class NotificationsService {
       take: limit,
     });
     return { data, page, limit, total };
+  }
+
+  async getPreferences(userId: number): Promise<NotificationPreference> {
+    let pref = await this.preferenceRepository.findOneBy({ userId });
+    if (!pref) {
+      pref = this.preferenceRepository.create({ userId });
+      pref = await this.preferenceRepository.save(pref);
+    }
+    return pref;
+  }
+
+  async updatePreferences(
+    userId: number,
+    data: Partial<NotificationPreference>,
+  ): Promise<NotificationPreference> {
+    let pref = await this.preferenceRepository.findOneBy({ userId });
+    if (!pref) {
+      pref = this.preferenceRepository.create({ userId });
+    }
+
+    if (data.appointmentReminders !== undefined) pref.appointmentReminders = data.appointmentReminders;
+    if (data.promotions !== undefined) pref.promotions = data.promotions;
+    if (data.chatMessages !== undefined) pref.chatMessages = data.chatMessages;
+    if (data.prescriptionUpdates !== undefined) pref.prescriptionUpdates = data.prescriptionUpdates;
+    if (data.labResults !== undefined) pref.labResults = data.labResults;
+    if (data.vaccinationReminders !== undefined) pref.vaccinationReminders = data.vaccinationReminders;
+
+    return this.preferenceRepository.save(pref);
   }
 }

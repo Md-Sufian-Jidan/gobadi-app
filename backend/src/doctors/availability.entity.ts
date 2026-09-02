@@ -2,6 +2,7 @@ import { Entity, PrimaryGeneratedColumn, Column, Index } from 'typeorm';
 
 @Entity('doctor_availability')
 @Index(['doctorId', 'dayOfWeek'])
+@Index(['doctorId', 'specificDate'])
 export class Availability {
   @PrimaryGeneratedColumn()
   id: number;
@@ -10,8 +11,8 @@ export class Availability {
   @Column()
   doctorId: number;
 
-  /** 0 = Sunday .. 6 = Saturday */
-  @Column('int')
+  /** 0 = Sunday .. 6 = Saturday. Used for recurring weekly availability. */
+  @Column('int', { nullable: true })
   dayOfWeek: number;
 
   /** 'HH:mm' 24-hour format */
@@ -28,6 +29,19 @@ export class Availability {
   @Column('int', { default: 10 })
   bufferMinutes: number;
 
+  /** true = recurring weekly rule is active; false = disabled */
   @Column({ default: true })
   isActive: boolean;
+
+  /** null = recurring weekly row; set = one-off override for that specific date */
+  @Column({ type: 'date', nullable: true })
+  specificDate?: Date;
+
+  /** false = doctor blocked this specific date/slot */
+  @Column({ default: true })
+  isAvailable: boolean;
+
+  /** Specific time slots for this date override, e.g. ['09:00-09:30','10:00-10:30'] */
+  @Column('simple-array', { nullable: true })
+  overrideSlots?: string[];
 }

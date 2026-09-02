@@ -12,10 +12,8 @@ export interface Ticket {
   id: number;
   userId: number;
   subject: string;
-  description: string;
+  message: string;
   status: string;
-  priority: string;
-  category: string;
   messages: TicketMessage[];
   createdAt: string;
   updatedAt: string;
@@ -23,9 +21,7 @@ export interface Ticket {
 
 export interface CreateTicketInput {
   subject: string;
-  description: string;
-  category: string;
-  priority?: string;
+  message?: string;
 }
 
 export const supportApi = createApi({

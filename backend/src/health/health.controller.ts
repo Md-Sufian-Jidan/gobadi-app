@@ -38,7 +38,7 @@ export class HealthController {
       await this.redisService.del('health_check');
     } catch (err) {
       redisStatus = 'DOWN';
-      errors.push(`Redis connection failed: ${err.message}`);
+      console.error('Redis Health Check Failed:', err.message);
     }
 
     const response = {
