@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useRequireDoctor } from '@/hooks/use-require-doctor';
 import {
   StyleSheet,
@@ -6,35 +6,87 @@ import {
   Text,
   TouchableOpacity,
   ScrollView,
-  TextInput,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useGetConversationsQuery } from '@/store/chatApi';
+import {
+  useGetDoctorBookingsQuery,
+  type DoctorAppointment,
+} from '@/store/doctorPortalApi';
 
-interface ChatListItem {
+interface EnrichedChat {
   id: string;
   name: string;
   lastMessage: string;
   time: string;
   unreadCount: number;
   isPending: boolean;
+  animalImage?: string;
 }
 
-const MOCK_CHATS: ChatListItem[] = [
-  { id: '1', name: 'Emily Carter', lastMessage: 'Thank you for the detailed exp...', time: '4:00 PM', unreadCount: 0, isPending: false },
-  { id: '2', name: 'Sophia Nguyen', lastMessage: 'Send prescription, re...', time: '12:45 P...', unreadCount: 1, isPending: true },
-  { id: '3', name: 'Martin Randolph', lastMessage: 'Thank you doctor, I will follow...', time: '11:30 AM', unreadCount: 2, isPending: false },
-  { id: '4', name: "Liam O'Connor", lastMessage: 'Please reschedule for next we...', time: '1:15 PM', unreadCount: 0, isPending: false },
-  { id: '5', name: 'Aisha Hassan', lastMessage: 'Send prescription, re...', time: '2:00 PM', unreadCount: 1, isPending: true },
-  { id: '6', name: 'Carlos Méndez', lastMessage: 'I have some concerns about m...', time: '3:30 PM', unreadCount: 0, isPending: false },
-];
+function formatChatTime(iso?: string | null): string {
+  if (!iso) return '';
+  const d = new Date(iso);
+  const now = new Date();
+  const diffMs = now.getTime() - d.getTime();
+  const diffMin = Math.floor(diffMs / 60000);
+  if (diffMin < 1) return 'now';
+  if (diffMin < 60) return `${diffMin}m`;
+  const diffHr = Math.floor(diffMin / 60);
+  if (diffHr < 24) return `${diffHr}h`;
+  return d.toLocaleDateString('en-US', { day: 'numeric', month: 'short' });
+}
 
 export default function DoctorMessagesScreen() {
   const router = useRouter();
   const isDoctor = useRequireDoctor();
+  const [searchQuery] = useState('');
+
+  const { data: conversations = [] } = useGetConversationsQuery();
+  const { data: bookings = [] } = useGetDoctorBookingsQuery();
+
+  const patientLookup = useMemo(() => {
+    const map = new Map<number, DoctorAppointment>();
+    bookings.forEach((b) => {
+      if (!map.has(b.patientId)) {
+        map.set(b.patientId, b);
+      }
+    });
+    return map;
+  }, [bookings]);
+
+  const enrichedChats = useMemo<EnrichedChat[]>(() => {
+    return conversations.map((conv) => {
+      const appointment = patientLookup.get(conv.patientId);
+      return {
+        id: String(conv.id),
+        name: appointment?.patientName || `Patient #${conv.patientId}`,
+        lastMessage: '',
+        time: formatChatTime(conv.lastMessageAt),
+        unreadCount: 0,
+        isPending: false,
+        animalImage: appointment?.animalImage,
+      };
+    });
+  }, [conversations, patientLookup]);
+
+  const filteredChats = useMemo(() => {
+    if (!searchQuery.trim()) return enrichedChats;
+    const q = searchQuery.toLowerCase();
+    return enrichedChats.filter((c) => c.name.toLowerCase().includes(q));
+  }, [enrichedChats, searchQuery]);
+
+  const nextAppointment = useMemo(() => {
+    const now = new Date();
+    return bookings
+      .filter((b) => new Date(b.startAt) >= now && b.status !== 'CANCELLED')
+      .sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime())[0];
+  }, [bookings]);
+
   if (!isDoctor) return null;
-  const [searchQuery, setSearchQuery] = useState('');
 
   return (
     <SafeAreaView style={styles.container}>
@@ -46,39 +98,57 @@ export default function DoctorMessagesScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
-        {/* Upcoming Appointment Banner */}
-        <TouchableOpacity style={styles.upcomingCard} activeOpacity={0.85}>
-          <View style={styles.upcomingContent}>
-            <View style={styles.upcomingLeft}>
-              <Text style={styles.upcomingLabel}>Upcoming appointment</Text>
-              <Text style={styles.upcomingTime}>10:00 AM · Today</Text>
-              <Text style={styles.upcomingPetName}>Donald Tramp</Text>
-              <Text style={styles.upcomingStarts}>Starts in 20 min</Text>
-              <Text style={styles.upcomingOwner}>Owner   Sophia Rodriguez</Text>
-            </View>
-            <View style={styles.upcomingRight}>
-              <View style={styles.upcomingPetAvatar}>
-                <Ionicons name="paw" size={28} color="#BD632F" />
+        {nextAppointment && (
+          <TouchableOpacity style={styles.upcomingCard} activeOpacity={0.85}>
+            <View style={styles.upcomingContent}>
+              <View style={styles.upcomingLeft}>
+                <Text style={styles.upcomingLabel}>Upcoming appointment</Text>
+                <Text style={styles.upcomingTime}>
+                  {new Date(nextAppointment.startAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} · Today
+                </Text>
+                <Text style={styles.upcomingPetName}>{nextAppointment.animalName || 'Pet'}</Text>
+                <Text style={styles.upcomingOwner}>Owner   {nextAppointment.patientName || `Patient #${nextAppointment.patientId}`}</Text>
               </View>
-              <TouchableOpacity style={styles.joinBtn} activeOpacity={0.85} onPress={() => router.push('/video-call')}>
-                <Text style={styles.joinBtnText}>Join</Text>
-              </TouchableOpacity>
+              <View style={styles.upcomingRight}>
+                <View style={styles.upcomingPetAvatar}>
+                  {nextAppointment.animalImage ? (
+                    <Image source={{ uri: nextAppointment.animalImage }} style={styles.upcomingPetAvatarImage} />
+                  ) : (
+                    <Ionicons name="paw" size={28} color="#BD632F" />
+                  )}
+                </View>
+                <TouchableOpacity style={styles.joinBtn} activeOpacity={0.85} onPress={() => router.push('/video-call')}>
+                  <Text style={styles.joinBtnText}>Join</Text>
+                </TouchableOpacity>
+              </View>
             </View>
-          </View>
-        </TouchableOpacity>
+          </TouchableOpacity>
+        )}
 
-        {/* Recent Chats */}
         <Text style={styles.sectionTitle}>Recent chats</Text>
 
-        {MOCK_CHATS.map((chat) => (
+        {filteredChats.map((chat) => (
           <TouchableOpacity
             key={chat.id}
             style={styles.chatItem}
             activeOpacity={0.7}
-            onPress={() => router.push({ pathname: '/chat', params: { conversationId: chat.id } })}
+            onPress={() =>
+              router.push({
+                pathname: '/chat',
+                params: {
+                  conversationId: chat.id,
+                  patientName: chat.name,
+                  animalImage: chat.animalImage || '',
+                },
+              })
+            }
           >
             <View style={styles.chatAvatar}>
-              <Ionicons name="paw" size={22} color="#BD632F" />
+              {chat.animalImage ? (
+                <Image source={{ uri: chat.animalImage }} style={styles.chatAvatarImage} />
+              ) : (
+                <Ionicons name="paw" size={22} color="#BD632F" />
+              )}
             </View>
             <View style={styles.chatInfo}>
               <View style={styles.chatTopRow}>
@@ -119,15 +189,16 @@ const styles = StyleSheet.create({
   upcomingLabel: { fontSize: 14, fontWeight: '800', color: '#BD632F', marginBottom: 4 },
   upcomingTime: { fontSize: 12, fontWeight: '600', color: '#7C7672', marginBottom: 2 },
   upcomingPetName: { fontSize: 17, fontWeight: '800', color: '#1A1817', marginBottom: 2 },
-  upcomingStarts: { fontSize: 12, fontWeight: '500', color: '#9C9690', marginBottom: 4 },
   upcomingOwner: { fontSize: 12, fontWeight: '500', color: '#7C7672' },
   upcomingRight: { alignItems: 'center', gap: 8 },
   upcomingPetAvatar: { width: 64, height: 64, borderRadius: 16, backgroundColor: '#FFF2EB', justifyContent: 'center', alignItems: 'center', overflow: 'hidden' },
+  upcomingPetAvatarImage: { width: 64, height: 64, borderRadius: 16 },
   joinBtn: { backgroundColor: '#BD632F', borderRadius: 20, paddingHorizontal: 20, paddingVertical: 8 },
   joinBtnText: { color: '#FFFFFF', fontSize: 14, fontWeight: '700' },
   sectionTitle: { fontSize: 16, fontWeight: '700', color: '#1A1817', marginBottom: 12 },
   chatItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: '#F0ECE8' },
-  chatAvatar: { width: 48, height: 48, borderRadius: 24, backgroundColor: '#FFF2EB', justifyContent: 'center', alignItems: 'center', marginRight: 12 },
+  chatAvatar: { width: 48, height: 48, borderRadius: 24, backgroundColor: '#FFF2EB', justifyContent: 'center', alignItems: 'center', marginRight: 12, overflow: 'hidden' },
+  chatAvatarImage: { width: 48, height: 48, borderRadius: 24 },
   chatInfo: { flex: 1 },
   chatTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
   chatName: { fontSize: 15, fontWeight: '700', color: '#1A1817' },

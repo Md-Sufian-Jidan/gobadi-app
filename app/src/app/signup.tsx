@@ -10,65 +10,83 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
+  Modal,
+  FlatList,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 
 import { useRegisterMutation } from '@/store/authApi';
 import { useSocialAuth } from '@/hooks/use-social-auth';
-import { PasswordField } from '@/components/password-field';
-import { IdentifierTabs, IdentifierMode } from '@/components/identifier-tabs';
 
 const BD_PHONE_REGEX = /^01[3-9]\d{8}$/;
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function SignUpScreen() {
   const router = useRouter();
 
-  const [mode, setMode] = useState<IdentifierMode>('phone');
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [isDoctor, setIsDoctor] = useState(false);
+  const [role, setRole] = useState<'doctor' | 'user' | ''>('');
+  const [bvcNumber, setBvcNumber] = useState('');
 
   const [errorMessage, setErrorMessage] = useState('');
+
+  // Dropdown Modal State
+  const [modalVisible, setModalVisible] = useState(false);
+  const [modalData, setModalData] = useState<{
+    title: string;
+    options: string[];
+    onSelect: (val: string) => void;
+  }>({ title: '', options: [], onSelect: () => {} });
 
   const [register, { isLoading }] = useRegisterMutation();
   const { withGoogle, withFacebook, isLoading: isSocialLoading, error: socialError } = useSocialAuth(
     () => router.replace('/(tabs)'),
   );
 
+  const openRoleDropdown = () => {
+    setModalData({
+      title: 'Select your role',
+      options: ['Doctor', 'User'],
+      onSelect: (val) => setRole(val === 'Doctor' ? 'doctor' : 'user'),
+    });
+    setModalVisible(true);
+  };
+
   const handleSignUp = async () => {
     setErrorMessage('');
 
-    const identifier = mode === 'phone' ? phone.trim() : email.trim();
-    if (!identifier || !password) {
-      setErrorMessage(`${mode === 'phone' ? 'Phone number' : 'Email'} and password are required.`);
+    if (!name.trim()) {
+      setErrorMessage('Name is required.');
       return;
     }
-    if (mode === 'phone' && !BD_PHONE_REGEX.test(phone)) {
+    if (!phone.trim()) {
+      setErrorMessage('Phone number is required.');
+      return;
+    }
+    if (!BD_PHONE_REGEX.test(phone)) {
       setErrorMessage('Please enter a valid 11-digit Bangladeshi phone number (e.g., 01712345678).');
       return;
     }
-    if (mode === 'email' && !EMAIL_REGEX.test(email.trim())) {
-      setErrorMessage('Please enter a valid email address.');
+    if (!role) {
+      setErrorMessage('Please select a role.');
       return;
     }
-    if (password !== confirmPassword) {
-      setErrorMessage('Passwords do not match.');
+    if (role === 'doctor' && !bvcNumber.trim()) {
+      setErrorMessage('BVC Registration Number is required for doctors.');
       return;
     }
 
     try {
+      const identifier = `+880${phone.trim()}`;
       await register({
         name: name.trim(),
         identifier,
-        password,
-        role: isDoctor ? 'doctor' : 'user',
+        password: 'doctor-pending',
+        role: role || 'user',
+        bvcRegistrationNumber: role === 'doctor' ? bvcNumber.trim() : undefined,
       }).unwrap();
-      router.push({ pathname: '/otp', params: { phone: identifier, purpose: 'verify' } });
+      router.push({ pathname: '/otp', params: { phone: identifier, purpose: 'verify', role: role || 'user' } });
     } catch (err: any) {
       setErrorMessage(err?.data?.message || 'Could not create account. Please try again.');
     }
@@ -96,8 +114,6 @@ export default function SignUpScreen() {
 
           {/* Form Fields */}
           <View style={styles.form}>
-            <IdentifierTabs mode={mode} onChange={setMode} />
-
             {/* Name */}
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Name</Text>
@@ -105,72 +121,58 @@ export default function SignUpScreen() {
                 style={styles.input}
                 value={name}
                 onChangeText={setName}
-                placeholder="Name"
+                placeholder="Enter your name"
                 placeholderTextColor="#A39E99"
               />
             </View>
 
-            {mode === 'phone' ? (
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>Phone Number*</Text>
-                <View style={styles.phoneInputContainer}>
-                  <TouchableOpacity style={styles.countryCodeSelector} activeOpacity={0.7}>
-                    <Text style={styles.flagEmoji}>🇧🇩</Text>
-                    <Text style={styles.countryCode}>+880</Text>
-                    <Text style={styles.dropdownArrow}>▼</Text>
-                  </TouchableOpacity>
-                  <View style={styles.phoneDivider} />
-                  <TextInput
-                    style={styles.phoneInput}
-                    value={phone}
-                    onChangeText={setPhone}
-                    placeholder="Phone number"
-                    placeholderTextColor="#A39E99"
-                    keyboardType="phone-pad"
-                    maxLength={11}
-                  />
-                </View>
+            {/* Phone Number */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Phone Number*</Text>
+              <View style={styles.phoneInputContainer}>
+                <TouchableOpacity style={styles.countryCodeSelector} activeOpacity={0.7}>
+                  <Text style={styles.flagEmoji}>🇧🇩</Text>
+                  <Text style={styles.countryCode}>+880</Text>
+                  <Text style={styles.dropdownArrow}>▼</Text>
+                </TouchableOpacity>
+                <View style={styles.phoneDivider} />
+                <TextInput
+                  style={styles.phoneInput}
+                  value={phone}
+                  onChangeText={setPhone}
+                  placeholder="Phone number"
+                  placeholderTextColor="#A39E99"
+                  keyboardType="phone-pad"
+                  maxLength={11}
+                />
               </View>
-            ) : (
+            </View>
+
+            {/* Role */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Role*</Text>
+              <TouchableOpacity style={styles.dropdownSelector} activeOpacity={0.7} onPress={openRoleDropdown}>
+                <Text style={[styles.dropdownValue, !role && styles.placeholderText]}>
+                  {role === 'doctor' ? 'Doctor' : role === 'user' ? 'User' : 'Select your role'}
+                </Text>
+                <Text style={styles.dropdownArrow}>▼</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* BVC Registration Number - Only for Doctors */}
+            {role === 'doctor' && (
               <View style={styles.inputGroup}>
-                <Text style={styles.label}>Email*</Text>
+                <Text style={styles.label}>BVC Registration Number*</Text>
                 <TextInput
                   style={styles.input}
-                  value={email}
-                  onChangeText={setEmail}
-                  placeholder="johndoe@email.com"
+                  value={bvcNumber}
+                  onChangeText={setBvcNumber}
+                  placeholder="Enter BVC registration number"
                   placeholderTextColor="#A39E99"
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  autoComplete="email"
-                  textContentType="emailAddress"
+                  keyboardType="number-pad"
                 />
               </View>
             )}
-
-            {/* Password */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Password*</Text>
-              <PasswordField value={password} onChangeText={setPassword} />
-            </View>
-
-            {/* Confirm Password */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Confirm Password*</Text>
-              <PasswordField value={confirmPassword} onChangeText={setConfirmPassword} />
-            </View>
-
-            {/* Register as doctor */}
-            <TouchableOpacity
-              style={styles.checkboxRow}
-              activeOpacity={0.7}
-              onPress={() => setIsDoctor((prev) => !prev)}
-            >
-              <View style={[styles.checkbox, isDoctor && styles.checkboxChecked]}>
-                {isDoctor ? <Text style={styles.checkboxTick}>✓</Text> : null}
-              </View>
-              <Text style={styles.checkboxLabel}>Register as a doctor</Text>
-            </TouchableOpacity>
 
             {/* Terms of Service */}
             <Text style={styles.termsText}>
@@ -181,7 +183,7 @@ export default function SignUpScreen() {
             {/* Error message */}
             {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
 
-            {/* Sign Up Button */}
+            {/* Continue Button */}
             <TouchableOpacity
               style={[styles.signUpButton, isLoading && styles.signUpButtonDisabled]}
               activeOpacity={0.8}
@@ -191,7 +193,7 @@ export default function SignUpScreen() {
               {isLoading ? (
                 <ActivityIndicator color="#FFFFFF" />
               ) : (
-                <Text style={styles.signUpButtonText}>Sign Up</Text>
+                <Text style={styles.signUpButtonText}>Continue</Text>
               )}
             </TouchableOpacity>
 
@@ -245,6 +247,39 @@ export default function SignUpScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* Role Selector Dropdown Modal */}
+      <Modal
+        visible={modalVisible}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setModalVisible(false)}
+        >
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>{modalData.title}</Text>
+            <FlatList
+              data={modalData.options}
+              keyExtractor={(item) => item}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={styles.modalItem}
+                  onPress={() => {
+                    modalData.onSelect(item);
+                    setModalVisible(false);
+                  }}
+                >
+                  <Text style={styles.modalItemText}>{item}</Text>
+                </TouchableOpacity>
+              )}
+            />
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -263,7 +298,7 @@ const styles = StyleSheet.create({
   logo: {
     width: 120,
     height: 120,
-    marginBottom: 10
+    marginBottom: 10,
   },
   title: {
     fontSize: 24,
@@ -351,35 +386,6 @@ const styles = StyleSheet.create({
   },
   placeholderText: {
     color: '#A39E99',
-  },
-  checkboxRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  checkbox: {
-    width: 22,
-    height: 22,
-    borderRadius: 6,
-    borderWidth: 1.5,
-    borderColor: '#E6E1DC',
-    backgroundColor: '#FFFFFF',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 10,
-  },
-  checkboxChecked: {
-    backgroundColor: '#BD632F',
-    borderColor: '#BD632F',
-  },
-  checkboxTick: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  checkboxLabel: {
-    fontSize: 14,
-    color: '#1A1817',
   },
   termsText: {
     fontSize: 13,

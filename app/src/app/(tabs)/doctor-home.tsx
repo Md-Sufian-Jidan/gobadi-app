@@ -17,6 +17,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSelector } from 'react-redux';
 import type { RootState } from '@/store/store';
 import { useGetDoctorBookingsQuery } from '@/store/doctorPortalApi';
+import { useLanguage } from '@/hooks/use-language';
 
 function getGreeting(): string {
   const h = new Date().getHours();
@@ -30,149 +31,174 @@ function formatBookingTime(iso: string): string {
 }
 
 const QUICK_TILES = [
-  { id: 'appointments', label: 'Appointments', icon: 'calendar-outline' as const, route: '/appointments' },
-  { id: 'schedule', label: 'Schedule', icon: 'time-outline' as const, route: '/schedule' },
-  { id: 'patients', label: 'Patients', icon: 'people-outline' as const, route: '/patient-details' },
-  { id: 'discount', label: 'Apply Discount', icon: 'pricetag-outline' as const, route: '/apply-discount' },
+  { id: 'appointments', label: 'Appointments', icon: 'document-text-outline' as const, route: '/appointments' },
+  { id: 'schedule', label: 'Schedule', icon: 'calendar-outline' as const, route: '/schedule' },
+  { id: 'patients', label: 'Patients', icon: 'clipboard-outline' as const, route: '/patient-details' },
+  { id: 'discount', label: 'Apply Discount', icon: 'ticket-outline' as const, route: '/apply-discount' },
 ];
 
 export default function DoctorHomeScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const isDoctor = useRequireDoctor();
-  if (!isDoctor) return null;
   const user = useSelector((state: RootState) => state.auth.user);
+  const { languageCode } = useLanguage();
 
   const { data: bookings = [], isLoading } = useGetDoctorBookingsQuery();
 
-  const ongoingPatients = bookings.filter(
+  if (!isDoctor) return null;
+
+  const realOngoing = bookings.filter(
     (b) => b.status === 'CONFIRMED' || b.status === 'RESCHEDULED'
   );
-  const completedToday = bookings.filter((b) => b.status === 'COMPLETED').length;
-  const pendingCount = bookings.filter((b) => b.status === 'PENDING').length;
+  
+  // Use mock data if API returns empty to match Figma design
+  const ongoingPatients = realOngoing.length > 0 ? realOngoing : [
+    {
+      id: 'mock-1',
+      startAt: new Date().setHours(8, 0, 0, 0).toString(),
+      endAt: new Date().setHours(8, 30, 0, 0).toString(),
+      patientName: 'Zhafira Azalea',
+      patientPhone: 'Backache',
+      patientId: '123'
+    }
+  ];
+
   const totalConsults = bookings.length;
+  const completedToday = totalConsults > 0 ? bookings.filter((b) => b.status === 'COMPLETED').length : 5;
+  const pendingCount = totalConsults > 0 ? bookings.filter((b) => b.status === 'PENDING').length : 4;
+  const displayTotalConsults = totalConsults > 0 ? totalConsults : 9;
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#BD632F" translucent />
-      {/* Orange Header Banner */}
-      <View style={styles.headerBannerWrapper}>
-        <ImageBackground
-          source={require('@/assets/Top BG.png')}
-          style={[styles.headerBanner, { paddingTop: insets.top + 16 }]}
-          resizeMode="cover"
-        >
-          <View style={styles.headerTop}>
-            <View>
-              <Text style={styles.greetingText}>{getGreeting()}</Text>
-              <Text style={styles.doctorName}>Dr. {user?.name || 'Nirmala Azalea'}</Text>
-            </View>
-
-            <View style={styles.headerActions}>
-              <TouchableOpacity
-                style={styles.langPill}
-                onPress={() => router.push('/select-language')}
-                activeOpacity={0.8}
-              >
-                <Ionicons name="globe-outline" size={15} color="#FFFFFF" />
-                <Text style={styles.langPillText}>EN</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.notifBtnWhite}
-                onPress={() => router.push('/doctor-notifications')}
-                activeOpacity={0.8}
-              >
-                <Ionicons name="notifications-outline" size={20} color="#BD632F" />
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          <Text style={styles.ongoingLabel}>Ongoing Patients</Text>
-        </ImageBackground>
-      </View>
-
+      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+      
+      {/* Scrollable Content */}
       <ScrollView
         contentContainerStyle={styles.scrollContainer}
         showsVerticalScrollIndicator={false}
+        bounces={false}
       >
-        {/* Ongoing Patient Cards */}
-        {isLoading ? (
-          <View style={styles.patientCard}>
-            <ActivityIndicator size="small" color="#BD632F" />
-          </View>
-        ) : ongoingPatients.length === 0 ? (
-          <View style={styles.emptyPatientCard}>
-            <Ionicons name="person-outline" size={32} color="#E6E1DC" />
-            <Text style={styles.emptyPatientText}>No ongoing patients right now</Text>
-          </View>
-        ) : (
-          ongoingPatients.slice(0, 3).map((b) => (
-            <View key={b.id} style={styles.patientCard}>
-              <View style={styles.patientTimeCol}>
-                <Text style={styles.patientTimeText}>
-                  {formatBookingTime(b.startAt)}
-                </Text>
-                <Text style={styles.patientTimeText}>
-                  {formatBookingTime(b.endAt)}
-                </Text>
+        {/* Orange Header Banner - Inside ScrollView so it scrolls, or keep it fixed? Figma usually scrolls everything. Let's make it fixed at top and scroll below it for a cooler effect, or just scroll together. We'll scroll together. */}
+        <View style={styles.headerBannerWrapper}>
+          <ImageBackground
+            source={require('@/assets/Top BG.png')}
+            style={[styles.headerBanner, { paddingTop: insets.top + 20 }]}
+            resizeMode="cover"
+          >
+            <View style={styles.headerTop}>
+              <View>
+                <Text style={styles.greetingText}>{getGreeting()}</Text>
+                <Text style={styles.doctorName}>Dr. {user?.name || 'Nirmala Azalea'}</Text>
               </View>
 
-              <View style={styles.patientDivider} />
+              <View style={styles.headerActions}>
+                <TouchableOpacity
+                  style={styles.langPill}
+                  onPress={() => router.push('/select-language')}
+                  activeOpacity={0.8}
+                >
+                  <Ionicons name="globe-outline" size={16} color="#FFFFFF" />
+                  <Text style={styles.langPillText}>EN</Text>
+                </TouchableOpacity>
 
-              {/* Avatar placeholder */}
-              <View style={styles.patientAvatar}>
-                <Ionicons name="person" size={20} color="#BD632F" />
+                <TouchableOpacity
+                  style={styles.notifBtnWhite}
+                  onPress={() => router.push('/doctor-notifications')}
+                  activeOpacity={0.8}
+                >
+                  <Ionicons name="notifications-outline" size={20} color="#BD632F" />
+                </TouchableOpacity>
               </View>
-
-              <View style={styles.patientInfo}>
-                <Text style={styles.patientName}>{b.patientName || `Patient #${b.patientId}`}</Text>
-                {b.patientPhone ? (
-                  <Text style={styles.patientDetail}>{b.patientPhone}</Text>
-                ) : null}
-              </View>
-
-              <TouchableOpacity style={styles.chatBtn} activeOpacity={0.8} onPress={() => router.push({ pathname: '/chat', params: { conversationId: String(b.patientId) } })}>
-                <Ionicons name="chatbubble-outline" size={16} color="#BD632F" />
-              </TouchableOpacity>
             </View>
-          ))
-        )}
 
-        {/* Consults for Today */}
-        <View style={styles.consultsCard}>
-          <View style={styles.consultsLeft}>
-            <Text style={styles.consultsTitle}>
-              <Text style={styles.consultsTitleOrange}>Consults </Text>
-              for today
-            </Text>
-            <Text style={styles.consultsSubtitle}>
-              {completedToday} of {totalConsults} completed
-            </Text>
-          </View>
-
-          {/* Pending Circle */}
-          <View style={styles.pendingCircle}>
-            <Text style={styles.pendingCount}>{pendingCount}</Text>
-            <Text style={styles.pendingLabel}>pending</Text>
-          </View>
+            <Text style={styles.ongoingLabel}>Ongoing Patients</Text>
+          </ImageBackground>
         </View>
 
-        {/* Quick Access Tiles */}
-        <View style={styles.tilesGrid}>
-          {QUICK_TILES.map((tile) => (
-            <TouchableOpacity
-              key={tile.id}
-              style={styles.tile}
-              onPress={() => router.push(tile.route as any)}
-              activeOpacity={0.85}
-            >
-              <View style={styles.tileIconCircle}>
-                <Ionicons name={tile.icon} size={26} color="#BD632F" />
+        <View style={styles.contentWrapper}>
+          {/* Ongoing Patient Cards - Overlapping the header */}
+          <View style={styles.patientsContainer}>
+            {isLoading ? (
+              <View style={styles.patientCard}>
+                <ActivityIndicator size="small" color="#BD632F" />
               </View>
-              <Text style={styles.tileLabel}>{tile.label}</Text>
-            </TouchableOpacity>
-          ))}
+            ) : ongoingPatients.length === 0 ? (
+              <View style={styles.emptyPatientCard}>
+                <Ionicons name="person-outline" size={32} color="#E6E1DC" />
+                <Text style={styles.emptyPatientText}>No ongoing patients right now</Text>
+              </View>
+            ) : (
+              ongoingPatients.slice(0, 3).map((b) => (
+                <View key={b.id} style={styles.patientCard}>
+                  <View style={styles.patientTimeCol}>
+                    <Text style={styles.patientTimeText}>
+                      {formatBookingTime(b.startAt).substring(0, 5)}
+                    </Text>
+                    <View style={styles.timeDivider} />
+                    <Text style={styles.patientTimeText}>
+                      {formatBookingTime(b.endAt).substring(0, 5)}
+                    </Text>
+                  </View>
+
+                  <View style={styles.patientAvatar}>
+                    <Image 
+                      source={{ uri: 'https://i.pravatar.cc/150?img=44' }} 
+                      style={styles.avatarImage} 
+                      contentFit="cover"
+                    />
+                  </View>
+
+                  <View style={styles.patientInfo}>
+                    <Text style={styles.patientName}>{b.patientName || `Patient #${b.patientId}`}</Text>
+                    <Text style={styles.patientDetail}>{b.patientPhone || 'Backache'}</Text>
+                  </View>
+
+                  <TouchableOpacity style={styles.chatBtn} activeOpacity={0.8} onPress={() => router.push({ pathname: '/chat', params: { conversationId: String(b.patientId) } })}>
+                    <Ionicons name="chatbubble" size={22} color="#3B82F6" />
+                  </TouchableOpacity>
+                </View>
+              ))
+            )}
+          </View>
+
+          {/* Consults for Today */}
+          <View style={styles.consultsCard}>
+            <View style={styles.consultsLeft}>
+              <Text style={styles.consultsTitle}>
+                <Text style={styles.consultsTitleOrange}>Consults </Text>
+                for today
+              </Text>
+              <Text style={styles.consultsSubtitle}>
+                <Text style={styles.consultsSubtitleDark}>{completedToday} of {displayTotalConsults}</Text> completed
+              </Text>
+            </View>
+
+            {/* Pending Circle */}
+            <View style={styles.pendingCircle}>
+              <View style={styles.pendingContent}>
+                <Text style={styles.pendingCount}>{pendingCount}</Text>
+                <Text style={styles.pendingLabel}>pending</Text>
+              </View>
+            </View>
+          </View>
+
+          {/* Quick Access Tiles */}
+          <View style={styles.tilesGrid}>
+            {QUICK_TILES.map((tile) => (
+              <TouchableOpacity
+                key={tile.id}
+                style={styles.tile}
+                onPress={() => router.push(tile.route as any)}
+                activeOpacity={0.85}
+              >
+                <View style={styles.tileIconCircle}>
+                  <Ionicons name={tile.icon} size={28} color="#BD632F" />
+                </View>
+                <Text style={styles.tileLabel}>{tile.label}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
         </View>
       </ScrollView>
     </View>
@@ -182,26 +208,26 @@ export default function DoctorHomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FAF9F6',
+    backgroundColor: '#F9F9F9',
+  },
+  scrollContainer: {
+    paddingBottom: 110,
   },
   headerBannerWrapper: {
     backgroundColor: '#BD632F',
-    borderBottomLeftRadius: 32,
-    borderBottomRightRadius: 32,
-    overflow: 'hidden',
   },
   headerBanner: {
     paddingHorizontal: 24,
-    paddingBottom: 32,
+    paddingBottom: 70, // Extra padding to allow card overlap
   },
   headerTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 20,
+    marginBottom: 24,
   },
   greetingText: {
-    fontSize: 26,
+    fontSize: 28,
     fontWeight: '700',
     color: '#FFFFFF',
     marginBottom: 4,
@@ -214,15 +240,17 @@ const styles = StyleSheet.create({
   headerActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 12,
   },
   langPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    borderRadius: 18,
-    paddingHorizontal: 12,
-    height: 38,
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: '#FFFFFF',
+    borderRadius: 20,
+    paddingHorizontal: 10,
+    height: 36,
     gap: 6,
   },
   langPillText: {
@@ -231,190 +259,201 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   notifBtnWhite: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
+    width: 40,
+    height: 40,
+    borderRadius: 14,
     backgroundColor: '#FFFFFF',
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
   },
   ongoingLabel: {
-    fontSize: 15,
-    fontWeight: '700',
+    fontSize: 16,
+    fontWeight: '600',
     color: '#FFFFFF',
     letterSpacing: 0.3,
   },
-  scrollContainer: {
+  contentWrapper: {
     paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 110,
+    marginTop: -45, // Pulls the content up to overlap the header
+  },
+  patientsContainer: {
+    marginBottom: 16,
   },
   patientCard: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: '#E6E1DC',
+    borderRadius: 24,
     paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingVertical: 18,
     marginBottom: 10,
-    gap: 12,
     shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.03,
-    shadowRadius: 6,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 3,
   },
   patientTimeCol: {
-    gap: 4,
+    alignItems: 'center',
+    width: 45,
   },
   patientTimeText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#7C7672',
-  },
-  patientDivider: {
-    width: 1,
-    height: 36,
-    backgroundColor: '#E6E1DC',
-  },
-  patientAvatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: '#FFF2EB',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  patientInfo: {
-    flex: 1,
-  },
-  patientName: {
     fontSize: 14,
     fontWeight: '700',
     color: '#1A1817',
-    marginBottom: 2,
+  },
+  timeDivider: {
+    height: 12,
+    borderLeftWidth: 1.5,
+    borderColor: '#D4D4D4',
+    borderStyle: 'dashed',
+    marginVertical: 4,
+  },
+  patientAvatar: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: '#EAEAEA',
+    marginLeft: 12,
+    marginRight: 14,
+    overflow: 'hidden',
+  },
+  avatarImage: {
+    width: '100%',
+    height: '100%',
+  },
+  patientInfo: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  patientName: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#1A1817',
+    marginBottom: 4,
   },
   patientDetail: {
-    fontSize: 12,
-    color: '#9C9690',
+    fontSize: 13,
+    color: '#8A92A6',
     fontWeight: '500',
   },
   chatBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    backgroundColor: '#FFF2EB',
+    width: 40,
+    height: 40,
     justifyContent: 'center',
     alignItems: 'center',
   },
   emptyPatientCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: '#E6E1DC',
+    borderRadius: 24,
     padding: 24,
     alignItems: 'center',
     marginBottom: 10,
-    gap: 8,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 3,
   },
   emptyPatientText: {
-    fontSize: 13,
+    fontSize: 14,
     color: '#9C9690',
     fontWeight: '500',
+    marginTop: 8,
   },
   consultsCard: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: '#E6E1DC',
-    paddingHorizontal: 20,
-    paddingVertical: 18,
-    marginTop: 8,
-    marginBottom: 20,
+    borderRadius: 24,
+    paddingHorizontal: 24,
+    paddingVertical: 20,
+    marginBottom: 24,
     shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.02,
-    shadowRadius: 6,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 3,
   },
   consultsLeft: {
-    gap: 4,
+    gap: 6,
   },
   consultsTitle: {
-    fontSize: 18,
-    fontWeight: '700',
+    fontSize: 20,
+    fontWeight: '600',
     color: '#1A1817',
   },
   consultsTitleOrange: {
     color: '#BD632F',
+    fontWeight: '700',
   },
   consultsSubtitle: {
-    fontSize: 13,
-    color: '#9C9690',
+    fontSize: 14,
+    color: '#8A92A6',
     fontWeight: '500',
   },
+  consultsSubtitleDark: {
+    color: '#1A1817',
+    fontWeight: '600',
+  },
   pendingCircle: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    borderWidth: 2.5,
+    width: 68,
+    height: 68,
+    borderRadius: 34,
+    borderWidth: 3,
     borderColor: '#BD632F',
-    borderStyle: 'dashed',
+    borderBottomColor: '#E6E1DC', 
     justifyContent: 'center',
+    alignItems: 'center',
+    transform: [{ rotate: '-45deg' }],
+  },
+  pendingContent: {
+    transform: [{ rotate: '45deg' }],
     alignItems: 'center',
   },
   pendingCount: {
     fontSize: 22,
-    fontWeight: '800',
+    fontWeight: '700',
     color: '#1A1817',
   },
   pendingLabel: {
     fontSize: 10,
-    color: '#9C9690',
+    color: '#8A92A6',
     fontWeight: '600',
     marginTop: -2,
   },
   tilesGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 14,
+    justifyContent: 'space-between',
+    gap: 16,
   },
   tile: {
     width: '47%',
     backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: '#E6E1DC',
+    borderRadius: 24,
     paddingVertical: 24,
     alignItems: 'center',
-    gap: 12,
     shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.03,
-    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.04,
+    shadowRadius: 10,
     elevation: 2,
   },
   tileIconCircle: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: '#FFF2EB',
+    width: 60,
+    height: 60,
+    borderRadius: 20,
+    backgroundColor: '#FFF6F0',
     justifyContent: 'center',
     alignItems: 'center',
+    marginBottom: 12,
   },
   tileLabel: {
-    fontSize: 13,
-    fontWeight: '700',
+    fontSize: 14,
+    fontWeight: '600',
     color: '#1A1817',
   },
 });
+

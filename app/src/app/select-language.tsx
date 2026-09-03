@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   StyleSheet,
   View,
@@ -9,21 +9,12 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-
-interface Language {
-  id: string;
-  name: string;
-  nativeName: string;
-}
-
-const LANGUAGES: Language[] = [
-  { id: 'en', name: 'English', nativeName: 'English' },
-  { id: 'bn', name: 'Bangla', nativeName: 'বাংলা' },
-];
+import { LANGUAGES } from '@/constants/languages';
+import { useLanguage } from '@/hooks/use-language';
 
 export default function SelectLanguageScreen() {
   const router = useRouter();
-  const [selected, setSelected] = useState('en');
+  const { language, setLanguage } = useLanguage();
 
   return (
     <SafeAreaView style={styles.container}>
@@ -36,32 +27,35 @@ export default function SelectLanguageScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
-        {/* Language Cards */}
-        <View style={styles.languageGrid}>
-          {LANGUAGES.map((lang) => (
-            <TouchableOpacity
-              key={lang.id}
-              style={[styles.languageCard, selected === lang.id && styles.languageCardActive]}
-              onPress={() => setSelected(lang.id)}
-              activeOpacity={0.8}
-            >
-              <View style={styles.languageInfo}>
-                <Text style={[styles.languageName, selected === lang.id && styles.languageNameActive]}>
-                  {lang.name}
-                </Text>
-                <Text style={[styles.languageNative, selected === lang.id && styles.languageNativeActive]}>
-                  {lang.nativeName}
-                </Text>
-              </View>
-              {selected === lang.id ? (
-                <View style={styles.checkCircle}>
-                  <Ionicons name="checkmark" size={16} color="#FFFFFF" />
+        <Text style={styles.helperText}>
+          Choose your preferred language for the interface and notifications.
+        </Text>
+
+        {/* Language List */}
+        <View style={styles.languageList}>
+          {LANGUAGES.map((lang) => {
+            const isSelected = language === lang.id;
+            return (
+              <TouchableOpacity
+                key={lang.id}
+                style={[styles.languageCard, isSelected && styles.languageCardActive]}
+                onPress={() => setLanguage(lang.id)}
+                activeOpacity={0.8}
+              >
+                <View style={styles.languageInfo}>
+                  <Text style={[styles.languageName, isSelected && styles.languageNameActive]}>
+                    {lang.name}
+                  </Text>
+                  <Text style={[styles.languageNative, isSelected && styles.languageNativeActive]}>
+                    {lang.nativeName}
+                  </Text>
                 </View>
-              ) : (
-                <Ionicons name="volume-high-outline" size={20} color="#9C9690" />
-              )}
-            </TouchableOpacity>
-          ))}
+                <View style={[styles.radio, isSelected && styles.radioActive]}>
+                  {isSelected && <View style={styles.radioDot} />}
+                </View>
+              </TouchableOpacity>
+            );
+          })}
         </View>
 
         {/* Voice Selection Mode */}
@@ -71,10 +65,10 @@ export default function SelectLanguageScreen() {
         </TouchableOpacity>
       </ScrollView>
 
-      {/* Update Button */}
+      {/* Save Button */}
       <View style={styles.bottomBar}>
-        <TouchableOpacity style={styles.updateBtn} activeOpacity={0.85}>
-          <Text style={styles.updateBtnText}>Update App Language</Text>
+        <TouchableOpacity style={styles.saveBtn} activeOpacity={0.85}>
+          <Text style={styles.saveBtnText}>Save Changes</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -87,18 +81,79 @@ const styles = StyleSheet.create({
   backBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#BD632F', justifyContent: 'center', alignItems: 'center' },
   headerTitle: { fontSize: 20, fontWeight: '800', color: '#1A1817' },
   scrollContainer: { paddingHorizontal: 20, paddingBottom: 100 },
-  languageGrid: { flexDirection: 'row', gap: 12, marginBottom: 16 },
-  languageCard: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#FFFFFF', borderRadius: 16, borderWidth: 1.5, borderColor: '#E6E1DC', padding: 16 },
-  languageCardActive: { borderColor: '#BD632F', backgroundColor: '#FFF8F4' },
+  helperText: {
+    fontSize: 14,
+    color: '#6B7280',
+    lineHeight: 20,
+    marginBottom: 24,
+  },
+  languageList: {
+    gap: 12,
+    marginBottom: 16,
+  },
+  languageCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: '#E6E1DC',
+    padding: 16,
+  },
+  languageCardActive: {
+    borderColor: '#BD632F',
+    backgroundColor: '#FFF8F4',
+  },
   languageInfo: { flex: 1 },
   languageName: { fontSize: 16, fontWeight: '700', color: '#1A1817', marginBottom: 2 },
   languageNameActive: { color: '#BD632F' },
   languageNative: { fontSize: 12, fontWeight: '500', color: '#9C9690' },
   languageNativeActive: { color: '#BD632F' },
-  checkCircle: { width: 28, height: 28, borderRadius: 14, backgroundColor: '#BD632F', justifyContent: 'center', alignItems: 'center' },
-  voiceRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#FFFFFF', borderRadius: 16, borderWidth: 1, borderColor: '#E6E1DC', padding: 16 },
+  radio: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#D1CCC7',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  radioActive: {
+    borderColor: '#BD632F',
+  },
+  radioDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: '#BD632F',
+  },
+  voiceRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#E6E1DC',
+    padding: 16,
+  },
   voiceText: { fontSize: 14, fontWeight: '600', color: '#1A1817' },
-  bottomBar: { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: '#FAF9F6', paddingHorizontal: 20, paddingVertical: 16, paddingBottom: 30 },
-  updateBtn: { backgroundColor: '#BD632F', borderRadius: 26, paddingVertical: 16, alignItems: 'center' },
-  updateBtnText: { color: '#FFFFFF', fontSize: 16, fontWeight: '700' },
+  bottomBar: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: '#FAF9F6',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    paddingBottom: 30,
+  },
+  saveBtn: {
+    backgroundColor: '#BD632F',
+    borderRadius: 26,
+    paddingVertical: 16,
+    alignItems: 'center',
+  },
+  saveBtnText: { color: '#FFFFFF', fontSize: 16, fontWeight: '700' },
 });

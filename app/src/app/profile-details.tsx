@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useRequireDoctor } from '@/hooks/use-require-doctor';
 import {
   StyleSheet,
@@ -25,6 +25,17 @@ export default function ProfileDetailsScreen() {
   const { data: doctorProfile } = useGetMyDoctorProfileQuery(undefined, { skip: !isDoctor });
   const { data: doctorBookings = [] } = useGetDoctorBookingsQuery(undefined, { skip: !isDoctor });
 
+  const uniquePatients = useMemo(() => {
+    const patientIds = new Set(doctorBookings.map((b) => b.patientId));
+    return patientIds.size;
+  }, [doctorBookings]);
+
+  const completedConsultations = useMemo(() => {
+    return doctorBookings.filter((b) => b.status === 'COMPLETED').length;
+  }, [doctorBookings]);
+
+  const doctorName = doctorProfile?.name || 'Doctor';
+
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
@@ -41,13 +52,15 @@ export default function ProfileDetailsScreen() {
         <View style={styles.doctorCard}>
           <View style={styles.doctorInfoRow}>
             <View style={styles.avatarContainer}>
-              <View style={styles.avatarPlaceholder}>
-                <Ionicons name="person" size={40} color="#BD632F" />
-              </View>
+              {doctorProfile?.avatar ? (
+                <Image source={{ uri: doctorProfile.avatar }} style={styles.avatarPlaceholder} />
+              ) : (
+                <Image source={require('@/assets/images/doctor_avatar.png')} style={styles.avatarPlaceholder} />
+              )}
               <View style={styles.onlineDot} />
             </View>
             <View style={styles.doctorDetails}>
-              <Text style={styles.doctorName}>{`Dr ${doctorProfile?.name}`}</Text>
+              <Text style={styles.doctorName}>{`Dr ${doctorName}`}</Text>
               <Text style={styles.doctorSpecialty}>{doctorProfile?.specialty}</Text>
               <View style={styles.ratingRow}>
                 <Ionicons name="star" size={14} color="#F59E0B" />
@@ -58,17 +71,17 @@ export default function ProfileDetailsScreen() {
           </View>
           <View style={styles.statsRow}>
             <View style={styles.statItem}>
-              <Text style={styles.statNumber}>0</Text>
+              <Text style={styles.statNumber}>{uniquePatients}</Text>
               <Text style={styles.statLabel}>Patients</Text>
             </View>
             <View style={styles.statDivider} />
             <View style={styles.statItem}>
-              <Text style={styles.statNumber}>0</Text>
+              <Text style={styles.statNumber}>{completedConsultations}</Text>
               <Text style={styles.statLabel}>Consultations</Text>
             </View>
             <View style={styles.statDivider} />
             <View style={styles.statItem}>
-              <Text style={styles.statNumber}>{`${doctorProfile?.experience || "0 Years"}`}</Text>
+              <Text style={styles.statNumber}>{doctorProfile?.experience || '0'}</Text>
               <Text style={styles.statLabel}>Years Experience</Text>
             </View>
           </View>
@@ -353,7 +366,7 @@ const styles = StyleSheet.create({
   doctorCard: { backgroundColor: '#FFFFFF', borderRadius: 20, borderWidth: 1, borderColor: '#E6E1DC', padding: 16, marginBottom: 16 },
   doctorInfoRow: { flexDirection: 'row', marginBottom: 14 },
   avatarContainer: { position: 'relative', marginRight: 14 },
-  avatarPlaceholder: { width: 64, height: 64, borderRadius: 32, backgroundColor: '#FFF2EB', justifyContent: 'center', alignItems: 'center' },
+  avatarPlaceholder: { width: 64, height: 64, borderRadius: 32, backgroundColor: '#FFF2EB', overflow: 'hidden' },
   onlineDot: { position: 'absolute', bottom: 2, right: 2, width: 12, height: 12, borderRadius: 6, backgroundColor: '#4CAF50', borderWidth: 2, borderColor: '#FFFFFF' },
   doctorDetails: { flex: 1 },
   doctorName: { fontSize: 16, fontWeight: '800', color: '#1A1817', marginBottom: 2 },

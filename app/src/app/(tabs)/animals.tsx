@@ -16,6 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useGetAnimalsQuery } from '@/store/animalsApi';
 import { EmptyState } from '@/components/ui/empty-state';
 import { MediaCardSkeleton } from '@/components/ui/skeleton';
+import { useLanguage } from '@/hooks/use-language';
 
 const { width } = Dimensions.get('window');
 
@@ -33,6 +34,7 @@ export default function AnimalsListScreen() {
   const router = useRouter();
   const [activeFilter, setActiveFilter] = useState('All');
   const { data: animals = [], isLoading } = useGetAnimalsQuery();
+  const { languageCode } = useLanguage();
 
   return (
     <SafeAreaView style={styles.container}>
@@ -47,7 +49,7 @@ export default function AnimalsListScreen() {
             onPress={() => router.push('/select-language')}
           >
             <Ionicons name="globe-outline" size={16} color="#BD632F" />
-            <Text style={styles.langText}>EN</Text>
+            <Text style={styles.langText}>{languageCode}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.notificationButton}

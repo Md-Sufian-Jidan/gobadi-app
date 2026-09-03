@@ -115,19 +115,21 @@ function MonthGrid({
                 style={[
                   styles.dayNumber,
                   hasAppointment && styles.dayNumberHasAppointment,
-                  isToday && !hasAppointment && styles.dayNumberToday,
                 ]}
               >
                 <Text
                   style={[
                     styles.dayNumberText,
                     hasAppointment && styles.dayNumberTextAppointment,
-                    isToday && !hasAppointment && styles.dayNumberTextToday,
+                    isToday && styles.dayNumberTextToday,
                   ]}
                 >
                   {day}
                 </Text>
               </View>
+              {isToday && !hasAppointment && (
+                <View style={styles.todayDot} />
+              )}
             </TouchableOpacity>
           );
         })}
@@ -246,7 +248,10 @@ function DayBottomSheet({
             ) : (
               <>
                 {pastAppts.map((appt) => (
-                  <DayAppointmentCard key={appt.id} appointment={appt} isPast />
+                  <View key={appt.id} style={styles.appointmentRow}>
+                    <Text style={styles.appointmentTimeLabel}>{formatTime(appt.startAt)}</Text>
+                    <DayAppointmentCard appointment={appt} isPast />
+                  </View>
                 ))}
 
                 {isToday && (
@@ -264,7 +269,10 @@ function DayBottomSheet({
                   <>
                     <Text style={styles.upcoming_label}>Upcoming</Text>
                     {upcomingAppts.map((appt) => (
-                      <DayAppointmentCard key={appt.id} appointment={appt} />
+                      <View key={appt.id} style={styles.appointmentRow}>
+                        <Text style={styles.appointmentTimeLabel}>{formatTime(appt.startAt)}</Text>
+                        <DayAppointmentCard appointment={appt} isUpcoming />
+                      </View>
                     ))}
                   </>
                 )}
@@ -277,7 +285,7 @@ function DayBottomSheet({
   );
 }
 
-function DayAppointmentCard({ appointment, isPast }: { appointment: DoctorAppointment; isPast?: boolean }) {
+function DayAppointmentCard({ appointment, isPast, isUpcoming }: { appointment: DoctorAppointment; isPast?: boolean; isUpcoming?: boolean }) {
   return (
     <View style={[styles.dayAppointmentCard, isPast && styles.dayAppointmentCardPast]}>
       <View style={styles.dayAppointmentAvatar}>
@@ -286,6 +294,7 @@ function DayAppointmentCard({ appointment, isPast }: { appointment: DoctorAppoin
         ) : (
           <Ionicons name="paw" size={20} color="#BD632F" />
         )}
+        {isUpcoming && <View style={styles.greenDot} />}
       </View>
       <View style={styles.dayAppointmentInfo}>
         <Text style={styles.dayAppointmentName}>
@@ -388,6 +397,7 @@ function ListAppointmentCard({ appointment }: { appointment: DoctorAppointment }
           ) : (
             <Ionicons name="paw" size={20} color="#BD632F" />
           )}
+          <View style={styles.greenDot} />
         </View>
         <View style={styles.listAppointmentInfo}>
           <Text style={styles.listAppointmentName}>
@@ -761,9 +771,6 @@ const styles = StyleSheet.create({
   dayNumberHasAppointment: {
     backgroundColor: '#BD632F',
   },
-  dayNumberToday: {
-    backgroundColor: '#FFF2EB',
-  },
   dayNumberText: {
     fontSize: 14,
     fontWeight: '500',
@@ -776,6 +783,36 @@ const styles = StyleSheet.create({
   dayNumberTextToday: {
     color: '#BD632F',
     fontWeight: '700',
+  },
+  todayDot: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#BD632F',
+    marginTop: 2,
+  },
+  greenDot: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#4CAF50',
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+  },
+  appointmentRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+    gap: 10,
+  },
+  appointmentTimeLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#9C9690',
+    width: 70,
   },
   weekStrip: {
     backgroundColor: '#FFFFFF',

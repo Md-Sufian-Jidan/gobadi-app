@@ -54,6 +54,8 @@ function RootNavigator() {
         <Stack.Screen name="forgot" />
         <Stack.Screen name="reset-password" />
         <Stack.Screen name="congo" />
+        <Stack.Screen name="password-setup" />
+        <Stack.Screen name="doctor-registration-success" />
       </Stack.Protected>
 
       <Stack.Protected guard={!!user}>

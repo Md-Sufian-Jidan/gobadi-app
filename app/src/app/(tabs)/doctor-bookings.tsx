@@ -6,14 +6,17 @@ import {
   Text,
   TouchableOpacity,
   ScrollView,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import {
   useGetDoctorBookingsQuery,
+  useGetMyDoctorProfileQuery,
   type DoctorAppointment,
 } from '@/store/doctorPortalApi';
+import { useGetBlockTimesQuery } from '@/store/blockTimesApi';
 
 type ViewMode = 'monthly' | 'weekly';
 
@@ -68,12 +71,14 @@ function MonthlyView({
   onSelectDate,
   onNavigateMonth,
   appointmentDates,
+  blockedDates,
   stats,
 }: {
   selectedDate: Date;
   onSelectDate: (d: Date) => void;
   onNavigateMonth: (direction: number) => void;
   appointmentDates: Set<string>;
+  blockedDates: Set<string>;
   stats: { openDays: number; blockedDays: number; totalAppointments: number };
 }) {
   const year = selectedDate.getFullYear();
@@ -110,7 +115,7 @@ function MonthlyView({
             const key = formatDateKey(date);
             const hasAppointment = appointmentDates.has(key);
             const isSelected = isSameDay(date, selectedDate);
-            const isBlocked = false;
+            const isBlocked = blockedDates.has(key);
 
             return (
               <TouchableOpacity
@@ -256,7 +261,11 @@ function WeeklyView({
                     activeOpacity={0.7}
                   >
                     <View style={styles.appointmentAvatar}>
-                      <Ionicons name="paw" size={18} color="#BD632F" />
+                      {appt.animalImage ? (
+                        <Image source={{ uri: appt.animalImage }} style={styles.appointmentAvatarImage} />
+                      ) : (
+                        <Ionicons name="paw" size={18} color="#BD632F" />
+                      )}
                     </View>
                     <View style={styles.appointmentInfo}>
                       <Text style={styles.appointmentName}>
@@ -301,7 +310,9 @@ export default function DoctorBookingsScreen() {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [showAllAppointments, setShowAllAppointments] = useState(false);
 
+  const { data: profile } = useGetMyDoctorProfileQuery();
   const { data: bookings = [] } = useGetDoctorBookingsQuery();
+  const { data: blockTimes = [] } = useGetBlockTimesQuery(profile?.id ?? 0, { skip: !profile?.id });
 
   const appointmentDates = useMemo(() => {
     const dates = new Set<string>();
@@ -311,15 +322,35 @@ export default function DoctorBookingsScreen() {
     return dates;
   }, [bookings]);
 
+  const blockedDates = useMemo(() => {
+    const dates = new Set<string>();
+    blockTimes.forEach((bt) => {
+      const start = new Date(bt.startDate);
+      const end = new Date(bt.endDate);
+      const current = new Date(start);
+      while (current <= end) {
+        dates.add(formatDateKey(current));
+        current.setDate(current.getDate() + 1);
+      }
+    });
+    return dates;
+  }, [blockTimes]);
+
   const stats = useMemo(() => {
     const today = new Date();
     const year = today.getFullYear();
     const month = today.getMonth();
     const daysInMonth = getDaysInMonth(year, month);
-    const blockedDays = 6;
+    const monthStart = new Date(year, month, 1);
+    const monthEnd = new Date(year, month + 1, 0);
+    const blockedDays = blockTimes.filter((bt) => {
+      const btStart = new Date(bt.startDate);
+      const btEnd = new Date(bt.endDate);
+      return btStart <= monthEnd && btEnd >= monthStart;
+    }).length;
     const openDays = daysInMonth - blockedDays;
     return { openDays, blockedDays, totalAppointments: bookings.length };
-  }, [bookings.length]);
+  }, [bookings.length, blockTimes]);
 
   const upcomingAppointments = useMemo(() => {
     const now = new Date();
@@ -352,6 +383,13 @@ export default function DoctorBookingsScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
+        <TouchableOpacity
+          onPress={() => router.back()}
+          style={styles.backBtn}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="arrow-back" size={20} color="#BD632F" />
+        </TouchableOpacity>
         <Text style={styles.headerTitle}>Calendar</Text>
         <TouchableOpacity
           style={styles.settingsBtn}
@@ -390,6 +428,7 @@ export default function DoctorBookingsScreen() {
             onSelectDate={handleSelectDate}
             onNavigateMonth={handleNavigateMonth}
             appointmentDates={appointmentDates}
+            blockedDates={blockedDates}
             stats={stats}
           />
         ) : (
@@ -427,7 +466,11 @@ export default function DoctorBookingsScreen() {
                 onPress={() => handleAppointmentPress(appt)}
               >
                 <View style={styles.upcomingAvatar}>
-                  <Ionicons name="paw" size={20} color="#BD632F" />
+                  {appt.animalImage ? (
+                    <Image source={{ uri: appt.animalImage }} style={styles.upcomingAvatarImage} />
+                  ) : (
+                    <Ionicons name="paw" size={20} color="#BD632F" />
+                  )}
                 </View>
                 <View style={styles.upcomingInfo}>
                   <Text style={styles.upcomingDate}>
@@ -457,6 +500,7 @@ export default function DoctorBookingsScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FAF9F6' },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 4, paddingBottom: 12 },
+  backBtn: { width: 44, height: 44, borderRadius: 12, backgroundColor: '#FFF2EB', justifyContent: 'center', alignItems: 'center' },
   headerTitle: { fontSize: 24, fontWeight: '800', color: '#1A1817' },
   settingsBtn: { width: 44, height: 44, borderRadius: 12, backgroundColor: '#FFF2EB', justifyContent: 'center', alignItems: 'center' },
   viewToggle: { flexDirection: 'row', marginHorizontal: 20, marginBottom: 12, backgroundColor: '#FFF2EB', borderRadius: 20, padding: 4 },
@@ -507,7 +551,8 @@ const styles = StyleSheet.create({
   timeLineBar: { width: 2, flex: 1, backgroundColor: '#E6E1DC', marginTop: 4 },
   timeLineContent: { flex: 1, paddingLeft: 8 },
   appointmentCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFFFFF', borderRadius: 14, borderWidth: 1, borderColor: '#E6E1DC', padding: 12, marginBottom: 8, gap: 10 },
-  appointmentAvatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#FFF2EB', justifyContent: 'center', alignItems: 'center' },
+  appointmentAvatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#FFF2EB', justifyContent: 'center', alignItems: 'center', overflow: 'hidden' },
+  appointmentAvatarImage: { width: 40, height: 40, borderRadius: 20 },
   appointmentInfo: { flex: 1 },
   appointmentName: { fontSize: 14, fontWeight: '700', color: '#1A1817' },
   appointmentDetail: { fontSize: 12, color: '#9C9690', fontWeight: '500' },
@@ -523,7 +568,8 @@ const styles = StyleSheet.create({
   viewAllBtn: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   viewAllText: { fontSize: 14, fontWeight: '600', color: '#BD632F' },
   upcomingCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFFFFF', borderRadius: 14, borderWidth: 1, borderColor: '#E6E1DC', padding: 12, marginBottom: 10, gap: 10 },
-  upcomingAvatar: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#FFF2EB', justifyContent: 'center', alignItems: 'center' },
+  upcomingAvatar: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#FFF2EB', justifyContent: 'center', alignItems: 'center', overflow: 'hidden' },
+  upcomingAvatarImage: { width: 44, height: 44, borderRadius: 22 },
   upcomingInfo: { flex: 1 },
   upcomingDate: { fontSize: 11, fontWeight: '500', color: '#9C9690' },
   upcomingName: { fontSize: 14, fontWeight: '700', color: '#1A1817' },

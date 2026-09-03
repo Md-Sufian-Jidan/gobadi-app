@@ -10,6 +10,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -44,11 +45,13 @@ export default function ChatScreen() {
     consultationId?: string;
     conversationId?: string;
     patientName?: string;
+    animalImage?: string;
   }>();
 
   const consultationId = params.consultationId || '';
   const conversationId = params.conversationId ? parseInt(params.conversationId, 10) : undefined;
   const patientName = params.patientName || 'Patient';
+  const animalImage = params.animalImage || '';
 
   const { data: consultation } = useGetConsultationQuery(consultationId, { skip: !consultationId });
   const { data: apiMessages, isLoading: messagesLoading } = useGetMessagesQuery(conversationId, { skip: !conversationId });
@@ -167,7 +170,11 @@ export default function ChatScreen() {
       <View style={isDoctor ? styles.messageRowRight : styles.messageRowLeft}>
         {!isDoctor && (
           <View style={styles.patientAvatar}>
-            <Ionicons name="paw" size={16} color="#BD632F" />
+            {animalImage ? (
+              <Image source={{ uri: animalImage }} style={styles.patientAvatarImage} />
+            ) : (
+              <Ionicons name="paw" size={16} color="#BD632F" />
+            )}
           </View>
         )}
         <View style={isDoctor ? styles.doctorBubble : styles.patientBubble}>
@@ -192,17 +199,17 @@ export default function ChatScreen() {
         <Text style={styles.headerTitle}>{patientName}</Text>
         <View style={styles.headerActions}>
           <TouchableOpacity style={styles.headerActionBtn} activeOpacity={0.7} onPress={() => router.push('/video-call')}>
-            <Ionicons name="call" size={18} color="#1A1817" />
+            <Ionicons name="call" size={18} color="#FFFFFF" />
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.headerActionBtn}
             activeOpacity={0.7}
             onPress={() => router.push('/video-call')}
           >
-            <Ionicons name="videocam" size={18} color="#1A1817" />
+            <Ionicons name="videocam" size={18} color="#FFFFFF" />
           </TouchableOpacity>
           <TouchableOpacity style={styles.headerActionBtn} activeOpacity={0.7}>
-            <Ionicons name="ellipsis-vertical" size={18} color="#1A1817" />
+            <Ionicons name="ellipsis-vertical" size={18} color="#FFFFFF" />
           </TouchableOpacity>
         </View>
       </View>
@@ -212,7 +219,11 @@ export default function ChatScreen() {
         <View style={styles.upcomingBanner}>
           <View style={styles.upcomingBannerLeft}>
             <View style={styles.upcomingBannerAvatar}>
-              <Ionicons name="paw" size={24} color="#BD632F" />
+              {animalImage ? (
+                <Image source={{ uri: animalImage }} style={styles.upcomingBannerAvatarImage} />
+              ) : (
+                <Ionicons name="paw" size={24} color="#BD632F" />
+              )}
             </View>
             <View>
               <Text style={styles.upcomingBannerTime}>
@@ -368,37 +379,38 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FAF9F6' },
 
   // Header
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 4, paddingBottom: 12 },
-  backBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#BD632F', justifyContent: 'center', alignItems: 'center' },
-  headerTitle: { fontSize: 18, fontWeight: '800', color: '#1A1817' },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 4, paddingBottom: 12, backgroundColor: '#BD632F' },
+  backBtn: { width: 40, height: 40, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.2)', justifyContent: 'center', alignItems: 'center' },
+  headerTitle: { fontSize: 18, fontWeight: '800', color: '#FFFFFF' },
   headerActions: { flexDirection: 'row', gap: 4 },
-  headerActionBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#FFF2EB', justifyContent: 'center', alignItems: 'center' },
+  headerActionBtn: { width: 36, height: 36, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.2)', justifyContent: 'center', alignItems: 'center' },
 
   // Upcoming Banner
-  upcomingBanner: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#E6D5C3', marginHorizontal: 20, borderRadius: 16, padding: 12, marginBottom: 12 },
+  upcomingBanner: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#E6D5C3', marginHorizontal: 20, borderRadius: 14, padding: 12, marginBottom: 12 },
   upcomingBannerLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  upcomingBannerAvatar: { width: 44, height: 44, borderRadius: 12, backgroundColor: '#FFF2EB', justifyContent: 'center', alignItems: 'center' },
+  upcomingBannerAvatar: { width: 44, height: 44, borderRadius: 12, backgroundColor: '#FFF2EB', justifyContent: 'center', alignItems: 'center', overflow: 'hidden' },
+  upcomingBannerAvatarImage: { width: 44, height: 44, borderRadius: 12 },
   upcomingBannerTime: { fontSize: 11, fontWeight: '600', color: '#BD632F' },
   upcomingBannerName: { fontSize: 15, fontWeight: '800', color: '#1A1817' },
-  upcomingBannerJoin: { backgroundColor: '#BD632F', borderRadius: 16, paddingHorizontal: 16, paddingVertical: 8 },
+  upcomingBannerJoin: { backgroundColor: '#BD632F', borderRadius: 14, paddingHorizontal: 16, paddingVertical: 8 },
   upcomingBannerJoinText: { color: '#FFFFFF', fontSize: 13, fontWeight: '700' },
 
   // Consultation Banner
-  consultationBanner: { backgroundColor: '#FFFFFF', marginHorizontal: 20, borderRadius: 16, borderWidth: 1, borderColor: '#E6E1DC', padding: 16, marginBottom: 12 },
-  consultationBannerTitle: { fontSize: 16, fontWeight: '800', color: '#1A1817', marginBottom: 4 },
-  consultationBannerEndedTitle: { fontSize: 16, fontWeight: '800', color: '#E53935', marginBottom: 4 },
+  consultationBanner: { backgroundColor: '#FFFFFF', marginHorizontal: 20, borderRadius: 14, borderWidth: 1, borderColor: '#E6E1DC', padding: 14, marginBottom: 12 },
+  consultationBannerTitle: { fontSize: 15, fontWeight: '800', color: '#1A1817', marginBottom: 4 },
+  consultationBannerEndedTitle: { fontSize: 15, fontWeight: '800', color: '#E53935', marginBottom: 4 },
   consultationBannerDesc: { fontSize: 13, fontWeight: '500', color: '#7C7672', marginBottom: 8 },
   consultationBannerBullet: { fontSize: 13, fontWeight: '500', color: '#1A1817', lineHeight: 20 },
   consultationBannerRemaining: { fontSize: 13, fontWeight: '600', color: '#BD632F', lineHeight: 20 },
-  endConsultationBtn: { backgroundColor: '#E6E1DC', borderRadius: 20, paddingVertical: 10, alignItems: 'center', marginTop: 12 },
+  endConsultationBtn: { backgroundColor: '#E6E1DC', borderRadius: 14, paddingVertical: 10, alignItems: 'center', marginTop: 12 },
   endConsultationBtnText: { color: '#1A1817', fontSize: 14, fontWeight: '700' },
 
   // Next Step (inline)
-  nextStepInline: { backgroundColor: '#FFFFFF', marginHorizontal: 20, borderRadius: 16, borderWidth: 1, borderColor: '#E6E1DC', padding: 16, marginBottom: 12 },
+  nextStepInline: { backgroundColor: '#FFFFFF', marginHorizontal: 20, borderRadius: 14, borderWidth: 1, borderColor: '#E6E1DC', padding: 14, marginBottom: 12 },
   nextStepInlineTitle: { fontSize: 15, fontWeight: '800', color: '#1A1817', marginBottom: 8 },
   nextStepInlineOption: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   nextStepInlineText: { fontSize: 13, fontWeight: '500', color: '#7C7672', flex: 1 },
-  sendPrescriptionInlineBtn: { backgroundColor: '#BD632F', borderRadius: 20, paddingVertical: 12, alignItems: 'center', marginTop: 12 },
+  sendPrescriptionInlineBtn: { backgroundColor: '#BD632F', borderRadius: 14, paddingVertical: 12, alignItems: 'center', marginTop: 12 },
   sendPrescriptionInlineBtnText: { color: '#FFFFFF', fontSize: 14, fontWeight: '700' },
   radioOuter: { width: 20, height: 20, borderRadius: 10, borderWidth: 2, borderColor: '#E6E1DC', justifyContent: 'center', alignItems: 'center' },
   radioInner: { width: 10, height: 10, borderRadius: 5, backgroundColor: 'transparent' },
@@ -407,9 +419,10 @@ const styles = StyleSheet.create({
   messagesList: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 12 },
   dateSeparator: { alignSelf: 'center', backgroundColor: '#FFFFFF', borderRadius: 20, borderWidth: 1, borderColor: '#E6E1DC', paddingHorizontal: 16, paddingVertical: 6, marginVertical: 12 },
   dateSeparatorText: { fontSize: 12, fontWeight: '600', color: '#9C9690' },
-  messageRowLeft: { flexDirection: 'row', alignItems: 'flex-end', marginBottom: 16, maxWidth: '85%' },
-  messageRowRight: { flexDirection: 'row', justifyContent: 'flex-end', marginBottom: 16, maxWidth: '85%', alignSelf: 'flex-end' },
-  patientAvatar: { width: 32, height: 32, borderRadius: 16, backgroundColor: '#FFF2EB', justifyContent: 'center', alignItems: 'center', marginRight: 8 },
+  messageRowLeft: { flexDirection: 'row', alignItems: 'flex-end', marginBottom: 14, maxWidth: '85%' },
+  messageRowRight: { flexDirection: 'row', justifyContent: 'flex-end', marginBottom: 14, maxWidth: '85%', alignSelf: 'flex-end' },
+  patientAvatar: { width: 32, height: 32, borderRadius: 16, backgroundColor: '#FFF2EB', justifyContent: 'center', alignItems: 'center', marginRight: 8, overflow: 'hidden' },
+  patientAvatarImage: { width: 32, height: 32, borderRadius: 16 },
   patientBubble: { backgroundColor: '#F5EDE6', borderRadius: 18, borderBottomLeftRadius: 4, paddingHorizontal: 14, paddingVertical: 10, maxWidth: '100%' },
   patientBubbleText: { fontSize: 14, fontWeight: '500', color: '#1A1817', lineHeight: 19 },
   patientTimeText: { fontSize: 10, fontWeight: '500', color: '#9C9690', marginTop: 4, alignSelf: 'flex-end' },
@@ -433,7 +446,7 @@ const styles = StyleSheet.create({
 
   // Start Consultation
   startConsultationContainer: { paddingHorizontal: 20, paddingBottom: 16 },
-  startConsultationBtn: { backgroundColor: '#BD632F', borderRadius: 26, paddingVertical: 16, alignItems: 'center' },
+  startConsultationBtn: { backgroundColor: '#BD632F', borderRadius: 14, paddingVertical: 16, alignItems: 'center' },
   startConsultationBtnText: { color: '#FFFFFF', fontSize: 16, fontWeight: '700' },
 
   // Input Bar

@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   ScrollView,
   Image,
-  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -17,7 +16,7 @@ import { useGetMyProfileQuery, useUpdateMyProfileMutation } from '@/store/usersA
 export default function EditProfileScreen() {
   const router = useRouter();
   const { data: profile } = useGetMyProfileQuery();
-  const [updateProfile, { isLoading: isSaving }] = useUpdateMyProfileMutation();
+  const [updateProfile] = useUpdateMyProfileMutation();
 
   const [name, setName] = useState(profile?.name || '');
   const [phone, setPhone] = useState(profile?.phone || '');
@@ -28,13 +27,11 @@ export default function EditProfileScreen() {
     if (profile?.phone) setPhone(profile.phone);
   }, [profile]);
 
-  async function handleSave() {
+  async function handleSaveField(fields: { name?: string }) {
     try {
-      await updateProfile({ name }).unwrap();
-      router.back();
+      await updateProfile(fields).unwrap();
     } catch (err) {
       console.log('Error updating profile:', err);
-      Alert.alert('Could not save', 'Please try again.');
     }
   }
 
@@ -79,6 +76,7 @@ export default function EditProfileScreen() {
                 onChangeText={setName}
                 placeholder="Enter name"
                 placeholderTextColor="#A39E99"
+                onBlur={() => handleSaveField({ name })}
               />
               <TouchableOpacity style={styles.inputActionBtn} activeOpacity={0.7}>
                 <Ionicons name="mic-outline" size={20} color="#BD632F" />
@@ -118,16 +116,6 @@ export default function EditProfileScreen() {
             </View>
           </View>
         </View>
-
-        {/* Save Changes Button */}
-        <TouchableOpacity
-          style={[styles.saveButton, isSaving && { opacity: 0.6 }]}
-          onPress={handleSave}
-          disabled={isSaving}
-          activeOpacity={0.85}
-        >
-          <Text style={styles.saveText}>Save Changes</Text>
-        </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
   );
@@ -240,22 +228,5 @@ const styles = StyleSheet.create({
   },
   inputActionBtn: {
     padding: 4,
-  },
-  saveButton: {
-    backgroundColor: '#BD632F',
-    height: 52,
-    borderRadius: 26,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#BD632F',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 6,
-    elevation: 3,
-  },
-  saveText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '700',
   },
 });

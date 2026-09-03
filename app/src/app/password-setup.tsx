@@ -1,0 +1,173 @@
+import React, { useState } from 'react';
+import {
+  StyleSheet,
+  View,
+  Text,
+  TouchableOpacity,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  ActivityIndicator,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter, useLocalSearchParams } from 'expo-router';
+import { Image } from 'expo-image';
+
+import { useSetPasswordMutation } from '@/store/authApi';
+import { PasswordField } from '@/components/password-field';
+
+export default function PasswordSetupScreen() {
+  const router = useRouter();
+  const params = useLocalSearchParams<{ name?: string }>();
+  const doctorName = params.name || 'Doctor';
+
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
+
+  const [setPasswordApi, { isLoading }] = useSetPasswordMutation();
+
+  const handleContinue = async () => {
+    setErrorMessage('');
+
+    if (!password) {
+      setErrorMessage('Password is required.');
+      return;
+    }
+    if (password.length < 8) {
+      setErrorMessage('Password must be at least 8 characters.');
+      return;
+    }
+    if (password !== confirmPassword) {
+      setErrorMessage('Passwords do not match.');
+      return;
+    }
+
+    try {
+      await setPasswordApi({ newPassword: password }).unwrap();
+      router.replace('/doctor-registration-success');
+    } catch (err: any) {
+      setErrorMessage(err?.data?.message || 'Could not set password. Please try again.');
+    }
+  };
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={{ flex: 1 }}
+      >
+        <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
+          {/* Logo */}
+          <Image
+            source={require('@/assets/images/splash-icon.png')}
+            style={styles.logo}
+            contentFit="contain"
+          />
+
+          {/* Welcome Text */}
+          <Text style={styles.title}>Welcome</Text>
+          <Text style={styles.doctorName}>{doctorName}</Text>
+
+          {/* Password */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Password*</Text>
+            <PasswordField value={password} onChangeText={setPassword} />
+          </View>
+
+          {/* Confirm Password */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Confirm Password*</Text>
+            <PasswordField value={confirmPassword} onChangeText={setConfirmPassword} />
+          </View>
+
+          {/* Error message */}
+          {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
+
+          {/* Continue Button */}
+          <TouchableOpacity
+            style={[styles.continueButton, isLoading && styles.continueButtonDisabled]}
+            activeOpacity={0.8}
+            onPress={handleContinue}
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              <ActivityIndicator color="#FFFFFF" />
+            ) : (
+              <Text style={styles.continueButtonText}>Continue</Text>
+            )}
+          </TouchableOpacity>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#FAF9F6',
+  },
+  scrollContainer: {
+    flexGrow: 1,
+    paddingHorizontal: 24,
+    paddingTop: 40,
+    paddingBottom: 40,
+    alignItems: 'center',
+  },
+  logo: {
+    width: 120,
+    height: 120,
+    marginBottom: 32,
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: '800',
+    color: '#1A1817',
+    marginBottom: 8,
+  },
+  doctorName: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#BD632F',
+    marginBottom: 40,
+  },
+  inputGroup: {
+    width: '100%',
+    marginBottom: 20,
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1A1817',
+    marginBottom: 8,
+  },
+  errorText: {
+    color: '#EF4444',
+    fontSize: 13,
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  continueButton: {
+    width: '100%',
+    height: 56,
+    backgroundColor: '#BD632F',
+    borderRadius: 28,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 8,
+    shadowColor: '#BD632F',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  continueButtonDisabled: {
+    opacity: 0.6,
+  },
+  continueButtonText: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: '600',
+  },
+});
