@@ -44,7 +44,7 @@ export default function SignUpScreen() {
     title: string;
     options: string[];
     onSelect: (val: string) => void;
-  }>({ title: '', options: [], onSelect: () => {} });
+  }>({ title: '', options: [], onSelect: () => { } });
 
   const [register, { isLoading }] = useRegisterMutation();
   const { withGoogle, withFacebook, isLoading: isSocialLoading, error: socialError } = useSocialAuth(
@@ -161,15 +161,15 @@ export default function SignUpScreen() {
 
           {/* Toggle Phone/Email */}
           <View style={styles.toggleContainer}>
-            <TouchableOpacity 
-              style={[styles.toggleButton, authMethod === 'phone' && styles.toggleButtonActive]} 
+            <TouchableOpacity
+              style={[styles.toggleButton, authMethod === 'phone' && styles.toggleButtonActive]}
               onPress={() => setAuthMethod('phone')}
               activeOpacity={0.8}
             >
               <Text style={[styles.toggleText, authMethod === 'phone' && styles.toggleTextActive]}>Phone Number</Text>
             </TouchableOpacity>
-            <TouchableOpacity 
-              style={[styles.toggleButton, authMethod === 'email' && styles.toggleButtonActive]} 
+            <TouchableOpacity
+              style={[styles.toggleButton, authMethod === 'email' && styles.toggleButtonActive]}
               onPress={() => setAuthMethod('email')}
               activeOpacity={0.8}
             >
@@ -198,7 +198,7 @@ export default function SignUpScreen() {
                 <View style={styles.phoneInputContainer}>
                   <TouchableOpacity style={styles.countryCodeSelector} activeOpacity={0.7}>
                     <Text style={styles.flagEmoji}>🇧🇩</Text>
-                    <Text style={styles.countryCode}>+880</Text>
+                    <Text style={styles.countryCode}>+88</Text>
                     <Text style={styles.dropdownArrow}>▼</Text>
                   </TouchableOpacity>
                   <View style={styles.phoneDivider} />
