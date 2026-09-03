@@ -100,8 +100,7 @@ export default function OTPScreen() {
         return;
       }
       if (role === 'doctor') {
-        const doctorName = res.user?.name || '';
-        router.replace({ pathname: '/password-setup', params: { name: doctorName } });
+        router.replace('/doctor-registration-success');
         return;
       }
       router.replace('/congo');

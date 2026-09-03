@@ -113,6 +113,10 @@ export default function ChatScreen() {
 
   const handleEndConsultation = () => {
     setConsultationState('ended');
+    router.push({
+      pathname: '/consultation-ended',
+      params: { patientName }
+    });
   };
 
   const handleSendPrescription = () => {

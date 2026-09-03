@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 
 import { useRegisterMutation } from '@/store/authApi';
 import { useSocialAuth } from '@/hooks/use-social-auth';
@@ -25,9 +26,15 @@ export default function SignUpScreen() {
   const router = useRouter();
 
   const [name, setName] = useState('');
+  const [authMethod, setAuthMethod] = useState<'phone' | 'email'>('phone');
   const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
   const [role, setRole] = useState<'doctor' | 'user' | ''>('');
   const [bvcNumber, setBvcNumber] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const [errorMessage, setErrorMessage] = useState('');
 
@@ -60,31 +67,71 @@ export default function SignUpScreen() {
       setErrorMessage('Name is required.');
       return;
     }
-    if (!phone.trim()) {
-      setErrorMessage('Phone number is required.');
-      return;
+
+    let identifier = '';
+
+    if (authMethod === 'phone') {
+      if (!phone.trim()) {
+        setErrorMessage('Phone number is required.');
+        return;
+      }
+      if (!BD_PHONE_REGEX.test(phone)) {
+        setErrorMessage('Please enter a valid 11-digit Bangladeshi phone number (e.g., 01712345678).');
+        return;
+      }
+      identifier = `+880${phone.trim()}`;
+    } else {
+      if (!email.trim()) {
+        setErrorMessage('Email is required.');
+        return;
+      }
+      if (!/^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/.test(email)) {
+        setErrorMessage('Please enter a valid email address.');
+        return;
+      }
+      identifier = email.trim();
     }
-    if (!BD_PHONE_REGEX.test(phone)) {
-      setErrorMessage('Please enter a valid 11-digit Bangladeshi phone number (e.g., 01712345678).');
-      return;
-    }
+
     if (!role) {
       setErrorMessage('Please select a role.');
       return;
     }
-    if (role === 'doctor' && !bvcNumber.trim()) {
-      setErrorMessage('BVC Registration Number is required for doctors.');
+    if (role === 'doctor') {
+      if (!bvcNumber.trim()) {
+        setErrorMessage('BVC Registration Number is required for doctors.');
+        return;
+      }
+    } else {
+      if (!password) {
+        setErrorMessage('Password is required.');
+        return;
+      }
+      if (password !== confirmPassword) {
+        setErrorMessage('Passwords do not match.');
+        return;
+      }
+    }
+
+    if (role === 'doctor') {
+      router.push({
+        pathname: '/password-setup',
+        params: {
+          name: name.trim(),
+          identifier,
+          role,
+          bvcNumber: bvcNumber.trim(),
+        },
+      });
       return;
     }
 
     try {
-      const identifier = `+880${phone.trim()}`;
       await register({
         name: name.trim(),
         identifier,
-        password: 'doctor-pending',
+        password,
         role: role || 'user',
-        bvcRegistrationNumber: role === 'doctor' ? bvcNumber.trim() : undefined,
+        bvcRegistrationNumber: undefined,
       }).unwrap();
       router.push({ pathname: '/otp', params: { phone: identifier, purpose: 'verify', role: role || 'user' } });
     } catch (err: any) {
@@ -112,6 +159,24 @@ export default function SignUpScreen() {
           {/* Heading */}
           <Text style={styles.title}>Create Your Account</Text>
 
+          {/* Toggle Phone/Email */}
+          <View style={styles.toggleContainer}>
+            <TouchableOpacity 
+              style={[styles.toggleButton, authMethod === 'phone' && styles.toggleButtonActive]} 
+              onPress={() => setAuthMethod('phone')}
+              activeOpacity={0.8}
+            >
+              <Text style={[styles.toggleText, authMethod === 'phone' && styles.toggleTextActive]}>Phone Number</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.toggleButton, authMethod === 'email' && styles.toggleButtonActive]} 
+              onPress={() => setAuthMethod('email')}
+              activeOpacity={0.8}
+            >
+              <Text style={[styles.toggleText, authMethod === 'email' && styles.toggleTextActive]}>Email</Text>
+            </TouchableOpacity>
+          </View>
+
           {/* Form Fields */}
           <View style={styles.form}>
             {/* Name */}
@@ -126,27 +191,42 @@ export default function SignUpScreen() {
               />
             </View>
 
-            {/* Phone Number */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Phone Number*</Text>
-              <View style={styles.phoneInputContainer}>
-                <TouchableOpacity style={styles.countryCodeSelector} activeOpacity={0.7}>
-                  <Text style={styles.flagEmoji}>🇧🇩</Text>
-                  <Text style={styles.countryCode}>+880</Text>
-                  <Text style={styles.dropdownArrow}>▼</Text>
-                </TouchableOpacity>
-                <View style={styles.phoneDivider} />
+            {/* Phone Number or Email */}
+            {authMethod === 'phone' ? (
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Phone Number*</Text>
+                <View style={styles.phoneInputContainer}>
+                  <TouchableOpacity style={styles.countryCodeSelector} activeOpacity={0.7}>
+                    <Text style={styles.flagEmoji}>🇧🇩</Text>
+                    <Text style={styles.countryCode}>+880</Text>
+                    <Text style={styles.dropdownArrow}>▼</Text>
+                  </TouchableOpacity>
+                  <View style={styles.phoneDivider} />
+                  <TextInput
+                    style={styles.phoneInput}
+                    value={phone}
+                    onChangeText={setPhone}
+                    placeholder="Phone number"
+                    placeholderTextColor="#A39E99"
+                    keyboardType="phone-pad"
+                    maxLength={11}
+                  />
+                </View>
+              </View>
+            ) : (
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Email Address*</Text>
                 <TextInput
-                  style={styles.phoneInput}
-                  value={phone}
-                  onChangeText={setPhone}
-                  placeholder="Phone number"
+                  style={styles.input}
+                  value={email}
+                  onChangeText={setEmail}
+                  placeholder="Enter your email"
                   placeholderTextColor="#A39E99"
-                  keyboardType="phone-pad"
-                  maxLength={11}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
                 />
               </View>
-            </View>
+            )}
 
             {/* Role */}
             <View style={styles.inputGroup}>
@@ -158,6 +238,45 @@ export default function SignUpScreen() {
                 <Text style={styles.dropdownArrow}>▼</Text>
               </TouchableOpacity>
             </View>
+
+            {/* Password Fields - Only for Users */}
+            {role !== 'doctor' && (
+              <>
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>Password*</Text>
+                  <View style={styles.passwordContainer}>
+                    <TextInput
+                      style={styles.passwordInput}
+                      value={password}
+                      onChangeText={setPassword}
+                      placeholder="••••••••••••"
+                      placeholderTextColor="#A39E99"
+                      secureTextEntry={!showPassword}
+                    />
+                    <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeIcon} activeOpacity={0.7}>
+                      <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={20} color="#A39E99" />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>Confirm Password*</Text>
+                  <View style={styles.passwordContainer}>
+                    <TextInput
+                      style={styles.passwordInput}
+                      value={confirmPassword}
+                      onChangeText={setConfirmPassword}
+                      placeholder="••••••••••••"
+                      placeholderTextColor="#A39E99"
+                      secureTextEntry={!showConfirmPassword}
+                    />
+                    <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)} style={styles.eyeIcon} activeOpacity={0.7}>
+                      <Ionicons name={showConfirmPassword ? 'eye-off-outline' : 'eye-outline'} size={20} color="#A39E99" />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </>
+            )}
 
             {/* BVC Registration Number - Only for Doctors */}
             {role === 'doctor' && (
@@ -183,7 +302,7 @@ export default function SignUpScreen() {
             {/* Error message */}
             {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
 
-            {/* Continue Button */}
+            {/* Continue/Sign Up Button */}
             <TouchableOpacity
               style={[styles.signUpButton, isLoading && styles.signUpButtonDisabled]}
               activeOpacity={0.8}
@@ -193,7 +312,7 @@ export default function SignUpScreen() {
               {isLoading ? (
                 <ActivityIndicator color="#FFFFFF" />
               ) : (
-                <Text style={styles.signUpButtonText}>Continue</Text>
+                <Text style={styles.signUpButtonText}>{role === 'doctor' ? 'Continue' : 'Sign Up'}</Text>
               )}
             </TouchableOpacity>
 
@@ -306,6 +425,31 @@ const styles = StyleSheet.create({
     color: '#BD632F',
     marginBottom: 24,
   },
+  toggleContainer: {
+    flexDirection: 'row',
+    width: '100%',
+    marginBottom: 24,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E6E1DC',
+  },
+  toggleButton: {
+    flex: 1,
+    paddingVertical: 12,
+    alignItems: 'center',
+    borderBottomWidth: 2,
+    borderBottomColor: 'transparent',
+  },
+  toggleButtonActive: {
+    borderBottomColor: '#BD632F',
+  },
+  toggleText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#9C9690',
+  },
+  toggleTextActive: {
+    color: '#BD632F',
+  },
   form: {
     width: '100%',
   },
@@ -328,6 +472,27 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     fontSize: 16,
     color: '#1A1817',
+  },
+  passwordContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E6E1DC',
+    borderRadius: 12,
+    height: 52,
+  },
+  passwordInput: {
+    flex: 1,
+    height: '100%',
+    paddingHorizontal: 16,
+    fontSize: 16,
+    color: '#1A1817',
+  },
+  eyeIcon: {
+    paddingHorizontal: 16,
+    justifyContent: 'center',
+    height: '100%',
   },
   phoneInputContainer: {
     flexDirection: 'row',
