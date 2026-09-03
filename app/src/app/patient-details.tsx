@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   ScrollView,
   Dimensions,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -24,6 +25,7 @@ const TABS = [
 ];
 
 const MOCK_PATIENT = {
+  image: 'https://images.unsplash.com/photo-1570441418510-820f8238015b?w=200',
   name: 'Donald Tramp',
   species: 'Albino Buffalo',
   age: '8 months',
@@ -244,10 +246,13 @@ function AllTab() {
               {item.clinicalActions.map((action, i) => (
                 <Text key={i} style={tabStyles.bulletItem}>• {action}</Text>
               ))}
+              <View style={tabStyles.sectionSeparator} />
               <Text style={tabStyles.detailLabel}>Test ordered:</Text>
               <Text style={tabStyles.detailText}>{item.testsOrdered}</Text>
+              <View style={tabStyles.sectionSeparator} />
               <Text style={tabStyles.detailLabel}>Diagnosis:</Text>
               <Text style={tabStyles.detailText}>{item.diagnosis}</Text>
+              <View style={tabStyles.sectionSeparator} />
               <Text style={tabStyles.detailLabel}>Treatment / Prescription:</Text>
               <Text style={tabStyles.detailText}>{item.prescription}</Text>
             </View>
@@ -528,7 +533,11 @@ export default function PatientDetailsScreen() {
       >
         <View style={styles.patientCard}>
           <View style={styles.patientAvatar}>
-            <Ionicons name="paw" size={32} color="#BD632F" />
+            {MOCK_PATIENT.image ? (
+              <Image source={{ uri: MOCK_PATIENT.image }} style={styles.patientImage} />
+            ) : (
+              <Ionicons name="paw" size={32} color="#BD632F" />
+            )}
           </View>
           <View style={styles.patientInfo}>
             <Text style={styles.patientName}>{MOCK_PATIENT.name}</Text>
@@ -623,8 +632,6 @@ const styles = StyleSheet.create({
     marginHorizontal: 20,
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#E6E1DC',
     padding: 16,
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -638,6 +645,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFF2EB',
     justifyContent: 'center',
     alignItems: 'center',
+    overflow: 'hidden',
+  },
+  patientImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 16,
   },
   patientInfo: {
     flex: 1,
@@ -739,7 +752,7 @@ const tabStyles = StyleSheet.create({
     borderRadius: 14,
     borderWidth: 1,
     borderColor: '#E6E1DC',
-    padding: 16,
+    padding: 14,
     marginBottom: 12,
   },
   activityHeader: {
@@ -754,8 +767,8 @@ const tabStyles = StyleSheet.create({
     gap: 6,
   },
   activityDate: {
-    fontSize: 12,
-    fontWeight: '500',
+    fontSize: 13,
+    fontWeight: '600',
     color: '#9C9690',
     marginBottom: 4,
   },
@@ -781,23 +794,23 @@ const tabStyles = StyleSheet.create({
     marginBottom: 4,
   },
   expandedContent: {
-    marginTop: 16,
-    paddingTop: 16,
+    marginTop: 14,
+    paddingTop: 14,
     borderTopWidth: 1,
-    borderTopColor: '#E6E1DC',
+    borderTopColor: '#F0EAE1',
   },
   detailLabel: {
     fontSize: 13,
     fontWeight: '700',
     color: '#1A1817',
-    marginBottom: 8,
+    marginBottom: 6,
     marginTop: 12,
   },
   detailLabelFirst: {
     fontSize: 13,
     fontWeight: '700',
     color: '#1A1817',
-    marginBottom: 8,
+    marginBottom: 6,
     marginTop: 0,
   },
   detailText: {
@@ -811,17 +824,22 @@ const tabStyles = StyleSheet.create({
     fontWeight: '500',
     color: '#7C7672',
     lineHeight: 22,
-    paddingLeft: 10,
+    paddingLeft: 8,
     marginBottom: 2,
+  },
+  sectionSeparator: {
+    height: 1,
+    backgroundColor: '#F0EDEA',
+    marginVertical: 12,
   },
   followUpRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 14,
-    paddingTop: 12,
+    marginTop: 12,
+    paddingTop: 10,
     borderTopWidth: 1,
-    borderTopColor: '#E6E1DC',
+    borderTopColor: '#F0EAE1',
   },
   followUpDate: {
     fontSize: 14,
@@ -838,8 +856,6 @@ const tabStyles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
     borderRadius: 14,
-    borderWidth: 1,
-    borderColor: '#E6E1DC',
     padding: 14,
     marginBottom: 10,
     gap: 12,

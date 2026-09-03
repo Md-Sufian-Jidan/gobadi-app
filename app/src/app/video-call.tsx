@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRequireDoctor } from '@/hooks/use-require-doctor';
 import {
   StyleSheet,
@@ -9,21 +9,44 @@ import {
   Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+
+function formatTimer(seconds: number): string {
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+}
 
 export default function VideoCallScreen() {
   const router = useRouter();
   const isDoctor = useRequireDoctor();
-  if (!isDoctor) return null;
+  const params = useLocalSearchParams<{
+    doctorName?: string;
+    duration?: string;
+  }>();
+
+  const doctorName = params.doctorName || 'Doctor';
+  const initialDuration = params.duration ? parseInt(params.duration, 10) : 900;
+
   const [callEnded, setCallEnded] = useState(false);
+  const [elapsed, setElapsed] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setElapsed((prev) => prev + 1);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  if (!isDoctor) return null;
 
   return (
     <View style={styles.container}>
       {/* Full Screen Video Background */}
       <View style={styles.videoBackground}>
         <View style={styles.videoPlaceholder}>
-          <Text style={styles.videoPlaceholderText}>Video Feed</Text>
+          <Ionicons name="videocam" size={48} color="rgba(255,255,255,0.08)" />
         </View>
       </View>
 
@@ -46,8 +69,8 @@ export default function VideoCallScreen() {
 
       {/* Doctor Name & Timer */}
       <View style={styles.callInfoOverlay}>
-        <Text style={styles.callDoctorName}>Dr. David Patel</Text>
-        <Text style={styles.callTimer}>15:32</Text>
+        <Text style={styles.callDoctorName}>{doctorName}</Text>
+        <Text style={styles.callTimer}>{formatTimer(elapsed)}</Text>
       </View>
 
       {/* Bottom Quick Actions */}
@@ -81,21 +104,20 @@ export default function VideoCallScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Call Ended Congratulations Modal */}
+      {/* Call Ended Modal */}
       <Modal visible={callEnded} transparent animationType="fade">
         <View style={styles.modalOverlay}>
           <View style={styles.modalCard}>
             <View style={styles.modalCheckCircle}>
               <Ionicons name="checkmark" size={40} color="#FFFFFF" />
             </View>
-            <Text style={styles.modalTitle}>Congratulations!</Text>
-            <Text style={styles.modalSubtitle}>Consultation completed successfully.</Text>
+            <Text style={styles.modalTitle}>Consultation ended!</Text>
+            <Text style={styles.modalSubtitle}>Your consultation has ended successfully.</Text>
             <TouchableOpacity
               style={styles.modalHomeBtn}
               onPress={() => router.replace('/(tabs)/doctor-home')}
               activeOpacity={0.85}
             >
-              <Ionicons name="arrow-back" size={18} color="#FFFFFF" />
               <Text style={styles.modalHomeBtnText}>Back to home</Text>
             </TouchableOpacity>
           </View>
@@ -109,7 +131,6 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#000000' },
   videoBackground: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
   videoPlaceholder: { flex: 1, backgroundColor: '#1A1817', justifyContent: 'center', alignItems: 'center' },
-  videoPlaceholderText: { color: 'rgba(255,255,255,0.15)', fontSize: 16 },
   statusBar: { position: 'absolute', top: 0, left: 0, right: 0 },
   backBtnTop: { position: 'absolute', top: 50, left: 20, width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center' },
   pipContainer: { position: 'absolute', top: 50, right: 20 },
@@ -130,6 +151,6 @@ const styles = StyleSheet.create({
   modalCheckCircle: { width: 80, height: 80, borderRadius: 40, backgroundColor: '#4CAF50', justifyContent: 'center', alignItems: 'center', marginBottom: 20 },
   modalTitle: { fontSize: 22, fontWeight: '800', color: '#1A1817', marginBottom: 8, textAlign: 'center' },
   modalSubtitle: { fontSize: 14, fontWeight: '500', color: '#7C7672', textAlign: 'center', marginBottom: 24, lineHeight: 20 },
-  modalHomeBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#BD632F', borderRadius: 26, paddingHorizontal: 24, paddingVertical: 16, gap: 8 },
+  modalHomeBtn: { backgroundColor: '#BD632F', borderRadius: 26, paddingHorizontal: 24, paddingVertical: 16, alignItems: 'center' },
   modalHomeBtnText: { color: '#FFFFFF', fontSize: 16, fontWeight: '700' },
 });

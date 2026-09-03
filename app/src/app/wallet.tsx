@@ -76,8 +76,11 @@ export default function WalletScreen() {
             <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Wallet</Text>
-          <View style={{ width: 40 }} />
+          <TouchableOpacity style={styles.settingsBtn} activeOpacity={0.7}>
+            <Ionicons name="settings-outline" size={20} color="#1A1817" />
+          </TouchableOpacity>
         </View>
+
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#BD632F" />
         </View>
@@ -85,7 +88,7 @@ export default function WalletScreen() {
     );
   }
 
-  const currency = balance?.currency || 'BDT';
+  const currency = '$';
 
   return (
     <SafeAreaView style={styles.container}>
@@ -94,13 +97,15 @@ export default function WalletScreen() {
           <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Wallet</Text>
-        <View style={{ width: 40 }} />
+        <TouchableOpacity style={styles.settingsBtn} activeOpacity={0.7}>
+          <Ionicons name="settings-outline" size={20} color="#1A1817" />
+        </TouchableOpacity>
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
         {/* Earnings Card */}
         <View style={styles.earningsCard}>
-          <Text style={styles.totalLabel}>Total Balance</Text>
+          <Text style={styles.totalLabel}>Total Earnings</Text>
           <Text style={styles.totalAmount}>{currency} {balance?.balance?.toLocaleString() ?? '0'}</Text>
 
           <View style={styles.earningsRow}>
@@ -112,7 +117,7 @@ export default function WalletScreen() {
               </View>
             </View>
             <View>
-              <Text style={styles.earningsLabel}>Last Transaction</Text>
+              <Text style={styles.earningsLabel}>Last Transactions</Text>
               <Text style={styles.earningsValueText}>
                 {lastTransaction ? `${currency} ${Math.abs(lastTransaction.amount).toLocaleString()}` : 'N/A'}
               </Text>
@@ -133,7 +138,21 @@ export default function WalletScreen() {
           onPress={() => router.push('/payment-methods')}
           activeOpacity={0.8}
         >
-          <Text style={styles.paymentMethodLabel}>Payment Methods</Text>
+          <Text style={styles.paymentMethodLabel}>Payment Method</Text>
+          <View style={styles.paymentIcons}>
+            <View style={[styles.paymentIcon, { backgroundColor: '#E53935' }]}>
+              <Text style={styles.paymentIconText}>b</Text>
+            </View>
+            <View style={[styles.paymentIcon, { backgroundColor: '#FF9800' }]}>
+              <Text style={styles.paymentIconText}>n</Text>
+            </View>
+            <View style={[styles.paymentIcon, { backgroundColor: '#1A1F71' }]}>
+              <Text style={styles.paymentIconText}>V</Text>
+            </View>
+            <View style={[styles.paymentIcon, { backgroundColor: '#EB001B' }]}>
+              <Text style={styles.paymentIconText}>M</Text>
+            </View>
+          </View>
           <Ionicons name="chevron-forward" size={18} color="#9C9690" />
         </TouchableOpacity>
 
@@ -155,7 +174,7 @@ export default function WalletScreen() {
                       styles.bar,
                       {
                         height: Math.max(item.value * MAX_BAR_HEIGHT, 4),
-                        backgroundColor: '#C4956A',
+                        backgroundColor: '#BD632F',
                       },
                     ]}
                   />
@@ -200,6 +219,7 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 4, paddingBottom: 12 },
   backBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#BD632F', justifyContent: 'center', alignItems: 'center' },
   headerTitle: { fontSize: 20, fontWeight: '800', color: '#1A1817' },
+  settingsBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#F5F2EC', justifyContent: 'center', alignItems: 'center' },
   scrollContainer: { paddingHorizontal: 20, paddingBottom: 100 },
   totalLabel: { fontSize: 14, fontWeight: '500', color: '#7C7672', marginBottom: 4 },
   totalAmount: { fontSize: 36, fontWeight: '800', color: '#BD632F', marginBottom: 12 },
@@ -213,6 +233,9 @@ const styles = StyleSheet.create({
   coinsText: { fontSize: 13, fontWeight: '600', color: '#F9A825' },
   paymentMethodRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#FFFFFF', borderRadius: 16, borderWidth: 1, borderColor: '#E6E1DC', padding: 16, marginBottom: 24 },
   paymentMethodLabel: { fontSize: 14, fontWeight: '700', color: '#1A1817' },
+  paymentIcons: { flexDirection: 'row', gap: 6 },
+  paymentIcon: { width: 32, height: 32, borderRadius: 8, justifyContent: 'center', alignItems: 'center' },
+  paymentIconText: { fontSize: 14, fontWeight: '800', color: '#FFFFFF' },
   performanceSection: { marginBottom: 24 },
   performanceHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
   performanceTitle: { fontSize: 16, fontWeight: '700', color: '#1A1817' },
@@ -221,7 +244,7 @@ const styles = StyleSheet.create({
   chartContainer: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', height: 160, backgroundColor: '#FFFFFF', borderRadius: 16, borderWidth: 1, borderColor: '#E6E1DC', padding: 16 },
   barColumn: { alignItems: 'center', flex: 1 },
   barWrapper: { height: MAX_BAR_HEIGHT, justifyContent: 'flex-end' },
-  bar: { width: 24, borderRadius: 6 },
+  bar: { width: 24, borderRadius: 10 },
   barLabel: { fontSize: 10, fontWeight: '600', color: '#9C9690', marginTop: 6 },
   sectionTitle: { fontSize: 16, fontWeight: '700', color: '#1A1817', marginBottom: 12 },
   transactionCard: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#FFFFFF', borderRadius: 14, borderWidth: 1, borderColor: '#E6E1DC', padding: 14, marginBottom: 10 },

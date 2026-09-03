@@ -1,9 +1,10 @@
 import * as SecureStore from 'expo-secure-store';
 
-export const API_URL = 'https://gobadi-backend.onrender.com';
+export const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://gobadi-backend.onrender.com';
 
 const AUTH_TOKEN_KEY = 'gobadi_jwt';
 const REFRESH_TOKEN_KEY = 'gobadi_refresh_jwt';
+const LANGUAGE_KEY = 'gobadi_language';
 
 export async function getToken(): Promise<string | null> {
   return SecureStore.getItemAsync(AUTH_TOKEN_KEY);
@@ -55,4 +56,12 @@ export async function apiFetch<T>(endpoint: string, options?: RequestInit): Prom
     console.error(`API Fetch failed for ${url}:`, error);
     throw error;
   }
+}
+
+export async function getLanguage(): Promise<string | null> {
+  return SecureStore.getItemAsync(LANGUAGE_KEY);
+}
+
+export async function setLanguage(lang: string): Promise<void> {
+  await SecureStore.setItemAsync(LANGUAGE_KEY, lang);
 }

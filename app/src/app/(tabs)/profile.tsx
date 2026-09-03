@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   StyleSheet,
   View,
@@ -32,8 +32,14 @@ export default function ProfileScreen() {
   const { data: doctorProfile } = useGetMyDoctorProfileQuery(undefined, { skip: !isDoctor });
   const { data: doctorBookings = [] } = useGetDoctorBookingsQuery(undefined, { skip: !isDoctor });
 
-  console.log("booking", doctorBookings)
-  console.log("profile", doctorProfile)
+  const uniquePatients = useMemo(() => {
+    const patientIds = new Set(doctorBookings.map((b) => b.patientId));
+    return patientIds.size;
+  }, [doctorBookings]);
+
+  const completedConsultations = useMemo(() => {
+    return doctorBookings.filter((b) => b.status === 'COMPLETED').length;
+  }, [doctorBookings]);
 
   // Animal counts for farmer
   const cowCount = animals.filter((a) => a.breed?.toLowerCase().includes('cow') || !a.breed?.toLowerCase().includes('buffalo') && !a.breed?.toLowerCase().includes('goat')).length || 0;
@@ -91,9 +97,8 @@ export default function ProfileScreen() {
                   <View style={styles.ratingRow}>
                     <Ionicons name="star" size={14} color="#F59E0B" />
                     <Text style={styles.ratingScore}>{doctorProfile?.rating ?? '4.8'}</Text>
-                    <Text style={styles.ratingCount}>(141 reviews)</Text>
+                    <Text style={styles.ratingCount}>({completedConsultations} reviews)</Text>
                   </View>
-                  <Text style={styles.doctorLocation}>Cardiology Center, USA</Text>
                 </View>
               </View>
 
@@ -101,13 +106,11 @@ export default function ProfileScreen() {
               <View style={styles.statsRow}>
                 <View style={styles.statItem}>
                   <Text style={styles.statLabel}>Patients</Text>
-                  <Text style={styles.statNumber}>
-                    {doctorBookings.length > 0 ? doctorBookings.length : 0}
-                  </Text>
+                  <Text style={styles.statNumber}>{uniquePatients}</Text>
                 </View>
                 <View style={styles.statItem}>
                   <Text style={styles.statLabel}>Consultations</Text>
-                  <Text style={styles.statNumber}>0</Text>
+                  <Text style={styles.statNumber}>{completedConsultations}</Text>
                 </View>
                 <View style={styles.statItem}>
                   <Text style={styles.statLabel}>Years Experience</Text>
@@ -199,23 +202,6 @@ export default function ProfileScreen() {
                   <Text style={styles.menuLabel}>Help & Support</Text>
                 </View>
                 <Ionicons name="chevron-forward" size={18} color="#9C9690" />
-              </TouchableOpacity>
-
-              <View style={styles.divider} />
-
-              {/* Doctor Log Out */}
-              <TouchableOpacity
-                style={styles.menuItem}
-                activeOpacity={0.7}
-                onPress={handleLogout}
-              >
-                <View style={styles.menuLeft}>
-                  <View style={[styles.iconCircle, styles.logoutCircle]}>
-                    <Ionicons name="log-out-outline" size={20} color="#DC2626" />
-                  </View>
-                  <Text style={[styles.menuLabel, styles.logoutLabel]}>Log Out</Text>
-                </View>
-                <Ionicons name="chevron-forward" size={18} color="#DC2626" />
               </TouchableOpacity>
             </View>
           </>

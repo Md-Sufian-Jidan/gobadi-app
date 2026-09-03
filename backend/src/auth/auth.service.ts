@@ -285,7 +285,13 @@ export class AuthService {
       }
       await this.usersService.markVerified(user.id);
       if (user.role === UserRole.DOCTOR) {
-        await this.doctorsService.createProfileForUser(user);
+        // Retrieve stored BVC registration number
+        const bvcNumber = await this.redisService.get(`bvc:${phone}`);
+        await this.doctorsService.createProfileForUser(user, bvcNumber || undefined);
+        // Clean up stored BVC number
+        if (bvcNumber) {
+          await this.redisService.del(`bvc:${phone}`);
+        }
       }
       const { accessToken, refreshToken } = await this.issueTokenPair(user);
       return {
@@ -332,6 +338,15 @@ export class AuthService {
       role: dto.role,
       passwordHash,
     });
+
+    // Store BVC registration number for doctors (retrieved after OTP verification)
+    if (dto.role === UserRole.DOCTOR && dto.bvcRegistrationNumber) {
+      await this.redisService.set(
+        `bvc:${dto.identifier}`,
+        dto.bvcRegistrationNumber,
+        600, // 10 minutes TTL
+      );
+    }
 
     await this.sendOtp(dto.identifier, 'verify');
 
@@ -407,6 +422,15 @@ export class AuthService {
     const passwordHash = await bcrypt.hash(newPassword, 10);
     await this.usersService.setPassword(payload.sub, passwordHash);
     return { success: true, message: 'Password reset successfully.' };
+  }
+
+  async setPassword(
+    userId: number,
+    newPassword: string,
+  ): Promise<{ success: boolean; message: string }> {
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+    await this.usersService.setPassword(userId, passwordHash);
+    return { success: true, message: 'Password set successfully.' };
   }
 
   async loginWithGoogle(

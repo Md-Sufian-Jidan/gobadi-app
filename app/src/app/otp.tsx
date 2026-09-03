@@ -22,6 +22,7 @@ export default function OTPScreen() {
   const phone = String(params.phone || '+88 01712-345678');
   const otpHint = params.otpHint || '';
   const purpose = (params.purpose as 'login' | 'verify' | 'reset' | undefined) ?? 'verify';
+  const role = (params.role as string) || '';
 
   const OTP_LENGTH = 4;
   const [otp, setOtp] = useState([otpHint ? otpHint[0] || '' : '', '', '', '']); // First prefilled with hint or '5' per mockup
@@ -96,6 +97,11 @@ export default function OTPScreen() {
       }
       if (purpose === 'reset' && res.resetToken) {
         router.replace({ pathname: '/reset-password', params: { resetToken: res.resetToken } });
+        return;
+      }
+      if (role === 'doctor') {
+        const doctorName = res.user?.name || '';
+        router.replace({ pathname: '/password-setup', params: { name: doctorName } });
         return;
       }
       router.replace('/congo');

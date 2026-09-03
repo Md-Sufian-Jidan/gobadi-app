@@ -21,6 +21,8 @@ import { useGetTasksQuery, useToggleTaskMutation } from '@/store/tasksApi';
 import { useGetWeatherQuery } from '@/store/weatherApi';
 import { useGetAlertsQuery, useActOnAlertMutation } from '@/store/alertsApi';
 import { useGetMyReferralQuery, useClaimReferralMutation } from '@/store/referralsApi';
+import { useLanguage } from '@/hooks/use-language';
+import LanguageBottomSheet from '@/components/LanguageBottomSheet';
 import Svg, { Path } from 'react-native-svg';
 import { EmptyState } from '@/components/ui/empty-state';
 import { RowSkeleton, AlertCardSkeleton, SkeletonBox } from '@/components/ui/skeleton';
@@ -40,10 +42,6 @@ function formatFullDate(): string {
   });
 }
 
-function formatClockTime(iso: string): string {
-  return new Date(iso).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-}
-
 function formatTaskTime(scheduledTime: string): string {
   return new Date(scheduledTime).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
 }
@@ -58,6 +56,8 @@ export default function HomeDashboard() {
   const { data: alerts = [], isLoading: isAlertsLoading } = useGetAlertsQuery();
   const { data: referral } = useGetMyReferralQuery();
   const [claimReferral, { isLoading: isClaiming }] = useClaimReferralMutation();
+  const { language, languageCode, setLanguage } = useLanguage();
+  const [showLangSheet, setShowLangSheet] = useState(false);
 
   const [toggleTaskMutation] = useToggleTaskMutation();
   const [actOnAlertMutation] = useActOnAlertMutation();
@@ -129,10 +129,10 @@ export default function HomeDashboard() {
               <TouchableOpacity
                 style={styles.langBadgeHeader}
                 activeOpacity={0.8}
-                onPress={() => router.push('/select-language')}
+                onPress={() => setShowLangSheet(true)}
               >
                 <Ionicons name="globe-outline" size={15} color="#FFFFFF" />
-                <Text style={styles.langTextHeader}>EN</Text>
+                <Text style={styles.langTextHeader}>{languageCode}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.notifBtnWhite}
@@ -225,11 +225,11 @@ export default function HomeDashboard() {
                 </View>
                 <View style={styles.arcLabels}>
                   <View>
-                    <Text style={styles.arcTime}>{weather ? formatClockTime(weather.sunriseTime) : '5:25 am'}</Text>
+                    <Text style={styles.arcTime}>{weather?.sunriseTime || '5:25 am'}</Text>
                     <Text style={styles.arcTypeSunrise}>Sunrise</Text>
                   </View>
                   <View style={{ alignItems: 'flex-end' }}>
-                    <Text style={styles.arcTime}>{weather ? formatClockTime(weather.sunsetTime) : '6:53 pm'}</Text>
+                    <Text style={styles.arcTime}>{weather?.sunsetTime || '6:53 pm'}</Text>
                     <Text style={styles.arcTypeSunset}>Sunset</Text>
                   </View>
                 </View>
@@ -487,6 +487,13 @@ export default function HomeDashboard() {
         </View>
 
       </ScrollView>
+
+      <LanguageBottomSheet
+        visible={showLangSheet}
+        selectedLanguage={language}
+        onClose={() => setShowLangSheet(false)}
+        onSave={setLanguage}
+      />
     </View>
   );
 }

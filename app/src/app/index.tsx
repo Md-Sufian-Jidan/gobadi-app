@@ -69,6 +69,10 @@ export default function OnboardingScreen() {
     }
   };
 
+  const handleSkip = () => {
+    router.push('/signup');
+  };
+
   const renderItem = ({ item }: { item: OnboardingSlide }) => {
     if (item.type === 'slide1') {
       return (
@@ -183,6 +187,15 @@ export default function OnboardingScreen() {
 
       {/* Footer Area with Dots & Action Button */}
       <View style={styles.footerContainer}>
+        {/* Skip Button - Only on Slide 1 */}
+        {activeIndex === 0 && (
+          <View style={styles.skipRow}>
+            <TouchableOpacity onPress={handleSkip} activeOpacity={0.7}>
+              <Text style={styles.skipText}>Skip</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
         {/* Pagination Dots */}
         <View style={styles.paginationRow}>
           {slides.map((_, index) => (
@@ -319,6 +332,16 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
     paddingTop: 8,
     backgroundColor: '#FAF8F5',
+  },
+  skipRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginBottom: 8,
+  },
+  skipText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#6B7280',
   },
   paginationRow: {
     flexDirection: 'row',

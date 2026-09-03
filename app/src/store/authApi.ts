@@ -37,7 +37,7 @@ export const authApi = createApi({
   endpoints: (builder) => ({
     register: builder.mutation<
       MessageResponse,
-      { name?: string; identifier: string; password: string; role: string }
+      { name?: string; identifier: string; password: string; role: string; bvcRegistrationNumber?: string }
     >({
       query: (body) => ({ url: '/auth/register', method: 'POST', body }),
     }),
@@ -103,6 +103,10 @@ export const authApi = createApi({
     logoutSession: builder.mutation<MessageResponse, { refreshToken: string }>({
       query: (body) => ({ url: '/auth/logout', method: 'POST', body }),
     }),
+
+    setPassword: builder.mutation<MessageResponse, { newPassword: string }>({
+      query: (body) => ({ url: '/auth/set-password', method: 'POST', body }),
+    }),
   }),
 });
 
@@ -144,4 +148,5 @@ export const {
   useResetPasswordMutation,
   useGoogleAuthMutation,
   useFacebookAuthMutation,
+  useSetPasswordMutation,
 } = authApi;

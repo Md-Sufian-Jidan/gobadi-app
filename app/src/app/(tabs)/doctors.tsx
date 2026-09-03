@@ -14,6 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useGetClinicsQuery } from '@/store/clinicsApi';
+import { useLanguage } from '@/hooks/use-language';
 
 const { width } = Dimensions.get('window');
 
@@ -38,6 +39,7 @@ export default function DoctorsScreen() {
   const [activeSlide, setActiveSlide] = useState(0); // 0: Upcoming, 1: AI Analyze
   const [activeCategory, setActiveCategory] = useState('Medicine');
   const { data: clinics = [] } = useGetClinicsQuery();
+  const { languageCode } = useLanguage();
 
   const categories: Category[] = [
     { id: '1', name: 'General', icon: '🩺' },
@@ -73,7 +75,7 @@ export default function DoctorsScreen() {
               onPress={() => router.push('/select-language')}
             >
               <Ionicons name="globe-outline" size={16} color="#BD632F" />
-              <Text style={styles.langText}>EN</Text>
+              <Text style={styles.langText}>{languageCode}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.notificationButton}
