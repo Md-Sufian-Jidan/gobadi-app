@@ -13,19 +13,25 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Image } from 'expo-image';
 
-import { useSetPasswordMutation } from '@/store/authApi';
+import { useRegisterMutation } from '@/store/authApi';
 import { PasswordField } from '@/components/password-field';
 
 export default function PasswordSetupScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ name?: string }>();
+  const params = useLocalSearchParams<{
+    name?: string;
+    identifier?: string;
+    role?: string;
+    bvcNumber?: string;
+  }>();
+  
   const doctorName = params.name || 'Doctor';
 
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
 
-  const [setPasswordApi, { isLoading }] = useSetPasswordMutation();
+  const [registerApi, { isLoading }] = useRegisterMutation();
 
   const handleContinue = async () => {
     setErrorMessage('');
@@ -44,10 +50,24 @@ export default function PasswordSetupScreen() {
     }
 
     try {
-      await setPasswordApi({ newPassword: password }).unwrap();
-      router.replace('/doctor-registration-success');
+      await registerApi({
+        name: params.name || '',
+        identifier: params.identifier || '',
+        password,
+        role: params.role || 'doctor',
+        bvcRegistrationNumber: params.bvcNumber,
+      }).unwrap();
+      
+      router.push({
+        pathname: '/otp',
+        params: {
+          phone: params.identifier,
+          purpose: 'verify',
+          role: 'doctor',
+        }
+      });
     } catch (err: any) {
-      setErrorMessage(err?.data?.message || 'Could not set password. Please try again.');
+      setErrorMessage(err?.data?.message || 'Could not create account. Please try again.');
     }
   };
 
