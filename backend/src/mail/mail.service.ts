@@ -32,7 +32,7 @@ export class MailService {
     html?: string,
     attachments?: MailAttachment[],
   ): Promise<boolean> {
-    const from = process.env.SMTP_FROM || '"Gobadi App" <no-reply@gobadi.com>';
+    const from = process.env.SMTP_FROM || '"Gobadi App" <onboarding@resend.dev>';
 
     if (this.resend) {
       const { error } = await this.resend.emails.send({

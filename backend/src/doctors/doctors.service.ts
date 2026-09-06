@@ -93,7 +93,7 @@ export class DoctorsService {
   async createProfileForUser(user: {
     id: number;
     name?: string;
-  }, bvcRegistrationNumber?: string): Promise<Doctor> {
+  }): Promise<Doctor> {
     const existing = await this.getDoctorByUserId(user.id);
     if (existing) {
       return existing;
@@ -106,7 +106,6 @@ export class DoctorsService {
       avatar: '',
       bio: '',
       isVerified: false,
-      bvcRegistrationNumber,
     });
     return this.doctorRepository.save(doctor);
   }
