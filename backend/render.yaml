@@ -33,7 +33,7 @@ services:
       - key: DB_SSL
         value: "true"
       - key: REDIS_HOST
-        value: "informed-mollusk-78164.upstash.io"
+        value: "relaxed-warthog-120597.upstash.io"
       - key: REDIS_PORT
         value: "6379"
       - key: REDIS_PASSWORD
@@ -44,6 +44,8 @@ services:
         generateValue: true
       - key: JWT_EXPIRES_IN
         value: 7d
+      - key: RESEND_API_KEY
+        sync: false
 
 databases:
   - name: gobadi-db

@@ -48,9 +48,6 @@ export class Doctor {
   @Column({ nullable: true })
   licenseNumber?: string;
 
-  @Column({ nullable: true })
-  bvcRegistrationNumber?: string;
-
   @Column('float', { default: 500 })
   consultationFee: number;
 
