@@ -184,13 +184,10 @@ export class AppointmentsController {
   @ApiBearerAuth()
   @ApiOperation({
     summary:
-      'Get a join URL for an online consultation (placeholder pending video provider selection)',
+      'Get Agora token + channel info for joining an online consultation',
   })
-  @ApiResponse({ status: 200, description: 'Join URL' })
-  async join(
-    @Param('id') id: string,
-    @CurrentUser() user: JwtPayload,
-  ): Promise<{ url: string }> {
+  @ApiResponse({ status: 200, description: 'Token + channel info' })
+  async join(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
     return this.appointmentsService.getJoinInfo(
       parseInt(id, 10),
       user.sub,

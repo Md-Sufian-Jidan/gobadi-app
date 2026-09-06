@@ -42,6 +42,7 @@ import { marketRatesApi } from './marketRatesApi';
 import { fieldsApi } from './fieldsApi';
 import { badgesApi } from './badgesApi';
 import { notificationPreferencesApi } from './notificationPreferencesApi';
+import { videoCallApi } from './videoCallApi';
 import { getToken, getRefreshToken } from '@/constants/api';
 import { decodeJwt } from './decode-jwt';
 import type { AuthUser } from './authSlice';
@@ -91,6 +92,7 @@ export const store = configureStore({
     [fieldsApi.reducerPath]: fieldsApi.reducer,
     [badgesApi.reducerPath]: badgesApi.reducer,
     [notificationPreferencesApi.reducerPath]: notificationPreferencesApi.reducer,
+    [videoCallApi.reducerPath]: videoCallApi.reducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware().concat(
@@ -136,6 +138,7 @@ export const store = configureStore({
       fieldsApi.middleware,
       badgesApi.middleware,
       notificationPreferencesApi.middleware,
+      videoCallApi.middleware,
     ),
 });
 

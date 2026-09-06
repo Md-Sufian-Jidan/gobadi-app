@@ -29,7 +29,12 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { NotificationType } from '../notifications/notification.entity';
 import { CancelAppointmentDto } from './dto/cancel-appointment.dto';
 import { PaginatedResult } from '../common/paginated-result.interface';
-import { MedicalEvent, MedicalEventType, MedicalEventStatus } from '../medical-events/medical-event.entity';
+import {
+  MedicalEvent,
+  MedicalEventType,
+  MedicalEventStatus,
+} from '../medical-events/medical-event.entity';
+import { VideoCallService } from '../video-call/video-call.service';
 
 const RESCHEDULE_CANCEL_BUFFER_MS = 2 * 60 * 60 * 1000; // 2 hours
 
@@ -67,6 +72,7 @@ export class AppointmentsService {
     private readonly discountsService: DiscountsService,
     private readonly walletService: WalletService,
     private readonly timeOffService: TimeOffService,
+    private readonly videoCallService: VideoCallService,
   ) {}
 
   async bookAppointment(
@@ -162,7 +168,10 @@ export class AppointmentsService {
     if (Number.isNaN(targetDate.getTime())) {
       throw new BadRequestException('date must be a valid calendar date');
     }
-    const availability = await this.doctorsService.getAvailabilityForDate(doctorId, targetDate);
+    const availability = await this.doctorsService.getAvailabilityForDate(
+      doctorId,
+      targetDate,
+    );
     if (availability.length === 0) {
       return [];
     }
@@ -353,7 +362,13 @@ export class AppointmentsService {
     requesterId: number,
     requesterRole: UserRole,
     dto: CancelAppointmentDto,
-  ): Promise<Appointment & { walletDeduction: number; cancellationFee: number; refundAmount: number }> {
+  ): Promise<
+    Appointment & {
+      walletDeduction: number;
+      cancellationFee: number;
+      refundAmount: number;
+    }
+  > {
     const appointment = await this.getOwnedAppointment(
       appointmentId,
       requesterId,
@@ -362,7 +377,8 @@ export class AppointmentsService {
     this.enforceReschedulableBuffer(appointment);
 
     // Calculate cancellation fee using block-time settings
-    const { cancellationFee, refundAmount } = await this.timeOffService.calculateCancellationFee(appointmentId);
+    const { cancellationFee, refundAmount } =
+      await this.timeOffService.calculateCancellationFee(appointmentId);
 
     appointment.status = AppointmentStatus.CANCELLED;
     appointment.cancelledAt = new Date();
@@ -464,15 +480,13 @@ export class AppointmentsService {
   }
 
   /**
-   * Placeholder join endpoint — returns a stand-in URL until a video
-   * provider (Twilio/Agora/etc.) is chosen. Kept as a real, guarded endpoint
-   * so frontend work isn't blocked on that decision.
+   * Returns Agora token + channel info for joining a video call.
    */
   async getJoinInfo(
     appointmentId: number,
     requesterId: number,
     requesterRole: UserRole,
-  ): Promise<{ url: string }> {
+  ): Promise<{ token: string; channelName: string; appId: string }> {
     const appointment = await this.getOwnedAppointment(
       appointmentId,
       requesterId,
@@ -495,7 +509,19 @@ export class AppointmentsService {
         'This appointment is not in a joinable state',
       );
     }
-    return { url: `https://meet.gobadi.app/appointments/${appointment.id}` };
+
+    const session =
+      await this.videoCallService.getOrCreateSession(appointmentId);
+    const token = this.videoCallService.generateRtcToken(
+      session.channelName,
+      requesterId,
+    );
+
+    return {
+      token,
+      channelName: session.channelName,
+      appId: process.env.AGORA_APP_ID as string,
+    };
   }
 
   private async enrichWithPatientAndAnimal(

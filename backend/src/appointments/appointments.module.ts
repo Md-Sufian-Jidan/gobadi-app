@@ -4,7 +4,11 @@ import { AppointmentsService } from './appointments.service';
 import { AppointmentsController } from './appointments.controller';
 import { Appointment } from './appointment.entity';
 import { Animal } from '../animals/animal.entity';
-import { MedicalEvent, MedicalEventType, MedicalEventStatus } from '../medical-events/medical-event.entity';
+import {
+  MedicalEvent,
+  MedicalEventType,
+  MedicalEventStatus,
+} from '../medical-events/medical-event.entity';
 import { DoctorsModule } from '../doctors/doctors.module';
 import { ChatModule } from '../chat/chat.module';
 import { UsersModule } from '../users/users.module';
@@ -13,6 +17,7 @@ import { NotificationsModule } from '../notifications/notifications.module';
 import { DiscountsModule } from '../discounts/discounts.module';
 import { WalletModule } from '../wallet/wallet.module';
 import { TimeOffModule } from '../time-off/time-off.module';
+import { VideoCallModule } from '../video-call/video-call.module';
 
 @Module({
   imports: [
@@ -25,6 +30,7 @@ import { TimeOffModule } from '../time-off/time-off.module';
     DiscountsModule,
     WalletModule,
     TimeOffModule,
+    VideoCallModule,
   ],
   controllers: [AppointmentsController],
   providers: [AppointmentsService],
