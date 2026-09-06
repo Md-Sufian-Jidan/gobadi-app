@@ -53,6 +53,7 @@ import { SupportModule } from './support/support.module';
 import { FieldsModule } from './fields/fields.module';
 import { MarketRatesModule } from './market-rates/market-rates.module';
 import { BadgesModule } from './badges/badges.module';
+import { VideoCallModule } from './video-call/video-call.module';
 
 @Module({
   imports: [
@@ -65,7 +66,8 @@ import { BadgesModule } from './badges/badges.module';
       database: process.env.DB_DATABASE || 'gobadi',
       autoLoadEntities: true,
       synchronize: true,
-      ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false,
+      ssl:
+        process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false,
     }),
     BullModule.forRoot({
       connection: {
@@ -126,15 +128,21 @@ import { BadgesModule } from './badges/badges.module';
     FieldsModule,
     MarketRatesModule,
     BadgesModule,
+    VideoCallModule,
   ],
   controllers: [AppController, HealthController],
   providers: [
     AppService,
     {
       provide: APP_GUARD,
-      useClass: process.env.SKIP_THROTTLE === 'true' 
-        ? class MockThrottlerGuard { canActivate() { return true; } } 
-        : ThrottlerGuard,
+      useClass:
+        process.env.SKIP_THROTTLE === 'true'
+          ? class MockThrottlerGuard {
+              canActivate() {
+                return true;
+              }
+            }
+          : ThrottlerGuard,
     },
   ],
 })
