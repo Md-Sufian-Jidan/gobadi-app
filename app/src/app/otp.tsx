@@ -150,7 +150,7 @@ export default function OTPScreen() {
 
           {/* Subtitle */}
           <Text style={styles.subtitle}>
-            Enter the verification code we just sent on your phone number
+            Enter the verification code we just sent to your {phone.includes('@') ? 'email' : 'phone number'}
           </Text>
           {phone && <Text style={styles.phoneNumber}>{phone}</Text>}
 
