@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Delivery, DeliveryStatus } from './delivery.entity';
@@ -17,7 +21,10 @@ export class DeliveryService {
     private readonly notificationsService: NotificationsService,
   ) {}
 
-  async createDelivery(orderId: string, courierName: string): Promise<Delivery> {
+  async createDelivery(
+    orderId: string,
+    courierName: string,
+  ): Promise<Delivery> {
     const existing = await this.deliveryRepository.findOneBy({ orderId });
     if (existing) {
       return existing;
@@ -46,7 +53,10 @@ export class DeliveryService {
     return saved;
   }
 
-  async updateDelivery(orderId: string, dto: UpdateDeliveryDto): Promise<Delivery> {
+  async updateDelivery(
+    orderId: string,
+    dto: UpdateDeliveryDto,
+  ): Promise<Delivery> {
     const delivery = await this.deliveryRepository.findOneBy({ orderId });
     if (!delivery) {
       throw new NotFoundException('Delivery details not found for this order');
@@ -60,7 +70,8 @@ export class DeliveryService {
       status: dto.status,
       timestamp: new Date(),
       location: dto.location,
-      description: dto.description || `Delivery status changed to ${dto.status}`,
+      description:
+        dto.description || `Delivery status changed to ${dto.status}`,
     });
 
     const saved = await this.deliveryRepository.save(delivery);
@@ -117,7 +128,9 @@ export class DeliveryService {
       relations: { order: true },
     });
     if (!delivery) {
-      throw new NotFoundException('Delivery details not found for tracking number');
+      throw new NotFoundException(
+        'Delivery details not found for tracking number',
+      );
     }
     return delivery;
   }

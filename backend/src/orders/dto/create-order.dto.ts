@@ -6,7 +6,10 @@ export class CreateOrderDto {
   @IsNumber()
   addressId: number;
 
-  @ApiProperty({ example: 'standard', description: 'standard, express, same_day, store_pickup, seller_pickup' })
+  @ApiProperty({
+    example: 'standard',
+    description: 'standard, express, same_day, store_pickup, seller_pickup',
+  })
   @IsString()
   deliveryMethod: string;
 

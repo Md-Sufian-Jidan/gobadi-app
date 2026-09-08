@@ -93,12 +93,10 @@ export class AiDiagnosisAnalyzerService {
           JSON.stringify(candidates),
         ].join('\n'),
       },
-      ...images.map(
-        (url): OpenAI.Chat.ChatCompletionContentPart => ({
-          type: 'image_url',
-          image_url: { url },
-        }),
-      ),
+      ...images.map((url): OpenAI.Chat.ChatCompletionContentPart => ({
+        type: 'image_url',
+        image_url: { url },
+      })),
     ];
 
     const completion = await this.client!.chat.completions.create({
@@ -169,7 +167,10 @@ export class AiDiagnosisAnalyzerService {
     let analysisResult = 'Healthy / Undetermined';
     let confidenceScore = 0.5;
     let isolationRequired = false;
-    let recommendations = ['Monitor temperature', 'Provide clean drinking water'];
+    let recommendations = [
+      'Monitor temperature',
+      'Provide clean drinking water',
+    ];
 
     const lowercaseSymptoms = symptoms.map((s) => s.toLowerCase());
 

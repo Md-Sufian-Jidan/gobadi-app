@@ -1,10 +1,17 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Review, ReviewTargetType } from './review.entity';
 import { CreateReviewDto } from './dto/create-review.dto';
 import { Order, OrderStatus } from '../orders/order.entity';
-import { Appointment, AppointmentStatus } from '../appointments/appointment.entity';
+import {
+  Appointment,
+  AppointmentStatus,
+} from '../appointments/appointment.entity';
 import { Doctor } from '../doctors/doctor.entity';
 import { Clinic } from '../clinics/clinic.entity';
 import { NotificationsService } from '../notifications/notifications.service';
@@ -112,7 +119,10 @@ export class ReviewsService {
     return saved;
   }
 
-  async findByTarget(targetType: ReviewTargetType, targetId: string): Promise<Review[]> {
+  async findByTarget(
+    targetType: ReviewTargetType,
+    targetId: string,
+  ): Promise<Review[]> {
     return this.reviewRepository.find({
       where: { targetType, targetId, isApproved: true },
       relations: { user: true },
@@ -176,27 +186,37 @@ export class ReviewsService {
     const result = await this.reviewRepository
       .createQueryBuilder('review')
       .select('AVG(review.rating)', 'avg')
-      .where('review.targetType = :type AND review.targetId = :targetId AND review.isApproved = true', {
-        type: ReviewTargetType.DOCTOR,
-        targetId: doctorId.toString(),
-      })
+      .where(
+        'review.targetType = :type AND review.targetId = :targetId AND review.isApproved = true',
+        {
+          type: ReviewTargetType.DOCTOR,
+          targetId: doctorId.toString(),
+        },
+      )
       .getRawOne();
 
     const avg = parseFloat(result?.avg || '5.0');
-    await this.doctorRepository.update(doctorId, { rating: parseFloat(avg.toFixed(1)) });
+    await this.doctorRepository.update(doctorId, {
+      rating: parseFloat(avg.toFixed(1)),
+    });
   }
 
   private async recalculateClinicRating(clinicId: number): Promise<void> {
     const result = await this.reviewRepository
       .createQueryBuilder('review')
       .select('AVG(review.rating)', 'avg')
-      .where('review.targetType = :type AND review.targetId = :targetId AND review.isApproved = true', {
-        type: ReviewTargetType.CLINIC,
-        targetId: clinicId.toString(),
-      })
+      .where(
+        'review.targetType = :type AND review.targetId = :targetId AND review.isApproved = true',
+        {
+          type: ReviewTargetType.CLINIC,
+          targetId: clinicId.toString(),
+        },
+      )
       .getRawOne();
 
     const avg = parseFloat(result?.avg || '5.0');
-    await this.clinicRepository.update(clinicId, { rating: parseFloat(avg.toFixed(1)) });
+    await this.clinicRepository.update(clinicId, {
+      rating: parseFloat(avg.toFixed(1)),
+    });
   }
 }

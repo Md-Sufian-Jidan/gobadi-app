@@ -23,7 +23,10 @@ export class CreateTaskDto {
   @IsDateString()
   scheduledTime: string;
 
-  @ApiPropertyOptional({ example: 'animal', enum: ['field', 'animal', 'appointment', 'other'] })
+  @ApiPropertyOptional({
+    example: 'animal',
+    enum: ['field', 'animal', 'appointment', 'other'],
+  })
   @IsOptional()
   @IsString()
   @IsIn(['field', 'animal', 'appointment', 'other'])

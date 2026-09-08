@@ -30,16 +30,26 @@ export class SearchService {
       try {
         const [products, livestock, doctors, clinics] = await Promise.all([
           this.meilisearchService.search<any>('products', query, { limit: 10 }),
-          this.meilisearchService.search<any>('livestock', query, { limit: 10 }),
+          this.meilisearchService.search<any>('livestock', query, {
+            limit: 10,
+          }),
           this.meilisearchService.search<any>('doctors', query, { limit: 10 }),
           this.meilisearchService.search<any>('clinics', query, { limit: 10 }),
         ]);
 
-        if (products !== null && livestock !== null && doctors !== null && clinics !== null) {
+        if (
+          products !== null &&
+          livestock !== null &&
+          doctors !== null &&
+          clinics !== null
+        ) {
           return { products, livestock, doctors, clinics };
         }
       } catch (err) {
-        console.warn('Meilisearch global query failed, falling back to database', err);
+        console.warn(
+          'Meilisearch global query failed, falling back to database',
+          err,
+        );
       }
     }
 

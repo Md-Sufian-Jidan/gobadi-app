@@ -135,7 +135,9 @@ export class PrescriptionsService {
       throw new NotFoundException('Prescription not found');
     }
     if (prescription.doctorId !== doctorUserId) {
-      throw new ForbiddenException('Only the creating doctor can add attachments');
+      throw new ForbiddenException(
+        'Only the creating doctor can add attachments',
+      );
     }
 
     const uploadResult = await this.cloudinaryService.uploadFile(file.buffer, {
@@ -146,10 +148,7 @@ export class PrescriptionsService {
     return this.prescriptionRepository.save(prescription);
   }
 
-  async send(
-    id: number,
-    doctorUserId: number,
-  ): Promise<Prescription> {
+  async send(id: number, doctorUserId: number): Promise<Prescription> {
     const prescription = await this.prescriptionRepository.findOneBy({ id });
     if (!prescription) {
       throw new NotFoundException('Prescription not found');

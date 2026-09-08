@@ -108,7 +108,8 @@ export class DoctorsController {
   @Roles(UserRole.DOCTOR)
   @ApiBearerAuth()
   @ApiOperation({
-    summary: "Update a single day's availability without resending the whole week",
+    summary:
+      "Update a single day's availability without resending the whole week",
   })
   @ApiParam({ name: 'id', example: '1' })
   @ApiParam({ name: 'dayId', example: '1' })

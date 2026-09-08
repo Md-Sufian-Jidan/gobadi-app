@@ -12,7 +12,9 @@ export class UpdateDeliveryDto {
   @IsString()
   location?: string;
 
-  @ApiPropertyOptional({ example: 'Shipment has arrived at distribution center' })
+  @ApiPropertyOptional({
+    example: 'Shipment has arrived at distribution center',
+  })
   @IsOptional()
   @IsString()
   description?: string;
@@ -22,7 +24,9 @@ export class UpdateDeliveryDto {
   @IsString()
   deliveryProofUrl?: string;
 
-  @ApiPropertyOptional({ example: 'Customer was not present, scheduled for retry' })
+  @ApiPropertyOptional({
+    example: 'Customer was not present, scheduled for retry',
+  })
   @IsOptional()
   @IsString()
   deliveryNotes?: string;

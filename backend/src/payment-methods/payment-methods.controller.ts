@@ -54,11 +54,7 @@ export class PaymentMethodsController {
     @CurrentUser() user: JwtPayload,
     @Body() body: { maskedNumber?: string; provider?: string },
   ): Promise<PaymentMethod> {
-    return this.paymentMethodsService.update(
-      parseInt(id, 10),
-      user.sub,
-      body,
-    );
+    return this.paymentMethodsService.update(parseInt(id, 10), user.sub, body);
   }
 
   @Delete(':id')
@@ -90,6 +86,10 @@ export class PaymentMethodsController {
     @CurrentUser() user: JwtPayload,
     @Body() body: { otp: string },
   ): Promise<PaymentMethod> {
-    return this.paymentMethodsService.verifyOtp(parseInt(id, 10), user.sub, body.otp);
+    return this.paymentMethodsService.verifyOtp(
+      parseInt(id, 10),
+      user.sub,
+      body.otp,
+    );
   }
 }

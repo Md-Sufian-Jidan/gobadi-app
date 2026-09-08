@@ -92,7 +92,11 @@ export class Livestock {
   @Column({ default: false })
   isSold: boolean;
 
-  @Column({ type: 'enum', enum: LivestockStatus, default: LivestockStatus.DRAFT })
+  @Column({
+    type: 'enum',
+    enum: LivestockStatus,
+    default: LivestockStatus.DRAFT,
+  })
   status: LivestockStatus;
 
   @Column({ default: false })

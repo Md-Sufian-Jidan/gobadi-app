@@ -13,7 +13,10 @@ export class FaqsService {
 
   async list(category?: string): Promise<Faq[]> {
     const where = category ? { category } : {};
-    return this.faqRepository.find({ where, order: { order: 'ASC', createdAt: 'ASC' } });
+    return this.faqRepository.find({
+      where,
+      order: { order: 'ASC', createdAt: 'ASC' },
+    });
   }
 
   async getById(id: number): Promise<Faq> {

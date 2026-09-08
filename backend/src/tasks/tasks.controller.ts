@@ -43,7 +43,12 @@ export class TasksController {
     @Query('category') category?: string,
     @Query('priority') priority?: string,
   ): Promise<Task[]> {
-    return this.tasksService.getTasksForDate(user.sub, date, category, priority);
+    return this.tasksService.getTasksForDate(
+      user.sub,
+      date,
+      category,
+      priority,
+    );
   }
 
   @Post()

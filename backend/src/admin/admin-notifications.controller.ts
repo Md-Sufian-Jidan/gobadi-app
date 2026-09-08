@@ -7,7 +7,10 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { NotificationsService } from '../notifications/notifications.service';
-import { Notification, NotificationType } from '../notifications/notification.entity';
+import {
+  Notification,
+  NotificationType,
+} from '../notifications/notification.entity';
 import { SendNotificationDto } from '../notifications/dto/send-notification.dto';
 import { BroadcastNotificationDto } from '../notifications/dto/broadcast-notification.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -46,8 +49,13 @@ export class AdminNotificationsController {
   }
 
   @Post('send')
-  @ApiOperation({ summary: 'Send a notification to specific users (admin only)' })
-  @ApiResponse({ status: 201, description: 'Notifications created and queued for push' })
+  @ApiOperation({
+    summary: 'Send a notification to specific users (admin only)',
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Notifications created and queued for push',
+  })
   async send(@Body() dto: SendNotificationDto): Promise<{ count: number }> {
     return this.notificationsService.sendToUsers(
       dto.userIds,
@@ -61,10 +69,18 @@ export class AdminNotificationsController {
 
   @Post('broadcast')
   @ApiOperation({
-    summary: 'Broadcast a notification to all users, or all users of a role (admin only)',
+    summary:
+      'Broadcast a notification to all users, or all users of a role (admin only)',
   })
   @ApiResponse({ status: 201, description: 'Broadcast queued' })
-  async broadcast(@Body() dto: BroadcastNotificationDto): Promise<{ queued: boolean }> {
-    return this.notificationsService.broadcastToRole(dto.title, dto.body, dto.type, dto.role);
+  async broadcast(
+    @Body() dto: BroadcastNotificationDto,
+  ): Promise<{ queued: boolean }> {
+    return this.notificationsService.broadcastToRole(
+      dto.title,
+      dto.body,
+      dto.type,
+      dto.role,
+    );
   }
 }

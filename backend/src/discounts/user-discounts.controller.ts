@@ -1,10 +1,4 @@
-import {
-  Body,
-  Controller,
-  Get,
-  Post,
-  UseGuards,
-} from '@nestjs/common';
+import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiOperation,
@@ -40,11 +34,11 @@ export class UserDiscountsController {
   constructor(private readonly discountsService: DiscountsService) {}
 
   @Get('available')
-  @ApiOperation({ summary: 'Get available discount codes for the current user' })
+  @ApiOperation({
+    summary: 'Get available discount codes for the current user',
+  })
   @ApiResponse({ status: 200, description: 'List of available discounts' })
-  async getAvailable(
-    @CurrentUser() user: JwtPayload,
-  ): Promise<Discount[]> {
+  async getAvailable(@CurrentUser() user: JwtPayload): Promise<Discount[]> {
     return this.discountsService.getAvailableDiscounts();
   }
 
@@ -52,9 +46,7 @@ export class UserDiscountsController {
   @ApiOperation({ summary: 'Validate a discount code' })
   @ApiResponse({ status: 200, description: 'Discount is valid' })
   @ApiResponse({ status: 404, description: 'Invalid or expired code' })
-  async validate(
-    @Body() dto: ValidateDiscountDto,
-  ): Promise<Discount> {
+  async validate(@Body() dto: ValidateDiscountDto): Promise<Discount> {
     return this.discountsService.validateDiscountCode(dto.code);
   }
 
@@ -76,9 +68,7 @@ export class UserDiscountsController {
   @Get('my')
   @ApiOperation({ summary: "Get the current user's discount usage history" })
   @ApiResponse({ status: 200, description: 'Discount history' })
-  async getMyDiscounts(
-    @CurrentUser() user: JwtPayload,
-  ): Promise<Discount[]> {
+  async getMyDiscounts(@CurrentUser() user: JwtPayload): Promise<Discount[]> {
     return this.discountsService.getUserDiscountHistory(user.sub);
   }
 }

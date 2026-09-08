@@ -27,7 +27,9 @@ export class WalletService {
     return wallet;
   }
 
-  async getBalance(userId: number): Promise<{ balance: number; coins: number }> {
+  async getBalance(
+    userId: number,
+  ): Promise<{ balance: number; coins: number }> {
     const wallet = await this.getOrCreateWallet(userId);
     return { balance: wallet.balance, coins: wallet.coins };
   }
@@ -123,7 +125,13 @@ export class WalletService {
     if (wallet.balance < amount) {
       throw new BadRequestException('Insufficient wallet balance');
     }
-    await this.adjustBalance(userId, -amount, reason, referenceType, referenceId);
+    await this.adjustBalance(
+      userId,
+      -amount,
+      reason,
+      referenceType,
+      referenceId,
+    );
     return this.getBalance(userId);
   }
 

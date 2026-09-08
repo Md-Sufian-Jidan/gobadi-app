@@ -470,20 +470,18 @@ Awarding logic = internal (triggered by other services), not an endpoint.
 
 ---
 
-### 4.13 Video Call — `src/video-call/` — **DEFERRED**
+### 4.13 Video Call — `src/video-call/` — ✅ DONE
 
-> **Skipped for now.** Video provider decision pending (Twilio/Agora/Daily.co). Requires team decision on provider + mobile SDK integration.
+> **Provider:** Agora (`agora-token` package). Entity `VideoSession` built. Placeholder `POST /doctors/bookings/:id/join` now returns real Agora token + channel info.
 
-**Placeholder stays:** `POST /doctors/bookings/:id/join` remains as-is (returns fake URL).
+**Entity:** `VideoSession: id (serial), appointmentId, channelName, status (WAITING/ACTIVE/ENDED), doctorUserId, patientId, startedAt, endedAt, createdAt, updatedAt`
 
-**Future entity:** `VideoSession: id, appointmentId, sessionId, status, createdAt, endedAt`
-
-**Future endpoints (once provider chosen):**
+**Endpoints:**
 ```
 POST /video-call/create            JWT+Doctor  create session
-POST /video-call/join/:sessionId   JWT         join (doctor or patient check)
-POST /video-call/end/:sessionId    JWT         end
-GET  /video-call/token/:sessionId  JWT         fresh access token
+POST /video-call/join/:appointmentId   JWT         join (doctor or patient check, returns Agora token)
+POST /video-call/end/:appointmentId    JWT         end
+GET  /video-call/token/:appointmentId  JWT         fresh access token
 ```
 
 ---

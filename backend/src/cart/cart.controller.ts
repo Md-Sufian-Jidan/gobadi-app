@@ -31,7 +31,9 @@ export class CartController {
   constructor(private readonly cartService: CartService) {}
 
   @Get()
-  @ApiOperation({ summary: "Get current user's cart summary with price and stock checks" })
+  @ApiOperation({
+    summary: "Get current user's cart summary with price and stock checks",
+  })
   @ApiResponse({ status: 200, description: 'Cart summary details' })
   async getCart(@CurrentUser() user: JwtPayload): Promise<CartSummary> {
     return this.cartService.getCart(user.sub);
@@ -56,7 +58,11 @@ export class CartController {
     @CurrentUser() user: JwtPayload,
     @Body() body: UpdateCartItemDto,
   ): Promise<CartItem> {
-    return this.cartService.updateItem(parseInt(id, 10), user.sub, body.quantity);
+    return this.cartService.updateItem(
+      parseInt(id, 10),
+      user.sub,
+      body.quantity,
+    );
   }
 
   @Delete('item/:id')

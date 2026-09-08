@@ -8,7 +8,10 @@ export class SearchController {
   constructor(private readonly searchService: SearchService) {}
 
   @Get()
-  @ApiOperation({ summary: 'Mixed global search across products, livestock, clinics, and doctors' })
+  @ApiOperation({
+    summary:
+      'Mixed global search across products, livestock, clinics, and doctors',
+  })
   @ApiQuery({ name: 'q', example: 'cattle', description: 'Query text' })
   @ApiResponse({ status: 200, description: 'Aggregated search results' })
   async globalSearch(@Query('q') q: string) {

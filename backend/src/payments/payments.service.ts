@@ -1,7 +1,4 @@
-import {
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Transaction, PaymentStatus } from './transaction.entity';
@@ -88,7 +85,8 @@ export class PaymentsService {
 
         tx.status = PaymentStatus.SUCCESSFUL;
         tx.gatewayTransactionId =
-          gatewayTxId || `SIM-TX-${Math.floor(100000 + Math.random() * 900000)}`;
+          gatewayTxId ||
+          `SIM-TX-${Math.floor(100000 + Math.random() * 900000)}`;
         tx.auditTrail.push({
           status: PaymentStatus.SUCCESSFUL,
           timestamp: new Date(),

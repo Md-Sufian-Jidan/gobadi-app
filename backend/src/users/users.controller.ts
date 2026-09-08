@@ -54,7 +54,9 @@ export class UsersController {
     @Body() body: UpdateLanguageDto,
     @CurrentUser() user: JwtPayload,
   ): Promise<{ success: boolean; language: string }> {
-    await this.usersService.updateProfile(user.sub, { language: body.language } as any);
+    await this.usersService.updateProfile(user.sub, {
+      language: body.language,
+    } as any);
     return { success: true, language: body.language };
   }
 }

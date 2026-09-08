@@ -57,7 +57,9 @@ export class ServicesController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.DOCTOR, UserRole.CLINIC, UserRole.ADMIN)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Create a new consulting service (Providers / Admin only)' })
+  @ApiOperation({
+    summary: 'Create a new consulting service (Providers / Admin only)',
+  })
   @ApiResponse({ status: 201, description: 'Service created' })
   async create(@Body() dto: CreateServiceDto): Promise<Service> {
     return this.servicesService.create(dto);
@@ -80,7 +82,9 @@ export class ServicesController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.DOCTOR, UserRole.CLINIC, UserRole.ADMIN)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Deactivate service by ID (Providers / Admin only)' })
+  @ApiOperation({
+    summary: 'Deactivate service by ID (Providers / Admin only)',
+  })
   @ApiParam({ name: 'id', example: '1' })
   async remove(@Param('id') id: string): Promise<void> {
     return this.servicesService.remove(parseInt(id, 10));

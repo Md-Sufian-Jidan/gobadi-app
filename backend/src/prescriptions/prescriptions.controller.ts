@@ -84,11 +84,7 @@ export class PrescriptionsController {
     @CurrentUser() user: JwtPayload,
     @Body() dto: UpdatePrescriptionDto,
   ): Promise<Prescription> {
-    return this.prescriptionsService.update(
-      parseInt(id, 10),
-      user.sub,
-      dto,
-    );
+    return this.prescriptionsService.update(parseInt(id, 10), user.sub, dto);
   }
 
   @Post(':id/attachment')
@@ -118,9 +114,6 @@ export class PrescriptionsController {
     @Param('id') id: string,
     @CurrentUser() user: JwtPayload,
   ): Promise<Prescription> {
-    return this.prescriptionsService.send(
-      parseInt(id, 10),
-      user.sub,
-    );
+    return this.prescriptionsService.send(parseInt(id, 10), user.sub);
   }
 }

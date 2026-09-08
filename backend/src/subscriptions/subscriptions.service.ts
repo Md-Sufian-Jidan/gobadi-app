@@ -6,7 +6,10 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { SubscriptionPlan } from './subscription-plan.entity';
-import { UserSubscription, SubscriptionStatus } from './user-subscription.entity';
+import {
+  UserSubscription,
+  SubscriptionStatus,
+} from './user-subscription.entity';
 
 @Injectable()
 export class SubscriptionsService {
@@ -28,10 +31,7 @@ export class SubscriptionsService {
     });
   }
 
-  async subscribe(
-    userId: number,
-    planId: number,
-  ): Promise<UserSubscription> {
+  async subscribe(userId: number, planId: number): Promise<UserSubscription> {
     // Check if user already has an active subscription
     const existing = await this.getMySubscription(userId);
     if (existing) {

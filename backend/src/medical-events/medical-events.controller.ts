@@ -25,7 +25,10 @@ import {
   MedicalEventType,
 } from './medical-events.service';
 import { CreateMedicalEventDto } from './dto/create-medical-event.dto';
-import { CreateLabTestDto, CreateVaccinationDto } from './dto/create-wrapper.dto';
+import {
+  CreateLabTestDto,
+  CreateVaccinationDto,
+} from './dto/create-wrapper.dto';
 import { UpdateMedicalEventDto } from './dto/update-medical-event.dto';
 import { DoctorsService } from '../doctors/doctors.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -140,7 +143,9 @@ export class MedicalEventsController {
   @Delete('medical-events/:id')
   @UseGuards(RolesGuard)
   @Roles(UserRole.DOCTOR)
-  @ApiOperation({ summary: 'Delete a medical event (doctor-only, own records)' })
+  @ApiOperation({
+    summary: 'Delete a medical event (doctor-only, own records)',
+  })
   @ApiParam({ name: 'id', example: '1' })
   async remove(
     @Param('id') id: string,
@@ -188,11 +193,11 @@ export class MedicalEventsController {
     if (!doctor) {
       throw new ForbiddenException('No doctor profile linked to this account');
     }
-    return this.medicalEventsService.create(
-      doctor.id,
-      body.animalId,
-      { appointmentId: body.appointmentId, type: MedicalEventType.LAB_TEST, data: body.data },
-    );
+    return this.medicalEventsService.create(doctor.id, body.animalId, {
+      appointmentId: body.appointmentId,
+      type: MedicalEventType.LAB_TEST,
+      data: body.data,
+    });
   }
 
   @Put('lab-tests/:id')
@@ -246,11 +251,11 @@ export class MedicalEventsController {
     if (!doctor) {
       throw new ForbiddenException('No doctor profile linked to this account');
     }
-    return this.medicalEventsService.create(
-      doctor.id,
-      body.animalId,
-      { appointmentId: body.appointmentId, type: MedicalEventType.VACCINATION, data: body.data },
-    );
+    return this.medicalEventsService.create(doctor.id, body.animalId, {
+      appointmentId: body.appointmentId,
+      type: MedicalEventType.VACCINATION,
+      data: body.data,
+    });
   }
 
   @Put('vaccinations/:id')

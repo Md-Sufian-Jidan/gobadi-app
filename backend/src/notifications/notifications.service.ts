@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { FindOptionsWhere, Repository } from 'typeorm';
 import { Notification, NotificationType } from './notification.entity';
@@ -80,7 +84,10 @@ export class NotificationsService {
   }
 
   async markAllAsRead(userId: number): Promise<void> {
-    await this.notificationRepository.update({ userId, isRead: false }, { isRead: true });
+    await this.notificationRepository.update(
+      { userId, isRead: false },
+      { isRead: true },
+    );
   }
 
   async registerPushToken(
@@ -94,7 +101,11 @@ export class NotificationsService {
       existing.deviceId = deviceId;
       return this.pushTokenRepository.save(existing);
     }
-    const pushToken = this.pushTokenRepository.create({ userId, token, deviceId });
+    const pushToken = this.pushTokenRepository.create({
+      userId,
+      token,
+      deviceId,
+    });
     return this.pushTokenRepository.save(pushToken);
   }
 
@@ -203,12 +214,15 @@ export class NotificationsService {
       pref = this.preferenceRepository.create({ userId });
     }
 
-    if (data.appointmentReminders !== undefined) pref.appointmentReminders = data.appointmentReminders;
+    if (data.appointmentReminders !== undefined)
+      pref.appointmentReminders = data.appointmentReminders;
     if (data.promotions !== undefined) pref.promotions = data.promotions;
     if (data.chatMessages !== undefined) pref.chatMessages = data.chatMessages;
-    if (data.prescriptionUpdates !== undefined) pref.prescriptionUpdates = data.prescriptionUpdates;
+    if (data.prescriptionUpdates !== undefined)
+      pref.prescriptionUpdates = data.prescriptionUpdates;
     if (data.labResults !== undefined) pref.labResults = data.labResults;
-    if (data.vaccinationReminders !== undefined) pref.vaccinationReminders = data.vaccinationReminders;
+    if (data.vaccinationReminders !== undefined)
+      pref.vaccinationReminders = data.vaccinationReminders;
 
     return this.preferenceRepository.save(pref);
   }

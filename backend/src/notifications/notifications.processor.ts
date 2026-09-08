@@ -59,7 +59,9 @@ export class NotificationsProcessor extends WorkerHost {
       );
       await this.notificationRepository.save(rows);
       await this.pushToUsers(userIds, title, body, { type });
-      this.logger.log(`Broadcast notification created for ${userIds.length} user(s)`);
+      this.logger.log(
+        `Broadcast notification created for ${userIds.length} user(s)`,
+      );
       return { success: true, count: userIds.length };
     }
   }

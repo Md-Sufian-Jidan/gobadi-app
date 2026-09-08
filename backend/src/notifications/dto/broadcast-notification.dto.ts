@@ -14,14 +14,18 @@ export class BroadcastNotificationDto {
   @IsNotEmpty()
   body: string;
 
-  @ApiPropertyOptional({ enum: NotificationType, example: NotificationType.SYSTEM })
+  @ApiPropertyOptional({
+    enum: NotificationType,
+    example: NotificationType.SYSTEM,
+  })
   @IsOptional()
   @IsEnum(NotificationType)
   type?: NotificationType;
 
   @ApiPropertyOptional({
     enum: UserRole,
-    description: 'Restrict the broadcast to a single role; omit to notify everyone',
+    description:
+      'Restrict the broadcast to a single role; omit to notify everyone',
   })
   @IsOptional()
   @IsEnum(UserRole)

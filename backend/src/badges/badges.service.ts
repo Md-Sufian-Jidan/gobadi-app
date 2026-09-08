@@ -20,8 +20,12 @@ export class BadgesService {
 
     if (!userId) return badges;
 
-    const userBadges = await this.userBadgeRepository.find({ where: { userId } });
-    const earnedMap = new Map(userBadges.map((ub) => [ub.badgeId, ub.earnedAt]));
+    const userBadges = await this.userBadgeRepository.find({
+      where: { userId },
+    });
+    const earnedMap = new Map(
+      userBadges.map((ub) => [ub.badgeId, ub.earnedAt]),
+    );
 
     return badges.map((badge) => ({
       ...badge,

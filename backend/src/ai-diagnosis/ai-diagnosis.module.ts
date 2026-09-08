@@ -21,7 +21,11 @@ import { ChatModule } from '../chat/chat.module';
     CloudinaryModule,
     ChatModule,
   ],
-  providers: [AiDiagnosisService, AiDiagnosisAnalyzerService, AiDiagnosisProcessor],
+  providers: [
+    AiDiagnosisService,
+    AiDiagnosisAnalyzerService,
+    AiDiagnosisProcessor,
+  ],
   controllers: [AiDiagnosisController],
   exports: [AiDiagnosisService, TypeOrmModule],
 })

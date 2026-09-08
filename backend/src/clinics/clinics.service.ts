@@ -1,4 +1,9 @@
-import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Clinic } from './clinic.entity';
@@ -49,7 +54,10 @@ export class ClinicsService {
     return saved;
   }
 
-  async findAll(page?: number, limit?: number): Promise<Clinic[] | PaginatedResult<Clinic>> {
+  async findAll(
+    page?: number,
+    limit?: number,
+  ): Promise<Clinic[] | PaginatedResult<Clinic>> {
     const where = {};
     if (!page && !limit) {
       return this.clinicRepository.find({
@@ -101,7 +109,12 @@ export class ClinicsService {
     return clinic;
   }
 
-  async update(id: number, userId: number, role: string, dto: Partial<CreateClinicDto>): Promise<Clinic> {
+  async update(
+    id: number,
+    userId: number,
+    role: string,
+    dto: Partial<CreateClinicDto>,
+  ): Promise<Clinic> {
     const clinic = await this.findOne(id);
     if (clinic.userId !== userId && role !== 'admin') {
       throw new ForbiddenException('You do not own this clinic profile');
@@ -156,8 +169,16 @@ export class ClinicsService {
     return updated;
   }
 
-  async addDoctor(id: number, doctorId: number, userId: number, role: string): Promise<Clinic> {
-    const clinic = await this.clinicRepository.findOne({ where: { id }, relations: { doctors: true } });
+  async addDoctor(
+    id: number,
+    doctorId: number,
+    userId: number,
+    role: string,
+  ): Promise<Clinic> {
+    const clinic = await this.clinicRepository.findOne({
+      where: { id },
+      relations: { doctors: true },
+    });
     if (!clinic) {
       throw new NotFoundException('Clinic not found');
     }
@@ -181,8 +202,16 @@ export class ClinicsService {
     return saved;
   }
 
-  async removeDoctor(id: number, doctorId: number, userId: number, role: string): Promise<Clinic> {
-    const clinic = await this.clinicRepository.findOne({ where: { id }, relations: { doctors: true } });
+  async removeDoctor(
+    id: number,
+    doctorId: number,
+    userId: number,
+    role: string,
+  ): Promise<Clinic> {
+    const clinic = await this.clinicRepository.findOne({
+      where: { id },
+      relations: { doctors: true },
+    });
     if (!clinic) {
       throw new NotFoundException('Clinic not found');
     }

@@ -61,7 +61,9 @@ export class ClinicsController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.CLINIC, UserRole.ADMIN)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Create a new clinic profile (Clinic owner / Admin only)' })
+  @ApiOperation({
+    summary: 'Create a new clinic profile (Clinic owner / Admin only)',
+  })
   @ApiResponse({ status: 201, description: 'Clinic profile created' })
   async create(
     @CurrentUser() user: JwtPayload,
@@ -80,7 +82,12 @@ export class ClinicsController {
     @CurrentUser() user: JwtPayload,
     @Body() dto: Partial<CreateClinicDto>,
   ): Promise<Clinic> {
-    return this.clinicsService.update(parseInt(id, 10), user.sub, user.role, dto);
+    return this.clinicsService.update(
+      parseInt(id, 10),
+      user.sub,
+      user.role,
+      dto,
+    );
   }
 
   @Patch(':id/verify')
@@ -99,20 +106,29 @@ export class ClinicsController {
   @Post(':id/doctors')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Add doctor association to clinic (Owner/Admin only)' })
+  @ApiOperation({
+    summary: 'Add doctor association to clinic (Owner/Admin only)',
+  })
   @ApiParam({ name: 'id', example: '1' })
   async addDoctor(
     @Param('id') id: string,
     @Body() body: { doctorId: number },
     @CurrentUser() user: JwtPayload,
   ): Promise<Clinic> {
-    return this.clinicsService.addDoctor(parseInt(id, 10), body.doctorId, user.sub, user.role);
+    return this.clinicsService.addDoctor(
+      parseInt(id, 10),
+      body.doctorId,
+      user.sub,
+      user.role,
+    );
   }
 
   @Delete(':id/doctors/:doctorId')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Remove doctor association from clinic (Owner/Admin only)' })
+  @ApiOperation({
+    summary: 'Remove doctor association from clinic (Owner/Admin only)',
+  })
   @ApiParam({ name: 'id', example: '1' })
   @ApiParam({ name: 'doctorId', example: '1' })
   async removeDoctor(
@@ -120,6 +136,11 @@ export class ClinicsController {
     @Param('doctorId') doctorId: string,
     @CurrentUser() user: JwtPayload,
   ): Promise<Clinic> {
-    return this.clinicsService.removeDoctor(parseInt(id, 10), parseInt(doctorId, 10), user.sub, user.role);
+    return this.clinicsService.removeDoctor(
+      parseInt(id, 10),
+      parseInt(doctorId, 10),
+      user.sub,
+      user.role,
+    );
   }
 }

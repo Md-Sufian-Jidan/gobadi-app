@@ -7,7 +7,11 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { SupportTicket, TicketStatus } from './support-ticket.entity';
 import { SupportTicketReply } from './support-ticket-reply.entity';
-import { CreateTicketDto, ReplyTicketDto, UpdateTicketStatusDto } from './dto/support.dto';
+import {
+  CreateTicketDto,
+  ReplyTicketDto,
+  UpdateTicketStatusDto,
+} from './dto/support.dto';
 
 @Injectable()
 export class SupportService {
@@ -35,7 +39,11 @@ export class SupportService {
     });
   }
 
-  async getById(id: number, userId: number, isAdmin: boolean): Promise<SupportTicket> {
+  async getById(
+    id: number,
+    userId: number,
+    isAdmin: boolean,
+  ): Promise<SupportTicket> {
     const ticket = await this.ticketRepository.findOneBy({ id });
     if (!ticket) {
       throw new NotFoundException('Ticket not found');

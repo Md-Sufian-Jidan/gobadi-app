@@ -1,9 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import {
-  IsArray,
-  IsOptional,
-  ValidateNested,
-} from 'class-validator';
+import { IsArray, IsOptional, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 import { MedicineDto } from './create-prescription.dto';
 
