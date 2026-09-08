@@ -32,7 +32,9 @@ export class ReviewsController {
   @Post()
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Submit a new review (Validates purchase/booking verified flags)' })
+  @ApiOperation({
+    summary: 'Submit a new review (Validates purchase/booking verified flags)',
+  })
   @ApiResponse({ status: 201, description: 'Review submitted' })
   async create(
     @CurrentUser() user: JwtPayload,
@@ -79,7 +81,9 @@ export class ReviewsController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Approve or Reject a review from publication (Admin only)' })
+  @ApiOperation({
+    summary: 'Approve or Reject a review from publication (Admin only)',
+  })
   @ApiParam({ name: 'id', example: '1' })
   async moderate(
     @Param('id') id: string,

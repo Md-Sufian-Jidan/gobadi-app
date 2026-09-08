@@ -1,5 +1,11 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsInt, IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator';
+import {
+  IsInt,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  MaxLength,
+} from 'class-validator';
 
 export class CreateFaqDto {
   @ApiProperty({ example: 'How do I book an appointment?' })
@@ -7,7 +13,9 @@ export class CreateFaqDto {
   @IsNotEmpty()
   question: string;
 
-  @ApiProperty({ example: 'You can book via the app by selecting a doctor and time slot.' })
+  @ApiProperty({
+    example: 'You can book via the app by selecting a doctor and time slot.',
+  })
   @IsString()
   @IsNotEmpty()
   answer: string;

@@ -1,5 +1,11 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsDecimal, IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator';
+import {
+  IsDecimal,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  MaxLength,
+} from 'class-validator';
 
 export class CreateFieldDto {
   @ApiProperty({ example: 'North Farm' })

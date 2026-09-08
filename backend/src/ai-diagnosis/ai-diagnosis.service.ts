@@ -22,7 +22,10 @@ export class AiDiagnosisService {
     private readonly cloudinaryService: CloudinaryService,
   ) {}
 
-  async analyze(userId: number, dto: CreateAiDiagnosisDto): Promise<AiDiagnosis> {
+  async analyze(
+    userId: number,
+    dto: CreateAiDiagnosisDto,
+  ): Promise<AiDiagnosis> {
     const diagnosis = this.aiDiagnosisRepository.create({
       userId,
       images: dto.images ?? [],

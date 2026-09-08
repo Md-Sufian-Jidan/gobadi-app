@@ -1,5 +1,12 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsBoolean, IsEnum, IsNumber, IsOptional, IsString, Min } from 'class-validator';
+import {
+  IsBoolean,
+  IsEnum,
+  IsNumber,
+  IsOptional,
+  IsString,
+  Min,
+} from 'class-validator';
 import { ProviderType } from '../service.entity';
 
 export class CreateServiceDto {
@@ -15,7 +22,9 @@ export class CreateServiceDto {
   @IsString()
   name: string;
 
-  @ApiProperty({ example: 'Complete health checkup including vaccination evaluation.' })
+  @ApiProperty({
+    example: 'Complete health checkup including vaccination evaluation.',
+  })
   @IsString()
   description: string;
 
@@ -29,7 +38,9 @@ export class CreateServiceDto {
   @Min(0)
   price: number;
 
-  @ApiPropertyOptional({ example: 'Ensure animal has not been fed for 2 hours before the checkup.' })
+  @ApiPropertyOptional({
+    example: 'Ensure animal has not been fed for 2 hours before the checkup.',
+  })
   @IsOptional()
   @IsString()
   preparationInstructions?: string;
@@ -54,7 +65,9 @@ export class CreateServiceDto {
   @IsString()
   location?: string;
 
-  @ApiPropertyOptional({ example: 'Free cancellation up to 2 hours before appointment.' })
+  @ApiPropertyOptional({
+    example: 'Free cancellation up to 2 hours before appointment.',
+  })
   @IsOptional()
   @IsString()
   cancellationPolicy?: string;

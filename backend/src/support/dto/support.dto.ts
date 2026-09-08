@@ -22,7 +22,10 @@ export class ReplyTicketDto {
 }
 
 export class UpdateTicketStatusDto {
-  @ApiProperty({ example: 'in-progress', enum: ['open', 'in-progress', 'closed'] })
+  @ApiProperty({
+    example: 'in-progress',
+    enum: ['open', 'in-progress', 'closed'],
+  })
   @IsString()
   @IsNotEmpty()
   status: string;

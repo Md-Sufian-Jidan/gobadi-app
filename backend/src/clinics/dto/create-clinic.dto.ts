@@ -10,11 +10,16 @@ export class CreateClinicDto {
   @IsString()
   location: string;
 
-  @ApiProperty({ example: 'Providing comprehensive medical care for farm and domestic animals.' })
+  @ApiProperty({
+    example:
+      'Providing comprehensive medical care for farm and domestic animals.',
+  })
   @IsString()
   description: string;
 
-  @ApiPropertyOptional({ example: { mon_fri: '09:00-18:00', sat: '10:00-14:00' } })
+  @ApiPropertyOptional({
+    example: { mon_fri: '09:00-18:00', sat: '10:00-14:00' },
+  })
   @IsOptional()
   @IsObject()
   businessHours?: Record<string, any>;

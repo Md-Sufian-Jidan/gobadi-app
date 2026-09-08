@@ -70,9 +70,7 @@ export class UsersService {
   ): Promise<User> {
     const hasData = Object.values(data).some((v) => v !== undefined);
     if (!hasData) {
-      throw new BadRequestException(
-        'At least one field must be provided.',
-      );
+      throw new BadRequestException('At least one field must be provided.');
     }
     const user = await this.userRepository.findOneBy({ id: userId });
     if (!user) {

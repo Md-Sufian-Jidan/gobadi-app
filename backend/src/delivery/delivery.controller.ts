@@ -40,7 +40,9 @@ export class DeliveryController {
   @Get('order/:orderId')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Get shipment tracking details for an order (Authenticated)' })
+  @ApiOperation({
+    summary: 'Get shipment tracking details for an order (Authenticated)',
+  })
   @ApiParam({ name: 'orderId', example: 'GBD-123456' })
   async getDeliveryByOrderId(
     @Param('orderId') orderId: string,
@@ -65,7 +67,9 @@ export class DeliveryController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Update shipment status and timeline event (Admin only)' })
+  @ApiOperation({
+    summary: 'Update shipment status and timeline event (Admin only)',
+  })
   @ApiParam({ name: 'orderId', example: 'GBD-123456' })
   async updateDelivery(
     @Param('orderId') orderId: string,

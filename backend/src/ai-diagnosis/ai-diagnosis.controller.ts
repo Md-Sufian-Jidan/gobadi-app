@@ -36,8 +36,15 @@ export class AiDiagnosisController {
   @Post('upload-image')
   @UseInterceptors(FileInterceptor('file'))
   @ApiConsumes('multipart/form-data')
-  @ApiBody({ schema: { type: 'object', properties: { file: { type: 'string', format: 'binary' } } } })
-  @ApiOperation({ summary: 'Upload a photo for AI diagnosis and get back its URL' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: { file: { type: 'string', format: 'binary' } },
+    },
+  })
+  @ApiOperation({
+    summary: 'Upload a photo for AI diagnosis and get back its URL',
+  })
   @ApiResponse({ status: 201, description: 'Image uploaded' })
   async uploadImage(
     @UploadedFile() file: Express.Multer.File,
@@ -50,8 +57,14 @@ export class AiDiagnosisController {
   }
 
   @Post('analyze')
-  @ApiOperation({ summary: 'Submit symptoms and photos for AI diagnosis (processed asynchronously)' })
-  @ApiResponse({ status: 201, description: 'Diagnosis queued, returned with status PENDING' })
+  @ApiOperation({
+    summary:
+      'Submit symptoms and photos for AI diagnosis (processed asynchronously)',
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Diagnosis queued, returned with status PENDING',
+  })
   async analyze(
     @CurrentUser() user: JwtPayload,
     @Body() dto: CreateAiDiagnosisDto,

@@ -1,7 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Between, LessThanOrEqual, MoreThanOrEqual } from 'typeorm';
-import { Appointment, AppointmentStatus } from '../appointments/appointment.entity';
+import {
+  Appointment,
+  AppointmentStatus,
+} from '../appointments/appointment.entity';
 import { Task } from '../tasks/task.entity';
 import { DoctorTimeOff } from '../time-off/doctor-time-off.entity';
 
@@ -57,7 +60,13 @@ export class CalendarService {
       }),
     ]);
 
-    return this.buildCalendarDays(startDate, endDate, appointments, tasks, blockTimes);
+    return this.buildCalendarDays(
+      startDate,
+      endDate,
+      appointments,
+      tasks,
+      blockTimes,
+    );
   }
 
   async getDoctorWeeklyCalendar(

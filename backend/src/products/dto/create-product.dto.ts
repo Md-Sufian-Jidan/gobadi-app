@@ -55,7 +55,9 @@ export class CreateProductDto {
   @IsObject()
   specifications?: Record<string, any>;
 
-  @ApiPropertyOptional({ example: 'Feed 2-3 times daily with plenty of water.' })
+  @ApiPropertyOptional({
+    example: 'Feed 2-3 times daily with plenty of water.',
+  })
   @IsOptional()
   @IsString()
   instructions?: string;

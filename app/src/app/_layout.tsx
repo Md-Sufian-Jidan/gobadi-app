@@ -1,10 +1,16 @@
 import { DarkTheme, DefaultTheme, ThemeProvider, Stack, useRouter } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import * as Notifications from 'expo-notifications';
 import { useColorScheme } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useEffect } from 'react';
 import { Provider, useSelector } from 'react-redux';
+
+let Notifications: typeof import('expo-notifications') | null = null;
+try {
+  Notifications = require('expo-notifications');
+} catch {
+  // expo-notifications not available in Expo Go (SDK 53+)
+}
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import { store, bootstrapAuth } from '@/store/store';
@@ -30,6 +36,7 @@ function RootNavigator() {
   }, [user]);
 
   useEffect(() => {
+    if (!Notifications) return;
     const subscription = Notifications.addNotificationResponseReceivedListener(() => {
       if (user?.role === 'doctor') {
         router.push('/doctor-notifications');

@@ -154,7 +154,9 @@ export class ProductsController {
   @Get(':id/stock')
   @ApiOperation({ summary: 'Get current stock level for a product' })
   @ApiParam({ name: 'id', example: '1' })
-  async getStock(@Param('id') id: string): Promise<{ productId: number; stock: number }> {
+  async getStock(
+    @Param('id') id: string,
+  ): Promise<{ productId: number; stock: number }> {
     const stock = await this.productsService.getStock(parseInt(id, 10));
     return { productId: parseInt(id, 10), stock };
   }
@@ -167,7 +169,8 @@ export class ProductsController {
   @ApiParam({ name: 'id', example: '1' })
   async addStock(
     @Param('id') id: string,
-    @Body() body: { quantity: number; batchNumber?: string; expiryDate?: string },
+    @Body()
+    body: { quantity: number; batchNumber?: string; expiryDate?: string },
   ): Promise<{ success: boolean }> {
     const expiry = body.expiryDate ? new Date(body.expiryDate) : undefined;
     await this.productsService.addStock(

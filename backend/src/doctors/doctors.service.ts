@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { ILike, IsNull, Repository } from 'typeorm';
 import { Doctor } from './doctor.entity';
@@ -158,9 +162,12 @@ export class DoctorsService {
       existing.bufferMinutes = dto.bufferMinutes;
     if (dto.isActive !== undefined) existing.isActive = dto.isActive;
     if (dto.specificDate !== undefined)
-      existing.specificDate = dto.specificDate ? new Date(dto.specificDate) : (null as any);
+      existing.specificDate = dto.specificDate
+        ? new Date(dto.specificDate)
+        : (null as any);
     if (dto.isAvailable !== undefined) existing.isAvailable = dto.isAvailable;
-    if (dto.overrideSlots !== undefined) existing.overrideSlots = dto.overrideSlots;
+    if (dto.overrideSlots !== undefined)
+      existing.overrideSlots = dto.overrideSlots;
 
     return this.availabilityRepository.save(existing);
   }

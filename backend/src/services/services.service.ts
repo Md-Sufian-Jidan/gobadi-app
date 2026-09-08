@@ -16,7 +16,10 @@ export class ServicesService {
     return this.serviceRepository.save(service);
   }
 
-  async findAll(providerType?: ProviderType, providerId?: number): Promise<Service[]> {
+  async findAll(
+    providerType?: ProviderType,
+    providerId?: number,
+  ): Promise<Service[]> {
     const where: any = { isActive: true };
     if (providerType) where.providerType = providerType;
     if (providerId) where.providerId = providerId;

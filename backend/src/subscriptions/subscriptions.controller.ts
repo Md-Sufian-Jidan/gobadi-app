@@ -1,10 +1,4 @@
-import {
-  Body,
-  Controller,
-  Get,
-  Post,
-  UseGuards,
-} from '@nestjs/common';
+import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiOperation,
@@ -59,9 +53,7 @@ export class SubscriptionsController {
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Cancel subscription' })
-  async cancel(
-    @CurrentUser() user: JwtPayload,
-  ): Promise<UserSubscription> {
+  async cancel(@CurrentUser() user: JwtPayload): Promise<UserSubscription> {
     return this.subscriptionsService.cancel(user.sub);
   }
 

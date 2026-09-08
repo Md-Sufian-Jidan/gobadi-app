@@ -46,6 +46,7 @@ import { videoCallApi } from './videoCallApi';
 import { getToken, getRefreshToken } from '@/constants/api';
 import { decodeJwt } from './decode-jwt';
 import type { AuthUser } from './authSlice';
+import { setStoreRef } from '@/lib/socket-manager';
 
 export const store = configureStore({
   reducer: {
@@ -141,6 +142,8 @@ export const store = configureStore({
       videoCallApi.middleware,
     ),
 });
+
+setStoreRef(store);
 
 export type RootState = ReturnType<typeof store.getState>;
 export type AppDispatch = typeof store.dispatch;

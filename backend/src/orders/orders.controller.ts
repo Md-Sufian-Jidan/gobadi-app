@@ -35,7 +35,9 @@ export class OrdersController {
   @Post()
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Place a new product/livestock order from the shopping cart' })
+  @ApiOperation({
+    summary: 'Place a new product/livestock order from the shopping cart',
+  })
   @ApiResponse({ status: 201, description: 'Order created' })
   async placeOrder(
     @CurrentUser() user: JwtPayload,

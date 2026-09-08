@@ -1,10 +1,15 @@
-import * as Notifications from 'expo-notifications';
+let Notifications: typeof import('expo-notifications') | null = null;
+try {
+  Notifications = require('expo-notifications');
+} catch {
+  // expo-notifications not available in Expo Go (SDK 53+)
+}
 import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 import { store } from '@/store/store';
 import { notificationsApi } from '@/store/notificationsApi';
 
-Notifications.setNotificationHandler({
+Notifications?.setNotificationHandler?.({
   handleNotification: async () => ({
     shouldShowBanner: true,
     shouldShowList: true,
@@ -23,6 +28,10 @@ let currentToken: string | null = null;
  * (or an equivalent projectId setup) is done, instead of crashing the app.
  */
 export async function registerForPushNotifications(): Promise<void> {
+  if (!Notifications) {
+    console.warn('expo-notifications not available in Expo Go — skipping push registration.');
+    return;
+  }
   const projectId = Constants.expoConfig?.extra?.eas?.projectId;
   if (!projectId) {
     console.warn(

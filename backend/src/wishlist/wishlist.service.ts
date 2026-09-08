@@ -1,4 +1,9 @@
-import { Injectable, BadRequestException, NotFoundException, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { WishlistItem } from './wishlist-item.entity';
@@ -23,26 +28,39 @@ export class WishlistService {
     });
   }
 
-  async addItem(userId: number, dto: AddWishlistItemDto): Promise<WishlistItem> {
+  async addItem(
+    userId: number,
+    dto: AddWishlistItemDto,
+  ): Promise<WishlistItem> {
     const { productId, livestockId } = dto;
 
     if (productId && livestockId) {
-      throw new BadRequestException('Cannot add both product and livestock to wishlist item');
+      throw new BadRequestException(
+        'Cannot add both product and livestock to wishlist item',
+      );
     }
     if (!productId && !livestockId) {
-      throw new BadRequestException('Must provide either productId or livestockId');
+      throw new BadRequestException(
+        'Must provide either productId or livestockId',
+      );
     }
 
     if (productId) {
       await this.productsService.findOne(productId);
-      const existing = await this.wishlistRepository.findOneBy({ userId, productId });
+      const existing = await this.wishlistRepository.findOneBy({
+        userId,
+        productId,
+      });
       if (existing) return existing;
 
       const item = this.wishlistRepository.create({ userId, productId });
       return this.wishlistRepository.save(item);
     } else {
       await this.livestockService.findOne(livestockId!);
-      const existing = await this.wishlistRepository.findOneBy({ userId, livestockId });
+      const existing = await this.wishlistRepository.findOneBy({
+        userId,
+        livestockId,
+      });
       if (existing) return existing;
 
       const item = this.wishlistRepository.create({ userId, livestockId });

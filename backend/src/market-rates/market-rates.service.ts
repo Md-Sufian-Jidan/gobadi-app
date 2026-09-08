@@ -22,7 +22,8 @@ export class MarketRatesService {
     if (rates.length === 0) return [];
 
     const conditions = rates.map(
-      (r) => `(rate.commodity = '${r.commodity}' AND rate.date = '${r.latestDate}')`,
+      (r) =>
+        `(rate.commodity = '${r.commodity}' AND rate.date = '${r.latestDate}')`,
     );
 
     return this.marketRateRepository

@@ -1,9 +1,4 @@
-import {
-  Body,
-  Controller,
-  Post,
-  UseGuards,
-} from '@nestjs/common';
+import { Body, Controller, Post, UseGuards } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiOperation,
@@ -29,9 +24,7 @@ export class AdminMarketRatesController {
   @Post()
   @ApiOperation({ summary: 'Add or update a market rate' })
   @ApiResponse({ status: 201, description: 'Rate added/updated' })
-  async createOrUpdate(
-    @Body() dto: CreateMarketRateDto,
-  ): Promise<MarketRate> {
+  async createOrUpdate(@Body() dto: CreateMarketRateDto): Promise<MarketRate> {
     return this.marketRatesService.createOrUpdate(dto);
   }
 }

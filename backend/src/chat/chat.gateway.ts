@@ -121,7 +121,9 @@ export class ChatGateway
     this.notifyConversation(data.conversationId, 'messageReceived', savedMsg);
     await this.notifyConversationParticipants(data.conversationId, savedMsg);
 
-    const conversation = await this.conversationService.findById(data.conversationId);
+    const conversation = await this.conversationService.findById(
+      data.conversationId,
+    );
     if (conversation) {
       const recipientId =
         conversation.patientId === user.sub

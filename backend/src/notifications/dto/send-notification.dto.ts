@@ -27,7 +27,10 @@ export class SendNotificationDto {
   @IsNotEmpty()
   body: string;
 
-  @ApiPropertyOptional({ enum: NotificationType, example: NotificationType.SYSTEM })
+  @ApiPropertyOptional({
+    enum: NotificationType,
+    example: NotificationType.SYSTEM,
+  })
   @IsOptional()
   @IsEnum(NotificationType)
   type?: NotificationType;

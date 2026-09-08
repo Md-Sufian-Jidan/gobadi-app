@@ -1,5 +1,21 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Put, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Put,
+  UseGuards,
+} from '@nestjs/common';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiParam,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import { NotificationsService } from './notifications.service';
 import { Notification } from './notification.entity';
 import { NotificationPreference } from './notification-preference.entity';
@@ -37,7 +53,9 @@ export class NotificationsController {
 
   @Post('read-all')
   @ApiOperation({ summary: 'Mark all user notifications as read' })
-  async markAllAsRead(@CurrentUser() user: JwtPayload): Promise<{ success: boolean }> {
+  async markAllAsRead(
+    @CurrentUser() user: JwtPayload,
+  ): Promise<{ success: boolean }> {
     await this.notificationsService.markAllAsRead(user.sub);
     return { success: true };
   }
@@ -49,7 +67,11 @@ export class NotificationsController {
     @CurrentUser() user: JwtPayload,
     @Body() body: RegisterPushTokenDto,
   ): Promise<{ success: boolean }> {
-    await this.notificationsService.registerPushToken(user.sub, body.token, body.deviceId);
+    await this.notificationsService.registerPushToken(
+      user.sub,
+      body.token,
+      body.deviceId,
+    );
     return { success: true };
   }
 
@@ -65,7 +87,9 @@ export class NotificationsController {
   }
 
   @Get('preferences')
-  @ApiOperation({ summary: 'Get notification preferences (creates default on first access)' })
+  @ApiOperation({
+    summary: 'Get notification preferences (creates default on first access)',
+  })
   async getPreferences(
     @CurrentUser() user: JwtPayload,
   ): Promise<NotificationPreference> {

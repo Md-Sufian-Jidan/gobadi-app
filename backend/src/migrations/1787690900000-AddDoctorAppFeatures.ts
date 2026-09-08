@@ -141,9 +141,7 @@ export class AddDoctorAppFeatures1787690900000 implements MigrationInterface {
     await queryRunner.query(`DROP TYPE "public"."medical_events_type_enum"`);
 
     await queryRunner.query(`DROP TABLE "doctor_time_off"`);
-    await queryRunner.query(
-      `DROP TYPE "public"."doctor_time_off_reason_enum"`,
-    );
+    await queryRunner.query(`DROP TYPE "public"."doctor_time_off_reason_enum"`);
 
     await queryRunner.query(`DROP TABLE "patient_discounts"`);
 

@@ -29,7 +29,9 @@ export class PaymentsController {
   @Post('intent')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Create a payment intent (returns simulation URLs)' })
+  @ApiOperation({
+    summary: 'Create a payment intent (returns simulation URLs)',
+  })
   @ApiResponse({ status: 201, description: 'Payment intent registered' })
   async createIntent(
     @CurrentUser() user: JwtPayload,
@@ -41,7 +43,9 @@ export class PaymentsController {
   @Get('verify/:transactionId')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Verify/audit transaction status by transaction ID' })
+  @ApiOperation({
+    summary: 'Verify/audit transaction status by transaction ID',
+  })
   @ApiParam({ name: 'transactionId', example: 'uuid' })
   async verifyPayment(
     @Param('transactionId') transactionId: string,
@@ -51,7 +55,9 @@ export class PaymentsController {
 
   @Post('simulate-success')
   @SetMetadata('isProduction', process.env.NODE_ENV === 'production')
-  @ApiOperation({ summary: 'Gateway simulation callback: Force success status' })
+  @ApiOperation({
+    summary: 'Gateway simulation callback: Force success status',
+  })
   @ApiResponse({ status: 200, description: 'Transaction marked successful' })
   async simulateSuccess(
     @Body() body: { transactionId: string; gatewayTxId?: string },
@@ -59,7 +65,10 @@ export class PaymentsController {
     if (process.env.NODE_ENV === 'production') {
       throw new Error('Simulate routes are disabled in production');
     }
-    return this.paymentsService.simulateSuccess(body.transactionId, body.gatewayTxId);
+    return this.paymentsService.simulateSuccess(
+      body.transactionId,
+      body.gatewayTxId,
+    );
   }
 
   @Post('simulate-fail')

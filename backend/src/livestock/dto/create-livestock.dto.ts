@@ -12,7 +12,10 @@ import {
 import { LivestockStatus } from '../livestock.entity';
 
 export class CreateLivestockDto {
-  @ApiProperty({ example: 'cattle', description: 'cattle, goat, sheep, poultry' })
+  @ApiProperty({
+    example: 'cattle',
+    description: 'cattle, goat, sheep, poultry',
+  })
   @IsString()
   species: string;
 
@@ -33,7 +36,9 @@ export class CreateLivestockDto {
   @IsString()
   gender: string;
 
-  @ApiPropertyOptional({ example: { anthrax: '2026-01-10', fmd: '2026-03-15' } })
+  @ApiPropertyOptional({
+    example: { anthrax: '2026-01-10', fmd: '2026-03-15' },
+  })
   @IsOptional()
   @IsObject()
   vaccinationHistory?: Record<string, any>;
@@ -93,7 +98,10 @@ export class CreateLivestockDto {
   @IsBoolean()
   isNegotiable?: boolean;
 
-  @ApiPropertyOptional({ enum: LivestockStatus, default: LivestockStatus.DRAFT })
+  @ApiPropertyOptional({
+    enum: LivestockStatus,
+    default: LivestockStatus.DRAFT,
+  })
   @IsOptional()
   @IsEnum(LivestockStatus)
   status?: LivestockStatus;

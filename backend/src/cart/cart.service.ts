@@ -1,4 +1,9 @@
-import { Injectable, BadRequestException, NotFoundException, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { CartItem } from './cart-item.entity';
@@ -133,24 +138,35 @@ export class CartService {
     const { productId, livestockId, quantity = 1 } = dto;
 
     if (productId && livestockId) {
-      throw new BadRequestException('Cannot add both product and livestock in a single cart item');
+      throw new BadRequestException(
+        'Cannot add both product and livestock in a single cart item',
+      );
     }
     if (!productId && !livestockId) {
-      throw new BadRequestException('Must provide either productId or livestockId');
+      throw new BadRequestException(
+        'Must provide either productId or livestockId',
+      );
     }
 
     if (productId) {
       const prod = await this.productsService.findOne(productId);
       const stock = await this.productsService.getStock(productId);
       if (stock < quantity) {
-        throw new BadRequestException(`Insufficient stock. Available: ${stock}`);
+        throw new BadRequestException(
+          `Insufficient stock. Available: ${stock}`,
+        );
       }
 
-      const existing = await this.cartRepository.findOneBy({ userId, productId });
+      const existing = await this.cartRepository.findOneBy({
+        userId,
+        productId,
+      });
       if (existing) {
         const newQty = existing.quantity + quantity;
         if (stock < newQty) {
-          throw new BadRequestException(`Insufficient stock. Total requested quantity ${newQty} exceeds available stock of ${stock}`);
+          throw new BadRequestException(
+            `Insufficient stock. Total requested quantity ${newQty} exceeds available stock of ${stock}`,
+          );
         }
         existing.quantity = newQty;
         return this.cartRepository.save(existing);
@@ -161,21 +177,37 @@ export class CartService {
     } else {
       const live = await this.livestockService.findOne(livestockId!);
       if (live.isSold || live.isReserved) {
-        throw new BadRequestException('This livestock listing is not available for purchase');
+        throw new BadRequestException(
+          'This livestock listing is not available for purchase',
+        );
       }
 
-      const existing = await this.cartRepository.findOneBy({ userId, livestockId });
+      const existing = await this.cartRepository.findOneBy({
+        userId,
+        livestockId,
+      });
       if (existing) {
         return existing; // Unique livestock, quantity is 1
       }
 
-      const item = this.cartRepository.create({ userId, livestockId, quantity: 1 });
+      const item = this.cartRepository.create({
+        userId,
+        livestockId,
+        quantity: 1,
+      });
       return this.cartRepository.save(item);
     }
   }
 
-  async updateItem(id: number, userId: number, quantity: number): Promise<CartItem> {
-    const item = await this.cartRepository.findOne({ where: { id }, relations: { product: true } });
+  async updateItem(
+    id: number,
+    userId: number,
+    quantity: number,
+  ): Promise<CartItem> {
+    const item = await this.cartRepository.findOne({
+      where: { id },
+      relations: { product: true },
+    });
     if (!item) {
       throw new NotFoundException('Cart item not found');
     }
@@ -186,7 +218,9 @@ export class CartService {
     if (item.productId) {
       const stock = await this.productsService.getStock(item.productId);
       if (stock < quantity) {
-        throw new BadRequestException(`Insufficient stock. Available: ${stock}`);
+        throw new BadRequestException(
+          `Insufficient stock. Available: ${stock}`,
+        );
       }
       item.quantity = quantity;
     } else {

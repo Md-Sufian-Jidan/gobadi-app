@@ -35,7 +35,10 @@ export class TasksService {
     }
 
     const { start, end } = this.dayBounds(date);
-    const where: Record<string, unknown> = { userId, scheduledTime: Between(start, end) };
+    const where: Record<string, unknown> = {
+      userId,
+      scheduledTime: Between(start, end),
+    };
     if (category) where.category = category;
     if (priority) where.priority = priority;
 
@@ -102,7 +105,12 @@ export class TasksService {
     }
   }
 
-  private buildCacheKey(userId: number, date: string, category?: string, priority?: string): string {
+  private buildCacheKey(
+    userId: number,
+    date: string,
+    category?: string,
+    priority?: string,
+  ): string {
     const parts = [`cache:tasks:user:${userId}:date:${date}`];
     if (category) parts.push(`cat:${category}`);
     if (priority) parts.push(`pri:${priority}`);

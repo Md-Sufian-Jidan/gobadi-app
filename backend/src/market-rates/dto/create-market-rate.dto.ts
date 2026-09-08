@@ -1,5 +1,12 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsDateString, IsDecimal, IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator';
+import {
+  IsDateString,
+  IsDecimal,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  MaxLength,
+} from 'class-validator';
 
 export class CreateMarketRateDto {
   @ApiProperty({ example: 'Rice' })
@@ -8,7 +15,7 @@ export class CreateMarketRateDto {
   @MaxLength(100)
   commodity: string;
 
-  @ApiProperty({ example: 45.50 })
+  @ApiProperty({ example: 45.5 })
   @IsDecimal({ decimal_digits: '2' })
   price: number;
 

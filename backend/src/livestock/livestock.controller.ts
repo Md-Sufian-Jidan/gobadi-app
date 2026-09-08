@@ -60,9 +60,7 @@ export class LivestockController {
   @ApiBearerAuth()
   @ApiOperation({ summary: "List current seller's own listings" })
   @ApiResponse({ status: 200, description: 'Seller listings' })
-  async getMyListings(
-    @CurrentUser() user: JwtPayload,
-  ): Promise<Livestock[]> {
+  async getMyListings(@CurrentUser() user: JwtPayload): Promise<Livestock[]> {
     return this.livestockService.getMyListings(user.sub);
   }
 
@@ -142,7 +140,10 @@ export class LivestockController {
     @Param('id') id: string,
     @Body() body: { isVerified: boolean },
   ): Promise<Livestock> {
-    return this.livestockService.verifyListing(parseInt(id, 10), body.isVerified);
+    return this.livestockService.verifyListing(
+      parseInt(id, 10),
+      body.isVerified,
+    );
   }
 
   @Patch(':id/feature')

@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Address } from './address.entity';
@@ -45,7 +49,11 @@ export class AddressesService {
     return address;
   }
 
-  async update(id: number, userId: number, dto: UpdateAddressDto): Promise<Address> {
+  async update(
+    id: number,
+    userId: number,
+    dto: UpdateAddressDto,
+  ): Promise<Address> {
     const address = await this.findOne(id, userId);
 
     if (dto.isDefault && !address.isDefault) {
@@ -76,10 +84,16 @@ export class AddressesService {
   }
 
   private async clearDefaults(userId: number): Promise<void> {
-    await this.addressRepository.update({ userId, isDefault: true }, { isDefault: false });
+    await this.addressRepository.update(
+      { userId, isDefault: true },
+      { isDefault: false },
+    );
   }
 
-  private async setNextDefault(userId: number, excludeId?: number): Promise<void> {
+  private async setNextDefault(
+    userId: number,
+    excludeId?: number,
+  ): Promise<void> {
     const query = this.addressRepository
       .createQueryBuilder('address')
       .where('address.userId = :userId', { userId });
@@ -88,7 +102,9 @@ export class AddressesService {
       query.andWhere('address.id != :excludeId', { excludeId });
     }
 
-    const nextAddress = await query.orderBy('address.createdAt', 'DESC').getOne();
+    const nextAddress = await query
+      .orderBy('address.createdAt', 'DESC')
+      .getOne();
     if (nextAddress) {
       nextAddress.isDefault = true;
       await this.addressRepository.save(nextAddress);

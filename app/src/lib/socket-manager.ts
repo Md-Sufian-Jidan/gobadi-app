@@ -1,7 +1,11 @@
 import { io, Socket } from 'socket.io-client';
 import { API_URL, getToken } from '@/constants/api';
-import { store } from '@/store/store';
 import { refreshAccessToken } from '@/store/base-query-with-reauth';
+
+let _storeRef: any = null;
+export function setStoreRef(storeRef: any) {
+  _storeRef = storeRef;
+}
 
 type SocketEventHandler = (...args: any[]) => void;
 
@@ -62,7 +66,8 @@ class SocketManager {
     if (this.isRefreshingAuth) return;
     this.isRefreshingAuth = true;
     try {
-      const newAccessToken = await refreshAccessToken(store.dispatch, store.getState);
+      if (!_storeRef) return;
+      const newAccessToken = await refreshAccessToken(_storeRef.dispatch, _storeRef.getState);
       if (newAccessToken && this.socket) {
         this.socket.auth = { token: newAccessToken };
         this.socket.connect();
