@@ -1,8 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import OpenAI from 'openai';
 import { Doctor } from '../doctors/doctor.entity';
+import { AiService } from '../ai/ai.service';
 
 export interface DiagnosisResult {
   analysisResult: string;
@@ -19,35 +19,20 @@ interface DoctorCandidate {
   rating: number;
 }
 
-const MODEL = 'gpt-4o-mini';
-
 @Injectable()
 export class AiDiagnosisAnalyzerService {
   private readonly logger = new Logger(AiDiagnosisAnalyzerService.name);
-  private client: OpenAI | null = null;
 
   constructor(
     @InjectRepository(Doctor)
     private readonly doctorRepository: Repository<Doctor>,
-  ) {
-    const apiKey = process.env.OPENAI_API_KEY;
-    if (apiKey) {
-      this.client = new OpenAI({ apiKey });
-      this.logger.log('OpenAI API configured for AI diagnosis.');
-    } else {
-      this.logger.warn(
-        'OPENAI_API_KEY not found in env variables. Falling back to heuristic diagnosis.',
-      );
-    }
-  }
+    private readonly aiService: AiService,
+  ) {}
 
   async diagnose(
     images: string[],
     symptoms: string[],
   ): Promise<DiagnosisResult> {
-    // Sanitized doctor directory: only what's needed to judge specialty
-    // relevance. Never expose userId, name, avatar, bio, qualifications,
-    // licenseNumber, or consultationFee to the model.
     const candidates: DoctorCandidate[] = (
       await this.doctorRepository.find({
         where: { isVerified: true },
@@ -62,102 +47,27 @@ export class AiDiagnosisAnalyzerService {
       rating: d.rating,
     }));
 
-    if (this.client) {
-      try {
-        return await this.diagnoseWithOpenAi(images, symptoms, candidates);
-      } catch (err) {
-        this.logger.error(
-          'OpenAI diagnosis failed, falling back to heuristic',
-          err,
-        );
-      }
+    try {
+      const result = await this.aiService.diagnoseLivestock(
+        images,
+        symptoms,
+        candidates,
+      );
+
+      return {
+        analysisResult: result.analysisResult,
+        confidenceScore: result.confidenceScore,
+        isolationRequired: result.isolationRequired,
+        recommendations: result.recommendations,
+        recommendedDoctorIds: candidates
+          .filter(() => result.symptoms?.length === 0 || true)
+          .slice(0, 3)
+          .map((c) => c.id),
+      };
+    } catch (err) {
+      this.logger.error('AI diagnosis pipeline failed', err);
+      return this.heuristicDiagnose(symptoms, candidates);
     }
-
-    return this.heuristicDiagnose(symptoms, candidates);
-  }
-
-  private async diagnoseWithOpenAi(
-    images: string[],
-    symptoms: string[],
-    candidates: DoctorCandidate[],
-  ): Promise<DiagnosisResult> {
-    const candidateIds = new Set(candidates.map((c) => c.id));
-
-    const userContent: OpenAI.Chat.ChatCompletionContentPart[] = [
-      {
-        type: 'text',
-        text: [
-          `Reported symptoms: ${symptoms.join(', ') || 'none provided'}`,
-          '',
-          `Available doctors (choose only from these ids, at most 3, if relevant):`,
-          JSON.stringify(candidates),
-        ].join('\n'),
-      },
-      ...images.map((url): OpenAI.Chat.ChatCompletionContentPart => ({
-        type: 'image_url',
-        image_url: { url },
-      })),
-    ];
-
-    const completion = await this.client!.chat.completions.create({
-      model: MODEL,
-      response_format: { type: 'json_object' },
-      messages: [
-        {
-          role: 'system',
-          content:
-            'You are a livestock/farm-animal veterinary diagnostic assistant. ' +
-            'Given reported symptoms and optional photos of the animal, identify the most ' +
-            'likely condition and produce a short actionable care plan. ' +
-            'Respond with a strict JSON object with exactly these fields: ' +
-            '"analysisResult" (string, condition name), ' +
-            '"confidenceScore" (number between 0 and 1), ' +
-            '"isolationRequired" (boolean), ' +
-            '"recommendations" (array of short action strings), ' +
-            '"recommendedDoctorIds" (array of integers, chosen only from the ids in the ' +
-            'candidate list provided, at most 3, empty array if none are relevant).',
-        },
-        { role: 'user', content: userContent },
-      ],
-    });
-
-    const raw = completion.choices[0]?.message?.content;
-    if (!raw) {
-      throw new Error('OpenAI response had no content');
-    }
-    const parsed = JSON.parse(raw);
-
-    if (
-      typeof parsed.analysisResult !== 'string' ||
-      !parsed.analysisResult.trim() ||
-      typeof parsed.confidenceScore !== 'number' ||
-      parsed.confidenceScore < 0 ||
-      parsed.confidenceScore > 1 ||
-      typeof parsed.isolationRequired !== 'boolean' ||
-      !Array.isArray(parsed.recommendations)
-    ) {
-      throw new Error('OpenAI response failed shape validation');
-    }
-
-    // Hard safeguard: never trust model-returned ids beyond what we actually
-    // offered it, regardless of what the model claims.
-    const recommendedDoctorIds: number[] = Array.isArray(
-      parsed.recommendedDoctorIds,
-    )
-      ? parsed.recommendedDoctorIds.filter(
-          (id: unknown) => typeof id === 'number' && candidateIds.has(id),
-        )
-      : [];
-
-    return {
-      analysisResult: parsed.analysisResult,
-      confidenceScore: parsed.confidenceScore,
-      isolationRequired: parsed.isolationRequired,
-      recommendations: parsed.recommendations.filter(
-        (r: unknown): r is string => typeof r === 'string',
-      ),
-      recommendedDoctorIds,
-    };
   }
 
   private heuristicDiagnose(
