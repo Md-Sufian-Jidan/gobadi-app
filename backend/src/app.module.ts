@@ -54,6 +54,7 @@ import { FieldsModule } from './fields/fields.module';
 import { MarketRatesModule } from './market-rates/market-rates.module';
 import { BadgesModule } from './badges/badges.module';
 import { VideoCallModule } from './video-call/video-call.module';
+import { AiModule } from './ai/ai.module';
 
 @Module({
   imports: [
@@ -129,6 +130,7 @@ import { VideoCallModule } from './video-call/video-call.module';
     MarketRatesModule,
     BadgesModule,
     VideoCallModule,
+    AiModule,
   ],
   controllers: [AppController, HealthController],
   providers: [
