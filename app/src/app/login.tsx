@@ -15,6 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
+import { API_URL } from '@/constants/api';
 import { useLoginMutation } from '@/store/authApi';
 import { useSocialAuth } from '@/hooks/use-social-auth';
 import { PasswordField } from '@/components/password-field';
@@ -39,6 +40,7 @@ export default function LoginScreen() {
 
   const handleLogin = async () => {
     setErrorMessage('');
+    console.log('[LOGIN] API_URL =', API_URL);
     const identifier = mode === 'phone' ? phone : email;
     if (mode === 'phone' && !BD_PHONE_REGEX.test(phone)) {
       setErrorMessage('Please enter a valid 11-digit Bangladeshi phone number (e.g., 01712345678).');
