@@ -114,7 +114,9 @@ export class MailService implements OnModuleInit {
     // }
 
     // ─── MOCK FALLBACK (no transport configured) ────────────────────────
-    this.logger.log(`[MOCK EMAIL DISPATCH] To: ${to} | Subject: ${subject}`);
-    return true;
+    this.logger.error(
+      `[MOCK EMAIL DISPATCH] No email transporter configured. Email to "${to}" was NOT sent. Subject: "${subject}"`,
+    );
+    return false;
   }
 }

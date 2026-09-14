@@ -48,6 +48,14 @@ services:
         sync: false
       - key: SMTP_FROM
         value: "Gobadi App <onboarding@resend.dev>"
+      - key: GMAIL_USER
+        value: "arpandey.web@gmail.com"
+      - key: GMAIL_API_CLIENT_ID
+        value: "826032045406-i412v1230an5l6rqjqsbn1hm8iro3t6e.apps.googleusercontent.com"
+      - key: GMAIL_API_CLIENT_SECRET
+        sync: false
+      - key: GMAIL_API_REFRESH_TOKEN
+        sync: false
 
 databases:
   - name: gobadi-db
