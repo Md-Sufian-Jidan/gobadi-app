@@ -42,9 +42,6 @@ example
 /ios
 /android
 
-# app.json
-app.json
-
 # apk
 gobadi.apk
 

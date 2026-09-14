@@ -203,6 +203,24 @@ export default function ProfileScreen() {
                 </View>
                 <Ionicons name="chevron-forward" size={18} color="#9C9690" />
               </TouchableOpacity>
+
+              <View style={styles.divider} />
+
+              {/* Farmer Log Out */}
+              <TouchableOpacity
+                style={styles.menuItem}
+                activeOpacity={0.7}
+                onPress={handleLogout}
+              >
+                <View style={styles.menuLeft}>
+                  <View style={[styles.iconCircle, styles.logoutCircle]}>
+                    <Ionicons name="log-out-outline" size={20} color="#DC2626" />
+                  </View>
+                  <Text style={[styles.menuLabel, styles.logoutLabel]}>Log Out</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color="#DC2626" />
+              </TouchableOpacity>
+
             </View>
           </>
         ) : (

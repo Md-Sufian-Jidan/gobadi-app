@@ -12,12 +12,17 @@ import {
 
 const LOGO_PATH = path.join(__dirname, 'assets/logo.png');
 
-const LOGO_ATTACHMENT = {
-  filename: 'gobadi-logo.png',
-  content: fs.readFileSync(LOGO_PATH),
-  contentType: 'image/png',
-  contentId: LOGO_CID,
-};
+let LOGO_ATTACHMENT: { filename: string; content: Buffer; contentType: string; contentId: string } | null = null;
+try {
+  LOGO_ATTACHMENT = {
+    filename: 'gobadi-logo.png',
+    content: fs.readFileSync(LOGO_PATH),
+    contentType: 'image/png',
+    contentId: LOGO_CID,
+  };
+} catch {
+  // Logo file not found in dist — emails will be sent without the logo attachment.
+}
 
 @Processor('mail-queue')
 export class MailProcessor extends WorkerHost {
@@ -30,6 +35,8 @@ export class MailProcessor extends WorkerHost {
   async process(job: Job<any, any, string>): Promise<any> {
     this.logger.log(`Processing email job ${job.id} of type ${job.name}...`);
 
+    const attachments = LOGO_ATTACHMENT ? [LOGO_ATTACHMENT] : [];
+
     if (job.name === 'send-otp') {
       const { email, otp } = job.data;
       const subject = 'Your Gobadi Verification OTP Code';
@@ -40,9 +47,8 @@ export class MailProcessor extends WorkerHost {
         bodyHtml: `<p>Hello,</p><p>Use the code below to verify your Gobadi account. It's valid for 5 minutes.</p>${renderOtpCode(otp)}<p>If you didn't request this, you can safely ignore this email.</p>`,
       });
 
-      await this.mailService.sendMail(email, subject, text, html, [
-        LOGO_ATTACHMENT,
-      ]);
+      const sent = await this.mailService.sendMail(email, subject, text, html, attachments);
+      if (!sent) throw new Error(`Failed to send OTP email to ${email}`);
       return { success: true, email };
     }
 
@@ -56,9 +62,8 @@ export class MailProcessor extends WorkerHost {
         bodyHtml: `<p>Hello,</p><p>Your appointment with <strong>${doctorName}</strong> has been successfully scheduled:</p><ul><li><strong>Date:</strong> ${date}</li><li><strong>Time:</strong> ${time}</li></ul><p>Thank you for choosing Gobadi!</p>`,
       });
 
-      await this.mailService.sendMail(email, subject, text, html, [
-        LOGO_ATTACHMENT,
-      ]);
+      const sent = await this.mailService.sendMail(email, subject, text, html, attachments);
+      if (!sent) throw new Error(`Failed to send booking confirmation email to ${email}`);
       return { success: true, email };
     }
 
@@ -72,9 +77,8 @@ export class MailProcessor extends WorkerHost {
         bodyHtml: `<p>Hello,</p><p>This is a reminder that your appointment with <strong>${doctorName}</strong> is coming up:</p><ul><li><strong>Date:</strong> ${date}</li><li><strong>Time:</strong> ${time}</li></ul>`,
       });
 
-      await this.mailService.sendMail(email, subject, text, html, [
-        LOGO_ATTACHMENT,
-      ]);
+      const sent = await this.mailService.sendMail(email, subject, text, html, attachments);
+      if (!sent) throw new Error(`Failed to send appointment reminder email to ${email}`);
       return { success: true, email };
     }
 
@@ -88,9 +92,8 @@ export class MailProcessor extends WorkerHost {
         bodyHtml: `<p>Hello,</p><p>Payment for your order <strong>${orderId}</strong> has been successfully verified!</p><ul><li><strong>Amount:</strong> BDT ${totalPrice}</li><li><strong>Transaction ID:</strong> ${transactionId}</li></ul><p>Thank you for shopping on Gobadi!</p>`,
       });
 
-      await this.mailService.sendMail(email, subject, text, html, [
-        LOGO_ATTACHMENT,
-      ]);
+      const sent = await this.mailService.sendMail(email, subject, text, html, attachments);
+      if (!sent) throw new Error(`Failed to send payment confirmation email to ${email}`);
       return { success: true, email };
     }
   }

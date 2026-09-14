@@ -1,6 +1,6 @@
 import * as SecureStore from 'expo-secure-store';
 
-export const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://gobadi-backend.onrender.com';
+export const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://gobadi-app.onrender.com';
 
 const AUTH_TOKEN_KEY = 'gobadi_jwt';
 const REFRESH_TOKEN_KEY = 'gobadi_refresh_jwt';
