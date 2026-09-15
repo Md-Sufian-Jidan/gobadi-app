@@ -5,9 +5,7 @@ import {
   UnauthorizedException,
   ForbiddenException,
 } from '@nestjs/common';
-import { InjectQueue } from '@nestjs/bullmq';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Queue } from 'bullmq';
 import { Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
@@ -21,6 +19,7 @@ import { RefreshToken } from './refresh-token.entity';
 import { RegisterDto } from './dto/register.dto';
 import { OtpPurpose } from './otp-purpose.type';
 import { ResetTokenPayload } from './reset-token-payload.interface';
+import { EmailClientService } from '../mail/email-client.service';
 
 const REFRESH_TOKEN_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 const ACCESS_TOKEN_EXPIRES_IN = '15m';
@@ -48,8 +47,7 @@ export class AuthService {
     private readonly usersService: UsersService,
     private readonly doctorsService: DoctorsService,
     private readonly jwtService: JwtService,
-    @InjectQueue('mail-queue')
-    private readonly mailQueue: Queue,
+    private readonly emailClient: EmailClientService,
     @InjectRepository(RefreshToken)
     private readonly refreshTokenRepository: Repository<RefreshToken>,
   ) {}
@@ -179,17 +177,19 @@ export class AuthService {
     }
 
     // If the identifier is an email, or a separate email was supplied
-    // alongside a phone identifier, queue an async OTP email job via BullMQ
-    // so the code reaches every channel the user registered with.
+    // alongside a phone identifier, send OTP email via the Vercel email service.
     const emailTarget = phone.includes('@') ? phone : notifyEmail;
     if (emailTarget) {
       try {
-        await this.mailQueue.add('send-otp', {
-          email: emailTarget,
-          otp,
+        await this.emailClient.sendEmail({
+          to: emailTarget,
+          subject: 'Your Gobadi Verification OTP Code',
+          text: `Hello,\n\nYour Gobadi verification OTP is: ${otp}.\nThis code is valid for 5 minutes.\n\nBest regards,\nGobadi App Team`,
+          html: `<p>Hello,</p><p>Use the code below to verify your Gobadi account. It's valid for 5 minutes.</p><div style="margin:20px 0; text-align:center;"><span style="display:inline-block; padding:14px 28px; border-radius:12px; background-color:#F3F1EC; border:1px dashed #C0612B; font-size:28px; font-weight:700; letter-spacing:8px; color:#9C4E22;">${otp}</span></div><p>If you didn't request this, you can safely ignore this email.</p>`,
+          meta: { type: 'otp', purpose },
         });
       } catch (err) {
-        console.warn('Failed to queue send-otp email job', err);
+        console.warn('Failed to send OTP email via Vercel service', err);
       }
     }
 
