@@ -6,11 +6,16 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Image } from 'expo-image';
 
 export default function DoctorRegistrationSuccessScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams<{
+    name?: string;
+    bvcNumber?: string;
+    phone?: string;
+  }>();
 
   return (
     <SafeAreaView style={styles.container}>
@@ -41,10 +46,19 @@ export default function DoctorRegistrationSuccessScreen() {
       <View style={styles.bottomBar}>
         <TouchableOpacity
           style={styles.continueButton}
-          onPress={() => router.replace('/(tabs)/doctor-home')}
+          onPress={() =>
+            router.replace({
+              pathname: '/account-details',
+              params: {
+                name: params.name,
+                bvcNumber: params.bvcNumber,
+                phone: params.phone,
+              },
+            })
+          }
           activeOpacity={0.85}
         >
-          <Text style={styles.continueButtonText}>Continue</Text>
+          <Text style={styles.continueButtonText}>Check Status</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
