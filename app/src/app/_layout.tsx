@@ -63,6 +63,7 @@ function RootNavigator() {
         <Stack.Screen name="congo" />
         <Stack.Screen name="password-setup" />
         <Stack.Screen name="doctor-registration-success" />
+        <Stack.Screen name="account-details" />
       </Stack.Protected>
 
       <Stack.Protected guard={!!user}>
@@ -79,11 +80,14 @@ function RootNavigator() {
       <Stack.Screen name="all-doctors" />
       <Stack.Screen name="doctor-detail" />
       <Stack.Screen name="book-slot" />
-      <Stack.Screen name="confirm-pay" />
-      <Stack.Screen name="payment-method" />
-      <Stack.Screen name="bkash-number" />
-      <Stack.Screen name="payment-success" />
-      <Stack.Screen name="billing-details" />
+      <Stack.Screen name="confirm-booking" />
+      <Stack.Screen name="booking-details" />
+      {/* Hidden screens - payment/bkash flow disabled for now */}
+      {/* <Stack.Screen name="confirm-pay" /> */}
+      {/* <Stack.Screen name="payment-method" /> */}
+      {/* <Stack.Screen name="bkash-number" /> */}
+      {/* <Stack.Screen name="payment-success" /> */}
+      {/* <Stack.Screen name="billing-details" /> */}
       <Stack.Screen name="chat" />
       <Stack.Screen name="video-call" />
       <Stack.Screen name="my-treatment" />
@@ -97,8 +101,8 @@ function RootNavigator() {
       <Stack.Screen name="doctor-notifications" />
       <Stack.Screen name="doctor-notification-preferences" />
       <Stack.Screen name="book-animal" />
-      <Stack.Screen name="booking-payment" />
-      <Stack.Screen name="booking-bkash-number" />
+      {/* <Stack.Screen name="booking-payment" /> */}
+      {/* <Stack.Screen name="booking-bkash-number" /> */}
       <Stack.Screen name="edit-profile" />
       <Stack.Screen name="profile-details" />
       <Stack.Screen name="profile-edit" />

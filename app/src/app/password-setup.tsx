@@ -64,6 +64,8 @@ export default function PasswordSetupScreen() {
           phone: params.identifier,
           purpose: 'verify',
           role: 'doctor',
+          name: params.name,
+          bvcNumber: params.bvcNumber,
         }
       });
     } catch (err: any) {

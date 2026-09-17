@@ -100,7 +100,14 @@ export default function OTPScreen() {
         return;
       }
       if (role === 'doctor') {
-        router.replace('/doctor-registration-success');
+        router.replace({
+          pathname: '/doctor-registration-success',
+          params: {
+            name: params.name,
+            bvcNumber: params.bvcNumber,
+            phone: phone,
+          },
+        });
         return;
       }
       router.replace('/congo');

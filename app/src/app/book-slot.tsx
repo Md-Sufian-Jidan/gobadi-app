@@ -89,7 +89,7 @@ export default function BookSlotScreen() {
       console.log('Error booking slot:', err);
     }
     router.push({
-      pathname: '/confirm-pay',
+      pathname: '/confirm-booking',
       params: {
         id: doctor.id,
         timeSlot: selectedTimeSlot,
