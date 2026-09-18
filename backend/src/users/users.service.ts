@@ -186,4 +186,44 @@ export class UsersService {
     user.role = role;
     return this.userRepository.save(user);
   }
+
+  async adminUpdate(
+    id: number,
+    data: {
+      name?: string;
+      email?: string;
+      phone?: string;
+      role?: UserRole;
+      profilePhoto?: string;
+      verified?: boolean;
+    },
+  ): Promise<User> {
+    const user = await this.userRepository.findOneBy({ id });
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+    if (data.email && data.email !== user.email) {
+      const existing = await this.userRepository.findOneBy({ email: data.email });
+      if (existing && existing.id !== id) {
+        throw new ConflictException('Email already in use');
+      }
+    }
+    if (data.phone && data.phone !== user.phone) {
+      const existing = await this.userRepository.findOneBy({ phone: data.phone });
+      if (existing && existing.id !== id) {
+        throw new ConflictException('Phone already in use');
+      }
+    }
+    Object.assign(user, data);
+    return this.userRepository.save(user);
+  }
+
+  async remove(id: number): Promise<{ success: boolean }> {
+    const user = await this.userRepository.findOneBy({ id });
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+    await this.userRepository.remove(user);
+    return { success: true };
+  }
 }

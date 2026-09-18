@@ -5,11 +5,11 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { JwtPayload } from '../jwt-payload.interface';
-import { getRequiredJwtSecret } from '../jwt-secret.util';
+import { getRequiredJwtSecret } from '../../auth/jwt-secret.util';
+import { AdminJwtPayload } from '../decorators/current-admin.decorator';
 
 @Injectable()
-export class JwtAuthGuard implements CanActivate {
+export class AdminJwtAuthGuard implements CanActivate {
   constructor(private readonly jwtService: JwtService) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -20,10 +20,13 @@ export class JwtAuthGuard implements CanActivate {
     }
 
     try {
-      const payload = await this.jwtService.verifyAsync<JwtPayload>(token, {
+      const payload = await this.jwtService.verifyAsync<AdminJwtPayload>(token, {
         secret: getRequiredJwtSecret(),
       });
-      request.user = payload;
+      if (payload.type !== 'admin') {
+        throw new UnauthorizedException('Invalid token type');
+      }
+      request.admin = payload;
       return true;
     } catch {
       throw new UnauthorizedException('Invalid or expired token');
@@ -31,13 +34,11 @@ export class JwtAuthGuard implements CanActivate {
   }
 
   private extractToken(request: any): string | undefined {
-    // 1. Check Authorization header
     const authHeader: string | undefined = request.headers?.authorization;
     if (authHeader) {
       const [type, token] = authHeader.split(' ');
       if (type === 'Bearer') return token;
     }
-    // 2. Check cookie
-    return request.cookies?.token;
+    return request.cookies?.adminToken;
   }
 }

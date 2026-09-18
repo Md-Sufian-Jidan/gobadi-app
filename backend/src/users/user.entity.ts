@@ -4,6 +4,7 @@ import {
   Column,
   Index,
   CreateDateColumn,
+  UpdateDateColumn,
 } from 'typeorm';
 
 export enum UserRole {
@@ -78,4 +79,7 @@ export class User {
 
   @CreateDateColumn()
   createdAt: Date;
+
+  @UpdateDateColumn()
+  updatedAt: Date;
 }

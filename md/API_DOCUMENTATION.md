@@ -18,37 +18,39 @@ Roles: `USER`, `DOCTOR`, `CLINIC`, `ADMIN`
 6. [Clinics](#clinics)
 7. [Services](#services)
 8. [Appointments](#appointments)
-9. [Products](#products)
-10. [Livestock](#livestock)
-11. [Cart](#cart)
-12. [Wishlist](#wishlist)
-13. [Orders](#orders)
-14. [Payments](#payments)
-15. [Wallet](#wallet)
-16. [Payment Methods](#payment-methods)
-17. [Discounts](#discounts)
-18. [Prescriptions](#prescriptions)
-19. [Calendar](#calendar)
-20. [Subscriptions](#subscriptions)
-21. [FAQs](#faqs)
-22. [Support Tickets](#support-tickets)
-23. [Fields](#fields)
-24. [Market Rates](#market-rates)
-25. [Badges](#badges)
-26. [Block Times](#block-times)
-27. [Delivery](#delivery)
-28. [Chat](#chat)
-29. [Reviews](#reviews)
-30. [Referrals](#referrals)
-31. [AI Diagnosis](#ai-diagnosis)
-32. [Medical Records](#medical-records)
-33. [Alerts](#alerts)
-34. [Notifications](#notifications)
-35. [Tasks](#tasks)
-36. [Search](#search)
-37. [Weather](#weather)
-38. [Admin](#admin)
-39. [Health](#health)
+9. [Video Call](#video-call)
+10. [Products](#products)
+11. [Livestock](#livestock)
+12. [Cart](#cart)
+13. [Wishlist](#wishlist)
+14. [Orders](#orders)
+15. [Payments](#payments)
+16. [Wallet](#wallet)
+17. [Payment Methods](#payment-methods)
+18. [Discounts](#discounts)
+19. [Prescriptions](#prescriptions)
+20. [Calendar](#calendar)
+21. [Subscriptions](#subscriptions)
+22. [FAQs](#faqs)
+23. [Support Tickets](#support-tickets)
+24. [Fields](#fields)
+25. [Market Rates](#market-rates)
+26. [Badges](#badges)
+27. [Block Times](#block-times)
+28. [Delivery](#delivery)
+29. [Chat](#chat)
+30. [Reviews](#reviews)
+31. [Referrals](#referrals)
+32. [AI Diagnosis](#ai-diagnosis)
+33. [Medical Records](#medical-records)
+34. [Medical Events](#medical-events)
+35. [Alerts](#alerts)
+36. [Notifications](#notifications)
+37. [Tasks](#tasks)
+38. [Search](#search)
+39. [Weather](#weather)
+40. [Admin](#admin)
+41. [Health](#health)
 
 ---
 
@@ -236,7 +238,7 @@ Update preferred language.
     "language": "en | bn"
   }
   ```
-- **Response:** `{ language: string }`
+- **Response:** `{ success: true, language: string }`
 
 ---
 
@@ -411,7 +413,10 @@ Update a single day's availability (doctor only).
     "endTime": "string (HH:mm, optional)",
     "slotDurationMinutes": "number (optional)",
     "bufferMinutes": "number (optional)",
-    "isActive": "boolean (optional)"
+    "isActive": "boolean (optional)",
+    "specificDate": "string (YYYY-MM-DD, optional)",
+    "isAvailable": "boolean (optional)",
+    "overrideSlots": "string[] (optional, e.g. ['09:00-09:30', '10:00-10:30'])"
   }
   ```
 - **Response:** `Availability`
@@ -576,7 +581,11 @@ Book an appointment slot with a doctor.
     "date": "string (YYYY-MM-DD)",
     "time": "string (HH:mm)",
     "clinicId": "number (optional)",
-    "serviceId": "number (optional)"
+    "serviceId": "number (optional)",
+    "animalId": "number (optional)",
+    "consultationType": "PHYSICAL | ONLINE (optional)",
+    "reasonForConsultation": "string (optional)",
+    "symptoms": "string[] (optional)"
   }
   ```
 - **Response:** `Appointment`
@@ -586,7 +595,8 @@ Book an appointment slot with a doctor.
 List current user's appointments. Patients see own bookings; doctors see their bookings.
 
 - **Roles:** Any authenticated
-- **Response:** `AppointmentWithPatient[]`
+- **Query Params:** `filter` (optional: `today | previous | upcoming | completed | cancelled`), `consultationType` (optional), `search` (optional, filter by animal name), `page`, `limit`
+- **Response:** `AppointmentWithPatient[]` or `PaginatedResult<AppointmentWithPatient>`
 
 ### PATCH `/doctors/bookings/:id/reschedule`
 
@@ -607,6 +617,13 @@ Reschedule an appointment (must be >2h before start).
 Cancel an appointment (must be >2h before start).
 
 - **Roles:** Any authenticated
+- **Request Body:**
+  ```json
+  {
+    "reason": "string",
+    "note": "string (optional)"
+  }
+  ```
 - **Response:** `Appointment`
 
 ### PATCH `/doctors/bookings/:id/complete`
@@ -615,6 +632,51 @@ Mark appointment as completed.
 
 - **Roles:** `DOCTOR`
 - **Response:** `Appointment`
+
+### POST `/doctors/bookings/:id/join`
+
+Join a video call for an appointment.
+
+- **Roles:** Any authenticated
+- **Response:** `{ sessionId, channelName, token }`
+
+---
+
+## Video Call
+
+### POST `/video-call/create`
+
+Create a video call session for an appointment.
+
+- **Roles:** `DOCTOR`
+- **Request Body:**
+  ```json
+  {
+    "appointmentId": "number"
+  }
+  ```
+- **Response:** `{ sessionId: string, channelName: string }`
+
+### POST `/video-call/join/:appointmentId`
+
+Join an existing video call session.
+
+- **Roles:** Any authenticated
+- **Response:** `{ sessionId, channelName, token }`
+
+### POST `/video-call/end/:appointmentId`
+
+End an active video call session.
+
+- **Roles:** Any authenticated
+- **Response:** `{ success: true }`
+
+### GET `/video-call/token/:appointmentId`
+
+Get a fresh Agora token for reconnection.
+
+- **Roles:** Any authenticated
+- **Response:** `{ sessionId, channelName, token }`
 
 ---
 
@@ -1027,7 +1089,7 @@ Update order status.
 - **Request Body:**
   ```json
   {
-    "status": "PENDING | SHIPPED | DELIVERED | CANCELLED"
+    "status": "PENDING | CONFIRMED | PREPARING | PACKED | SHIPPED | DELIVERED | COMPLETED | CANCELLED | REFUNDED | RETURNED | FAILED"
   }
   ```
 - **Response:** `Order`
@@ -1109,7 +1171,7 @@ List current user's wallet transaction history.
 
 - **Roles:** Any authenticated
 - **Query Params:** `page`, `limit`
-- **Response:** `WalletTransaction[]`
+- **Response:** `PaginatedResult<WalletTransaction>`
 
 ### POST `/wallet/topup`
 
@@ -1119,10 +1181,11 @@ Add money to wallet.
 - **Request Body:**
   ```json
   {
-    "amount": "number (min 0.01)"
+    "amount": "number (min 0.01)",
+    "method": "string"
   }
   ```
-- **Response:** `WalletTransaction`
+- **Response:** `{ balance: number, coins: number }`
 
 ### POST `/wallet/pay`
 
@@ -1133,11 +1196,11 @@ Pay from wallet balance.
   ```json
   {
     "amount": "number (min 0.01)",
-    "appointmentId": "string (optional)",
+    "appointmentId": "number (optional)",
     "reason": "string"
   }
   ```
-- **Response:** `{ balance: number }`
+- **Response:** `{ balance: number, coins: number }`
 
 ### POST `/wallet/earn-coins`
 
@@ -1151,7 +1214,7 @@ Earn coins (internal endpoint).
     "reason": "string"
   }
   ```
-- **Response:** `{ coins: number }`
+- **Response:** `{ balance: number, coins: number }`
 
 ### POST `/wallet/spend-coins`
 
@@ -1165,7 +1228,7 @@ Spend coins (internal endpoint).
     "reason": "string"
   }
   ```
-- **Response:** `{ coins: number }`
+- **Response:** `{ balance: number, coins: number }`
 
 ---
 
@@ -1261,10 +1324,10 @@ Apply a discount code to an appointment.
   ```json
   {
     "code": "string",
-    "appointmentId": "string"
+    "appointmentId": "number"
   }
   ```
-- **Response:** `{ success: true, discountAmount: number }`
+- **Response:** `{ success: boolean, discountPercent: number }`
 
 ### GET `/discounts/my`
 
@@ -1306,27 +1369,54 @@ Delete a discount promo code (admin only).
 - **Roles:** `ADMIN`
 - **Response:** `void`
 
+### GET `/discounts/:patientId`
+
+Get the current discount (if any) for a patient.
+
+- **Roles:** `DOCTOR`
+- **Response:** `PatientDiscount | null`
+
 ### POST `/discounts`
 
-Doctor creates a patient discount.
+Apply a discount to a patient's next appointment fee.
 
 - **Roles:** `DOCTOR`
 - **Request Body:**
   ```json
   {
     "patientId": "number",
-    "percent": "number",
-    "appointmentId": "string (optional)"
+    "percent": "number (0-100)"
   }
   ```
 - **Response:** `PatientDiscount`
+
+### PUT `/discounts/:id`
+
+Edit an existing discount percent.
+
+- **Roles:** `DOCTOR`
+- **Request Body:**
+  ```json
+  {
+    "percent": "number (0-100)"
+  }
+  ```
+- **Response:** `PatientDiscount`
+
+### DELETE `/discounts/:id`
+
+Remove a discount.
+
+- **Roles:** `DOCTOR`
+- **Response:** `{ success: true }`
 
 ### GET `/doctors/me/patients`
 
 Doctor lists patients with discounts.
 
 - **Roles:** `DOCTOR`
-- **Response:** `PatientDiscount[]`
+- **Query Params:** `search` (optional), `discountGiven` (optional)
+- **Response:** `DoctorPatient[]`
 
 ---
 
@@ -1340,7 +1430,7 @@ Create a prescription (doctor only).
 - **Request Body:**
   ```json
   {
-    "appointmentId": "string",
+    "appointmentId": "number",
     "animalId": "number",
     "medicines": [
       {
@@ -1396,14 +1486,14 @@ Upload attachment for prescription (doctor only).
 
 - **Roles:** `DOCTOR`
 - **Request:** `multipart/form-data` with `file` field
-- **Response:** `{ attachmentUrl: string }`
+- **Response:** `Prescription`
 
 ### POST `/prescriptions/:id/send`
 
 Send prescription to owner (doctor only).
 
 - **Roles:** `DOCTOR`
-- **Response:** `{ success: true, sentAt: ISO date }`
+- **Response:** `Prescription`
 
 ---
 
@@ -1495,7 +1585,7 @@ Subscribe to a plan.
   ```json
   {
     "planId": "number",
-    "paymentMethodId": "number (optional)"
+    "paymentMethodId": "number"
   }
   ```
 - **Response:** `UserSubscription`
@@ -1507,7 +1597,7 @@ Cancel current subscription.
 - **Roles:** Any authenticated
 - **Response:** `{ success: true }`
 
-### GET `/admin/subscriptions`
+### GET `/subscriptions/admin/all`
 
 List all subscriptions (admin only).
 
@@ -1577,7 +1667,7 @@ Create a support ticket.
   ```json
   {
     "subject": "string",
-    "message": "string"
+    "message": "string (optional)"
   }
   ```
 - **Response:** `SupportTicket`
@@ -1746,7 +1836,9 @@ Block a date range (doctor only).
   {
     "startDate": "ISO date",
     "endDate": "ISO date",
-    "reason": "string (optional)"
+    "reason": "TimeOffReason enum",
+    "note": "string (optional)",
+    "force": "boolean (optional, default false)"
   }
   ```
 - **Response:** `BlockTime`
@@ -1811,7 +1903,7 @@ Update shipment status and timeline event.
 - **Request Body:**
   ```json
   {
-    "status": "PENDING | PICKED_UP | IN_TRANSIT | DELIVERED | FAILED",
+    "status": "PENDING | PICKED_UP | IN_TRANSIT | OUT_FOR_DELIVERY | DELIVERED | FAILED | RETURNED",
     "location": "string (optional)",
     "description": "string (optional)",
     "deliveryProofUrl": "string (optional)",
@@ -2037,6 +2129,151 @@ Get single attachment (ownership-checked).
 
 ---
 
+## Medical Events
+
+### GET `/animals/:id/medical-events`
+
+List structured clinical records for an animal.
+
+- **Roles:** Any authenticated (owner or treating doctor)
+- **Query Params:** `type` (optional: `LAB_TEST | VACCINATION | CONSULTATION`), `page`, `limit`
+- **Response:** `PaginatedResult<MedicalEvent>`
+
+### GET `/medical-events/:id`
+
+Get a single medical event by ID.
+
+- **Roles:** Any authenticated (owner or treating doctor)
+- **Response:** `MedicalEvent`
+
+### POST `/animals/:id/medical-events`
+
+Create a structured clinical record for an animal.
+
+- **Roles:** `DOCTOR`
+- **Request Body:**
+  ```json
+  {
+    "appointmentId": "number (optional)",
+    "type": "LAB_TEST | VACCINATION | CONSULTATION",
+    "data": "object"
+  }
+  ```
+- **Response:** `MedicalEvent`
+
+### PATCH `/medical-events/:eventId`
+
+Update a clinical record.
+
+- **Roles:** `DOCTOR` (own records)
+- **Request Body:** Partial `MedicalEvent` fields
+- **Response:** `MedicalEvent`
+
+### DELETE `/medical-events/:id`
+
+Delete a medical event.
+
+- **Roles:** `DOCTOR` (own records)
+- **Response:** `{ success: true }`
+
+### GET `/lab-tests/animal/:animalId`
+
+Get animal's lab test records.
+
+- **Roles:** Any authenticated (owner or treating doctor)
+- **Response:** `MedicalEvent[]`
+
+### POST `/lab-tests`
+
+Create a lab test record.
+
+- **Roles:** `DOCTOR`
+- **Request Body:**
+  ```json
+  {
+    "animalId": "number",
+    "appointmentId": "number (optional)",
+    "data": "object"
+  }
+  ```
+- **Response:** `MedicalEvent`
+
+### PUT `/lab-tests/:id`
+
+Update a lab test record.
+
+- **Roles:** `DOCTOR` (own records)
+- **Request Body:** Partial `MedicalEvent` fields
+- **Response:** `MedicalEvent`
+
+### GET `/vaccinations/animal/:animalId`
+
+Get animal's vaccination records.
+
+- **Roles:** Any authenticated (owner or treating doctor)
+- **Response:** `MedicalEvent[]`
+
+### POST `/vaccinations`
+
+Create a vaccination record.
+
+- **Roles:** `DOCTOR`
+- **Request Body:**
+  ```json
+  {
+    "animalId": "number",
+    "appointmentId": "number (optional)",
+    "data": "object"
+  }
+  ```
+- **Response:** `MedicalEvent`
+
+### PUT `/vaccinations/:id`
+
+Update a vaccination record.
+
+- **Roles:** `DOCTOR` (own records)
+- **Request Body:** Partial `MedicalEvent` fields
+- **Response:** `MedicalEvent`
+
+### DELETE `/vaccinations/:id`
+
+Delete a vaccination record.
+
+- **Roles:** `DOCTOR` (own records)
+- **Response:** `{ success: true }`
+
+### GET `/consultations/animal/:animalId`
+
+Get animal's consultation records.
+
+- **Roles:** Any authenticated (owner or treating doctor)
+- **Response:** `MedicalEvent[]`
+
+### GET `/consultations/:id`
+
+Get a single consultation record.
+
+- **Roles:** Any authenticated (owner or treating doctor)
+- **Response:** `MedicalEvent`
+
+### PUT `/consultations/:id`
+
+Update a consultation record.
+
+- **Roles:** `DOCTOR` (own records)
+- **Request Body:** Partial `MedicalEvent` fields
+- **Response:** `MedicalEvent`
+
+### POST `/consultations/:id/end`
+
+End a consultation (mark as completed).
+
+- **Roles:** `DOCTOR`
+- **Response:** `MedicalEvent`
+
+---
+
 ## Alerts
 
 ### GET `/alerts`
@@ -2123,8 +2360,9 @@ Get current user's notification preferences.
     "appointmentReminders": "boolean",
     "promotions": "boolean",
     "chatMessages": "boolean",
-    "orderUpdates": "boolean",
-    "medicalAlerts": "boolean"
+    "prescriptionUpdates": "boolean",
+    "labResults": "boolean",
+    "vaccinationReminders": "boolean"
   }
   ```
 
@@ -2145,7 +2383,7 @@ Update notification preferences.
 Get current user's tasks for a given day. Rate limited: 30/minute.
 
 - **Roles:** Any authenticated
-- **Query Params:** `date` (YYYY-MM-DD, required)
+- **Query Params:** `date` (YYYY-MM-DD, required), `category` (optional: `field | animal | appointment | other`), `priority` (optional)
 - **Response:** `Task[]`
 
 ### POST `/tasks`
@@ -2158,7 +2396,10 @@ Create a task.
   {
     "title": "string",
     "detail": "string (optional)",
-    "scheduledTime": "string (ISO 8601 date)"
+    "scheduledTime": "string (ISO 8601 date)",
+    "category": "field | animal | appointment | other (optional)",
+    "priority": "low | medium | high (optional)",
+    "dueDate": "string (YYYY-MM-DD, optional)"
   }
   ```
 - **Response:** `Task`
@@ -2259,7 +2500,7 @@ Update order status.
 - **Request Body:**
   ```json
   {
-    "status": "PENDING | SHIPPED | DELIVERED | CANCELLED"
+    "status": "PENDING | CONFIRMED | PREPARING | PACKED | SHIPPED | DELIVERED | COMPLETED | CANCELLED | REFUNDED | RETURNED | FAILED"
   }
   ```
 - **Response:** `Order`

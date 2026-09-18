@@ -70,6 +70,24 @@ export class NotificationsService {
     });
   }
 
+  async findById(id: number, userId: number): Promise<Notification> {
+    const notification = await this.notificationRepository.findOneBy({ id });
+    if (!notification) {
+      throw new NotFoundException('Notification not found');
+    }
+    if (notification.userId !== userId) {
+      throw new ForbiddenException('You do not own this notification');
+    }
+    return notification;
+  }
+
+  async getUnreadCount(userId: number): Promise<{ count: number }> {
+    const count = await this.notificationRepository.count({
+      where: { userId, isRead: false },
+    });
+    return { count };
+  }
+
   async markAsRead(id: number, userId: number): Promise<Notification> {
     const notification = await this.notificationRepository.findOneBy({ id });
     if (!notification) {
