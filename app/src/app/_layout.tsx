@@ -60,11 +60,13 @@ function RootNavigator() {
         <Stack.Screen name="login" />
         <Stack.Screen name="forgot" />
         <Stack.Screen name="reset-password" />
-        <Stack.Screen name="congo" />
         <Stack.Screen name="password-setup" />
-        <Stack.Screen name="doctor-registration-success" />
-        <Stack.Screen name="account-details" />
       </Stack.Protected>
+
+      {/* Onboarding success screens: accessible after OTP stores tokens */}
+      <Stack.Screen name="congo" />
+      <Stack.Screen name="doctor-registration-success" />
+      <Stack.Screen name="account-details" />
 
       <Stack.Protected guard={!!user}>
         <Stack.Screen name="(tabs)" />

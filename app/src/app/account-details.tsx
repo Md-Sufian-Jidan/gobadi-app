@@ -7,6 +7,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useSelector } from 'react-redux';
+import type { RootState } from '@/store/store';
 import { Image } from 'expo-image';
 
 function formatPhone(raw: string): string {
@@ -27,6 +29,7 @@ function formatPhone(raw: string): string {
 
 export default function AccountDetailsScreen() {
   const router = useRouter();
+  const user = useSelector((state: RootState) => state.auth.user);
   const params = useLocalSearchParams<{
     name?: string;
     bvcNumber?: string;
@@ -94,7 +97,7 @@ export default function AccountDetailsScreen() {
       <View style={styles.bottomBar}>
         <TouchableOpacity
           style={styles.closeButton}
-          onPress={() => router.replace('/login')}
+          onPress={() => (user ? router.replace('/(tabs)') : router.replace('/login'))}
           activeOpacity={0.85}
         >
           <Text style={styles.closeButtonText}>Close</Text>

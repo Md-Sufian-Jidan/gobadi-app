@@ -9,12 +9,19 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { useSelector } from 'react-redux';
+import type { RootState } from '@/store/store';
 
 export default function CongoScreen() {
   const router = useRouter();
+  const user = useSelector((state: RootState) => state.auth.user);
 
   const handleSignIn = () => {
-    router.replace('/login');
+    if (user) {
+      router.replace('/(tabs)');
+    } else {
+      router.replace('/login');
+    }
   };
 
   return (
