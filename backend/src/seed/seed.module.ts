@@ -7,6 +7,8 @@ import { Availability } from '../doctors/availability.entity';
 import { ChatMessage } from '../chat/chat-message.entity';
 import { Conversation } from '../chat/conversation.entity';
 import { User } from '../users/user.entity';
+import { Admin } from '../admin/entities/admin.entity';
+import { AdminRefreshToken } from '../admin/entities/admin-refresh-token.entity';
 
 import { Category } from '../products/category.entity';
 import { Brand } from '../products/brand.entity';
@@ -35,6 +37,8 @@ import { AiDiagnosis } from '../ai-diagnosis/ai-diagnosis.entity';
       Availability,
       ChatMessage,
       Conversation,
+      Admin,
+      AdminRefreshToken,
       Category,
       Brand,
       Product,

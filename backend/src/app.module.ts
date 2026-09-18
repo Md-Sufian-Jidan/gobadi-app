@@ -67,6 +67,7 @@ import { AiModule } from './ai/ai.module';
       database: process.env.DB_DATABASE || 'gobadi',
       autoLoadEntities: true,
       synchronize: true,
+      dropSchema: true,
       ssl:
         process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false,
     }),

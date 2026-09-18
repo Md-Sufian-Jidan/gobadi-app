@@ -8,6 +8,7 @@ import { Availability } from '../doctors/availability.entity';
 import { ChatMessage, MessageStatus } from '../chat/chat-message.entity';
 import { Conversation } from '../chat/conversation.entity';
 import { User, UserRole } from '../users/user.entity';
+import { Admin, AdminRole, AdminDesignation, AdminStatus } from '../admin/entities/admin.entity';
 
 import { Category } from '../products/category.entity';
 import { Brand } from '../products/brand.entity';
@@ -87,6 +88,8 @@ export class SeedService implements OnModuleInit {
     private readonly notificationRepository: Repository<Notification>,
     @InjectRepository(AiDiagnosis)
     private readonly aiDiagnosisRepository: Repository<AiDiagnosis>,
+    @InjectRepository(Admin)
+    private readonly adminRepository: Repository<Admin>,
   ) {}
 
   async onModuleInit() {
@@ -101,6 +104,7 @@ export class SeedService implements OnModuleInit {
     await this.seedChatMessages(users);
     await this.seedCommerceAndEngagementData(users, doctors);
     await this.backfillDemoLoginCredentials();
+    await this.seedAdmins();
     this.logger.log('Database seeding checks completed successfully!');
   }
 
@@ -725,5 +729,37 @@ export class SeedService implements OnModuleInit {
       ],
       recommendedDoctorIds: [doctor.id],
     });
+  }
+
+  private async seedAdmins(): Promise<void> {
+    const count = await this.adminRepository.count();
+    if (count === 0) {
+      this.logger.log('Seeding admin accounts...');
+      const passwordHash = await bcrypt.hash(SEED_PASSWORD, 10);
+      await this.adminRepository.save([
+        {
+          name: 'Super Admin',
+          email: 'superadmin@gobadi.com',
+          password: passwordHash,
+          role: AdminRole.SUPER_ADMIN,
+          designation: AdminDesignation.MANAGER,
+          verified: true,
+          status: AdminStatus.ACTIVE,
+        },
+        {
+          name: 'Admin',
+          email: 'admin@gobadi.com',
+          password: passwordHash,
+          role: AdminRole.ADMIN,
+          designation: AdminDesignation.SUPPORT,
+          verified: true,
+          status: AdminStatus.ACTIVE,
+        },
+      ]);
+      this.logger.log(
+        'Seeded superadmin@gobadi.com and admin@gobadi.com — password: ' +
+          SEED_PASSWORD,
+      );
+    }
   }
 }

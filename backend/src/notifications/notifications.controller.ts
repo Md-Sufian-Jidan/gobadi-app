@@ -41,6 +41,34 @@ export class NotificationsController {
     return this.notificationsService.getUserNotifications(user.sub);
   }
 
+  @Get('user')
+  @ApiOperation({ summary: "Get current user's notifications (alias)" })
+  @ApiResponse({ status: 200, description: 'List of notifications' })
+  async getUserNotificationsAlias(
+    @CurrentUser() user: JwtPayload,
+  ): Promise<Notification[]> {
+    return this.notificationsService.getUserNotifications(user.sub);
+  }
+
+  @Get('unread-count')
+  @ApiOperation({ summary: 'Get unread notification count' })
+  @ApiResponse({ status: 200, description: 'Unread count' })
+  async getUnreadCount(
+    @CurrentUser() user: JwtPayload,
+  ): Promise<{ count: number }> {
+    return this.notificationsService.getUnreadCount(user.sub);
+  }
+
+  @Get(':id')
+  @ApiOperation({ summary: 'Get a single notification by ID' })
+  @ApiParam({ name: 'id', example: '1' })
+  async findById(
+    @Param('id') id: string,
+    @CurrentUser() user: JwtPayload,
+  ): Promise<Notification> {
+    return this.notificationsService.findById(parseInt(id, 10), user.sub);
+  }
+
   @Patch(':id/read')
   @ApiOperation({ summary: 'Mark a notification as read' })
   @ApiParam({ name: 'id', example: '1' })
@@ -51,7 +79,7 @@ export class NotificationsController {
     return this.notificationsService.markAsRead(parseInt(id, 10), user.sub);
   }
 
-  @Post('read-all')
+  @Patch('read-all')
   @ApiOperation({ summary: 'Mark all user notifications as read' })
   async markAllAsRead(
     @CurrentUser() user: JwtPayload,
