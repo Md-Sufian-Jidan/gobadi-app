@@ -1,4 +1,4 @@
-import { Injectable, OnModuleInit, Logger } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
@@ -37,7 +37,7 @@ import { AiDiagnosis } from '../ai-diagnosis/ai-diagnosis.entity';
 export const SEED_PASSWORD = 'Password123!';
 
 @Injectable()
-export class SeedService implements OnModuleInit {
+export class SeedService {
   private readonly logger = new Logger(SeedService.name);
 
   constructor(
@@ -92,21 +92,7 @@ export class SeedService implements OnModuleInit {
     private readonly adminRepository: Repository<Admin>,
   ) {}
 
-  async onModuleInit() {
-    this.logger.log('Checking database status to run seeder...');
-    const users = await this.seedUsers();
-    const doctors = await this.seedDoctors(users);
-    await this.seedAvailability();
-    await this.seedAnimals();
-    await this.seedCategoriesAndBrandsAndProducts();
-    await this.seedClinicsAndServices(users, doctors);
-    await this.seedLivestock(users);
-    await this.seedChatMessages(users);
-    await this.seedCommerceAndEngagementData(users, doctors);
-    await this.backfillDemoLoginCredentials();
-    await this.seedAdmins();
-    this.logger.log('Database seeding checks completed successfully!');
-  }
+
 
   private async backfillDemoLoginCredentials(): Promise<void> {
     const passwordHash = await bcrypt.hash(SEED_PASSWORD, 10);
