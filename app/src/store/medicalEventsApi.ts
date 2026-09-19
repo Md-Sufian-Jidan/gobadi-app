@@ -5,7 +5,9 @@ export interface MedicalEvent {
   id: number;
   appointmentId: number;
   animalId: number;
+  doctorId: number;
   type: string;
+  status?: string;
   data: Record<string, any>;
   nextFollowUpAt?: string;
   createdAt: string;

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { useRequireDoctor } from '@/hooks/use-require-doctor';
 import {
   StyleSheet,
@@ -8,19 +8,103 @@ import {
   ScrollView,
   TextInput,
   Modal,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useGetMyDoctorProfileQuery } from '@/store/doctorPortalApi';
+import {
+  useGetBlockTimesQuery,
+  useCreateBlockTimeMutation,
+} from '@/store/blockTimesApi';
+import type { BlockTime } from '@/store/blockTimesApi';
 
 const REASONS = ['Vacation', 'Sick Leave', 'Conference/Training', 'Emergency', 'Other'];
 
+const REASON_MAP: Record<string, string> = {
+  'Vacation': 'vacation',
+  'Sick Leave': 'sick_leave',
+  'Conference/Training': 'conference_training',
+  'Emergency': 'emergency',
+  'Other': 'other',
+};
+
 type Step = 'form' | 'warning' | 'confirmation' | 'confirmed';
+
+const MONTH_NAMES = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+];
+
+function getDaysInMonth(year: number, month: number): number {
+  return new Date(year, month + 1, 0).getDate();
+}
+
+function getFirstDayOfWeek(year: number, month: number): number {
+  return new Date(year, month, 1).getDay();
+}
+
+function formatDateISO(year: number, month: number, day: number): string {
+  const m = String(month + 1).padStart(2, '0');
+  const d = String(day).padStart(2, '0');
+  return `${year}-${m}-${d}`;
+}
+
+function formatDateDisplay(dateStr: string): string {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  return `${d} ${MONTH_NAMES[m - 1]}, ${y}`;
+}
+
+function isDateInRange(dateStr: string, start: string, end: string): boolean {
+  return dateStr >= start && dateStr <= end;
+}
+
+function isPastDate(year: number, month: number, day: number): boolean {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const date = new Date(year, month, day);
+  return date < today;
+}
+
+function getBlockedDatesForMonth(blockTimes: BlockTime[], year: number, month: number): Set<string> {
+  const blocked = new Set<string>();
+  const monthStart = formatDateISO(year, month, 1);
+  const monthEnd = formatDateISO(year, month, getDaysInMonth(year, month));
+
+  for (const bt of blockTimes) {
+    const btStart = bt.startDate < monthStart ? monthStart : bt.startDate;
+    const btEnd = bt.endDate > monthEnd ? monthEnd : bt.endDate;
+
+    if (btStart <= btEnd) {
+      const startParts = btStart.split('-').map(Number);
+      const endParts = btEnd.split('-').map(Number);
+      const startDay = startParts[2];
+      const endDay = endParts[2];
+
+      for (let d = startDay; d <= endDay; d++) {
+        blocked.add(formatDateISO(year, month, d));
+      }
+    }
+  }
+  return blocked;
+}
 
 export default function BlockTimeOffScreen() {
   const router = useRouter();
   const isDoctor = useRequireDoctor();
   if (!isDoctor) return null;
+
+  const { data: profile } = useGetMyDoctorProfileQuery();
+  const doctorId = profile?.id;
+
+  const { data: blockTimes = [], isLoading: loadingBlocks } = useGetBlockTimesQuery(
+    String(doctorId),
+    { skip: !doctorId }
+  );
+
+  const [createBlockTime, { isLoading: creating }] = useCreateBlockTimeMutation();
+
   const [step, setStep] = useState<Step>('form');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
@@ -28,6 +112,151 @@ export default function BlockTimeOffScreen() {
   const [note, setNote] = useState('');
   const [showStartCalendar, setShowStartCalendar] = useState(false);
   const [showEndCalendar, setShowEndCalendar] = useState(false);
+
+  const today = useMemo(() => {
+    const now = new Date();
+    return { year: now.getFullYear(), month: now.getMonth() };
+  }, []);
+
+  const [startCalMonth, setStartCalMonth] = useState(today.month);
+  const [startCalYear, setStartCalYear] = useState(today.year);
+  const [endCalMonth, setEndCalMonth] = useState(today.month);
+  const [endCalYear, setEndCalYear] = useState(today.year);
+
+  const startCalBlocked = useMemo(
+    () => getBlockedDatesForMonth(blockTimes, startCalYear, startCalMonth),
+    [blockTimes, startCalYear, startCalMonth]
+  );
+
+  const endCalBlocked = useMemo(
+    () => getBlockedDatesForMonth(blockTimes, endCalYear, endCalMonth),
+    [blockTimes, endCalYear, endCalMonth]
+  );
+
+  const navigateMonth = useCallback(
+    (direction: 'prev' | 'next', target: 'start' | 'end') => {
+      const setter = target === 'start'
+        ? { month: setStartCalMonth, year: setStartCalYear }
+        : { month: setEndCalMonth, year: setEndCalYear };
+      const getMonth = target === 'start' ? startCalMonth : endCalMonth;
+      const getYear = target === 'start' ? startCalYear : endCalYear;
+
+      if (direction === 'next') {
+        if (getMonth === 11) {
+          setter.month(0);
+          setter.year(getYear + 1);
+        } else {
+          setter.month(getMonth + 1);
+        }
+      } else {
+        if (getMonth === today.month && getYear === today.year) return;
+        if (getMonth === 0) {
+          setter.month(11);
+          setter.year(getYear - 1);
+        } else {
+          setter.month(getMonth - 1);
+        }
+      }
+    },
+    [startCalMonth, startCalYear, endCalMonth, endCalYear, today]
+  );
+
+  const canNavigatePrev = startCalMonth !== today.month || startCalYear !== today.year;
+
+  const renderCalendar = (
+    calYear: number,
+    calMonth: number,
+    blockedDates: Set<string>,
+    target: 'start' | 'end',
+    showCalendar: boolean
+  ) => {
+    if (!showCalendar) return null;
+
+    const daysInMonth = getDaysInMonth(calYear, calMonth);
+    const firstDay = getFirstDayOfWeek(calYear, calMonth);
+
+    return (
+      <View style={styles.miniCalendar}>
+        <View style={styles.calHeader}>
+          <TouchableOpacity
+            onPress={() => navigateMonth('prev', target)}
+            activeOpacity={0.7}
+            disabled={target === 'start' && !canNavigatePrev}
+          >
+            <Ionicons
+              name="chevron-back"
+              size={18}
+              color={target === 'start' && !canNavigatePrev ? '#E6E1DC' : '#BD632F'}
+            />
+          </TouchableOpacity>
+          <Text style={styles.calMonth}>{MONTH_NAMES[calMonth]} {calYear}</Text>
+          <TouchableOpacity onPress={() => navigateMonth('next', target)} activeOpacity={0.7}>
+            <Ionicons name="chevron-forward" size={18} color="#BD632F" />
+          </TouchableOpacity>
+        </View>
+        <View style={styles.calDayHeader}>
+          {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((d) => (
+            <Text key={d} style={styles.calDayText}>{d}</Text>
+          ))}
+        </View>
+        <View style={styles.calDays}>
+          {Array.from({ length: firstDay }, (_, i) => (
+            <View key={`empty-${i}`} style={styles.calDay} />
+          ))}
+          {Array.from({ length: daysInMonth }, (_, i) => {
+            const day = i + 1;
+            const dateStr = formatDateISO(calYear, calMonth, day);
+            const blocked = blockedDates.has(dateStr);
+            const past = isPastDate(calYear, calMonth, day);
+            const selected = dateStr === startDate || dateStr === endDate;
+            const inRange =
+              startDate && endDate
+                ? isDateInRange(dateStr, startDate, endDate)
+                : false;
+
+            return (
+              <TouchableOpacity
+                key={day}
+                style={[
+                  styles.calDay,
+                  blocked && styles.calDayBlocked,
+                  past && styles.calDayDisabled,
+                  selected && styles.calDaySelected,
+                  inRange && !selected && styles.calDayInRange,
+                ]}
+                onPress={() => {
+                  if (past || blocked) return;
+                  if (target === 'start') {
+                    setStartDate(dateStr);
+                    setShowStartCalendar(false);
+                    if (endDate && dateStr > endDate) setEndDate('');
+                  } else {
+                    if (startDate && dateStr < startDate) return;
+                    setEndDate(dateStr);
+                    setShowEndCalendar(false);
+                  }
+                }}
+                activeOpacity={past || blocked ? 1 : 0.7}
+                disabled={past || blocked}
+              >
+                <Text
+                  style={[
+                    styles.calDayNumber,
+                    blocked && styles.calDayNumberBlocked,
+                    past && styles.calDayNumberDisabled,
+                    selected && styles.calDayNumberSelected,
+                  ]}
+                >
+                  {day}
+                </Text>
+                {blocked && <View style={styles.blockedDot} />}
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      </View>
+    );
+  };
 
   const handleContinue = () => {
     if (startDate && endDate && selectedReason) {
@@ -39,8 +268,26 @@ export default function BlockTimeOffScreen() {
     setStep('confirmation');
   };
 
-  const handleFinalConfirm = () => {
-    setStep('confirmed');
+  const handleFinalConfirm = async () => {
+    if (!doctorId || !startDate || !endDate || !selectedReason) return;
+
+    try {
+      await createBlockTime({
+        id: doctorId,
+        data: {
+          startDate,
+          endDate,
+          reason: REASON_MAP[selectedReason] as any,
+          note: note || undefined,
+          force: true,
+        },
+      }).unwrap();
+      setStep('confirmed');
+    } catch (err: any) {
+      if (err?.status === 409) {
+        setStep('confirmation');
+      }
+    }
   };
 
   if (step === 'confirmed') {
@@ -59,7 +306,9 @@ export default function BlockTimeOffScreen() {
             <Ionicons name="checkmark" size={48} color="#FFFFFF" />
           </View>
           <Text style={styles.confirmedTitle}>Your time has been blocked</Text>
-          <Text style={styles.confirmedDate}>{startDate} - {endDate}</Text>
+          <Text style={styles.confirmedDate}>
+            {formatDateDisplay(startDate)} - {formatDateDisplay(endDate)}
+          </Text>
           <Text style={styles.confirmedSubtitle}>You will not receive any bookings during this time.</Text>
         </View>
 
@@ -126,37 +375,6 @@ export default function BlockTimeOffScreen() {
             <Text style={styles.walletAmount}>৳ 1,250</Text>
           </View>
 
-          <View style={styles.billingSection}>
-            <Text style={styles.billingTitle}>Billing Details</Text>
-            <View style={styles.billingRow}>
-              <Text style={styles.billingLabel}>Booking time off</Text>
-              <Text style={styles.billingValue}>{startDate} - {endDate}</Text>
-            </View>
-            <View style={styles.billingRow}>
-              <Text style={styles.billingLabel}>Reason</Text>
-              <Text style={styles.billingValue}>{selectedReason}</Text>
-            </View>
-            <View style={styles.billingDivider} />
-            <Text style={styles.feesTitle}>Fees Details</Text>
-            <View style={styles.billingRow}>
-              <Text style={styles.billingLabel}>Appointments fee</Text>
-              <Text style={styles.billingValue}>৳ 1100</Text>
-            </View>
-            <View style={styles.billingRow}>
-              <Text style={styles.billingLabel}>Cancellation fee</Text>
-              <Text style={styles.billingValue}>৳ 150</Text>
-            </View>
-            <View style={styles.billingDivider} />
-            <View style={styles.billingRow}>
-              <Text style={styles.totalLabel}>Total Fees</Text>
-              <Text style={styles.totalValue}>৳ 1250</Text>
-            </View>
-            <View style={styles.billingRow}>
-              <Text style={styles.billingLabel}>Status</Text>
-              <Text style={styles.paidText}>Paid</Text>
-            </View>
-          </View>
-
           <View style={styles.infoBanner}>
             <Ionicons name="information-circle-outline" size={20} color="#BD632F" />
             <Text style={styles.infoText}>
@@ -167,7 +385,11 @@ export default function BlockTimeOffScreen() {
 
         <View style={styles.bottomBar}>
           <TouchableOpacity style={styles.confirmBtn} onPress={handleFinalConfirm} activeOpacity={0.85}>
-            <Text style={styles.confirmBtnText}>Confirm</Text>
+            {creating ? (
+              <ActivityIndicator color="#FFFFFF" />
+            ) : (
+              <Text style={styles.confirmBtnText}>Confirm</Text>
+            )}
           </TouchableOpacity>
           <TouchableOpacity style={styles.backBtnBottom} onPress={() => setStep('form')} activeOpacity={0.85}>
             <Text style={styles.backBtnText}>Back</Text>
@@ -231,48 +453,12 @@ export default function BlockTimeOffScreen() {
           activeOpacity={0.7}
         >
           <Text style={[styles.dateText, !startDate && styles.datePlaceholder]}>
-            {startDate || 'Select date'}
+            {startDate ? formatDateDisplay(startDate) : 'Select date'}
           </Text>
           <Ionicons name="chevron-down" size={18} color="#9C9690" />
         </TouchableOpacity>
 
-        {showStartCalendar && (
-          <View style={styles.miniCalendar}>
-            <View style={styles.calHeader}>
-              <TouchableOpacity onPress={() => {}} activeOpacity={0.7}>
-                <Ionicons name="chevron-back" size={18} color="#BD632F" />
-              </TouchableOpacity>
-              <Text style={styles.calMonth}>April 2026</Text>
-              <TouchableOpacity onPress={() => {}} activeOpacity={0.7}>
-                <Ionicons name="chevron-forward" size={18} color="#BD632F" />
-              </TouchableOpacity>
-            </View>
-            <View style={styles.calDayHeader}>
-              {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((d) => (
-                <Text key={d} style={styles.calDayText}>{d}</Text>
-              ))}
-            </View>
-            <View style={styles.calDays}>
-              {Array.from({ length: 30 }, (_, i) => {
-                const day = i + 1;
-                const isSelected = day >= 23 && day <= 26;
-                return (
-                  <TouchableOpacity
-                    key={day}
-                    style={[styles.calDay, isSelected && styles.calDaySelected]}
-                    onPress={() => {
-                      setStartDate(`${day} April, 2026`);
-                      setShowStartCalendar(false);
-                    }}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={[styles.calDayNumber, isSelected && styles.calDayNumberSelected]}>{day}</Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          </View>
-        )}
+        {renderCalendar(startCalYear, startCalMonth, startCalBlocked, 'start', showStartCalendar)}
 
         <Text style={[styles.fieldLabel, { marginTop: 20 }]}>End date</Text>
         <TouchableOpacity
@@ -281,45 +467,19 @@ export default function BlockTimeOffScreen() {
           activeOpacity={0.7}
         >
           <Text style={[styles.dateText, !endDate && styles.datePlaceholder]}>
-            {endDate || 'Select date'}
+            {endDate ? formatDateDisplay(endDate) : 'Select date'}
           </Text>
           <Ionicons name="chevron-down" size={18} color="#9C9690" />
         </TouchableOpacity>
 
-        {showEndCalendar && (
-          <View style={styles.miniCalendar}>
-            <View style={styles.calHeader}>
-              <TouchableOpacity onPress={() => {}} activeOpacity={0.7}>
-                <Ionicons name="chevron-back" size={18} color="#BD632F" />
-              </TouchableOpacity>
-              <Text style={styles.calMonth}>April 2026</Text>
-              <TouchableOpacity onPress={() => {}} activeOpacity={0.7}>
-                <Ionicons name="chevron-forward" size={18} color="#BD632F" />
-              </TouchableOpacity>
-            </View>
-            <View style={styles.calDayHeader}>
-              {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((d) => (
-                <Text key={d} style={styles.calDayText}>{d}</Text>
-              ))}
-            </View>
-            <View style={styles.calDays}>
-              {Array.from({ length: 30 }, (_, i) => {
-                const day = i + 1;
-                return (
-                  <TouchableOpacity
-                    key={day}
-                    style={styles.calDay}
-                    onPress={() => {
-                      setEndDate(`${day} April, 2026`);
-                      setShowEndCalendar(false);
-                    }}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={styles.calDayNumber}>{day}</Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
+        {renderCalendar(endCalYear, endCalMonth, endCalBlocked, 'end', showEndCalendar)}
+
+        {startDate && endDate && (
+          <View style={styles.dateRangeInfo}>
+            <Ionicons name="information-circle-outline" size={16} color="#7C7672" />
+            <Text style={styles.dateRangeText}>
+              Blocking from {formatDateDisplay(startDate)} to {formatDateDisplay(endDate)}
+            </Text>
           </View>
         )}
 
@@ -392,8 +552,16 @@ const styles = StyleSheet.create({
   calDays: { flexDirection: 'row', flexWrap: 'wrap' },
   calDay: { width: `${100 / 7}%`, alignItems: 'center', paddingVertical: 6 },
   calDaySelected: { backgroundColor: '#BD632F', borderRadius: 16 },
+  calDayInRange: { backgroundColor: '#FFF2EB' },
+  calDayBlocked: { backgroundColor: '#FFEBEE', borderRadius: 16 },
+  calDayDisabled: { opacity: 0.4 },
   calDayNumber: { fontSize: 13, fontWeight: '500', color: '#1A1817' },
   calDayNumberSelected: { color: '#FFFFFF', fontWeight: '700' },
+  calDayNumberBlocked: { color: '#C62828', fontWeight: '600' },
+  calDayNumberDisabled: { color: '#D1CCC8' },
+  blockedDot: { width: 4, height: 4, borderRadius: 2, backgroundColor: '#C62828', marginTop: 2 },
+  dateRangeInfo: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 12, paddingHorizontal: 4 },
+  dateRangeText: { fontSize: 13, fontWeight: '500', color: '#7C7672' },
   reasonsCard: { backgroundColor: '#FFFFFF', borderRadius: 16, borderWidth: 1, borderColor: '#E6E1DC', padding: 16 },
   reasonRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, gap: 12 },
   radio: { width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: '#E6E1DC', justifyContent: 'center', alignItems: 'center' },

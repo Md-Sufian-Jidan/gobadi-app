@@ -11,6 +11,7 @@ export interface DoctorProfile {
   rating: number;
   avatar: string;
   bio: string;
+  qualifications: string[];
 }
 
 export type AppointmentStatus =

@@ -177,11 +177,13 @@ function WeeklyView({
   selectedDate,
   onSelectDate,
   bookings,
+  blockedDates,
   onAppointmentPress,
 }: {
   selectedDate: Date;
   onSelectDate: (d: Date) => void;
   bookings: DoctorAppointment[];
+  blockedDates: Set<string>;
   onAppointmentPress: (appointment: DoctorAppointment) => void;
 }) {
   const weekDates = useMemo(() => getWeekDates(selectedDate), [selectedDate.getTime()]);
@@ -191,21 +193,6 @@ function WeeklyView({
       .filter((a) => isSameDay(new Date(a.startAt), selectedDate))
       .sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime());
   }, [bookings, selectedDate]);
-
-  // If no appointments, we can show a mock one to perfectly match Figma for presentation
-  const displayAppointments = dayAppointments.length > 0 ? dayAppointments : [
-    {
-      id: 999,
-      doctorId: 1,
-      patientId: 123,
-      patientName: 'Zhafira Azalea',
-      patientImage: 'https://i.pravatar.cc/150?img=44',
-      symptoms: 'Backache',
-      startAt: new Date(selectedDate.setHours(8, 0, 0, 0)).toISOString(),
-      endAt: new Date(selectedDate.setHours(8, 30, 0, 0)).toISOString(),
-      status: 'CONFIRMED',
-    } as any
-  ];
 
   return (
     <View>
@@ -219,10 +206,15 @@ function WeeklyView({
           {weekDates.map((date, i) => {
             const isSelected = isSameDay(date, selectedDate);
             const isTodayDate = isSameDay(date, new Date());
+            const isBlocked = blockedDates.has(formatDateKey(date));
             return (
               <TouchableOpacity
                 key={i}
-                style={[styles.weekDateCell, isSelected && styles.weekDateCellSelected]}
+                style={[
+                  styles.weekDateCell,
+                  isSelected && styles.weekDateCellSelected,
+                  isBlocked && !isSelected && styles.weekDateCellBlocked,
+                ]}
                 onPress={() => onSelectDate(date)}
                 activeOpacity={0.7}
               >
@@ -231,6 +223,7 @@ function WeeklyView({
                     styles.weekDateNumber,
                     isSelected && styles.weekDateNumberSelected,
                     isTodayDate && !isSelected && styles.weekDateNumberToday,
+                    isBlocked && !isSelected && styles.weekDateNumberBlocked,
                   ]}
                 >
                   {date.getDate()}
@@ -246,48 +239,55 @@ function WeeklyView({
           <Text style={styles.dayTimelineHeader}>
             {DAY_SHORT[selectedDate.getDay()]}, {selectedDate.getDate()} {MONTH_NAMES[selectedDate.getMonth()]}
           </Text>
-          <Text style={styles.appointmentCount}>{displayAppointments.length} Appointments</Text>
+          <Text style={styles.appointmentCount}>{dayAppointments.length} Appointments</Text>
         </View>
 
-        {displayAppointments.map((appt) => (
-          <TouchableOpacity
-            key={appt.id}
-            style={styles.agendaCard}
-            onPress={() => onAppointmentPress(appt)}
-            activeOpacity={0.8}
-          >
-            <View style={styles.agendaTimeCol}>
-              <Text style={styles.agendaTimeText}>
-                {formatAgendaTime(appt.startAt).substring(0, 5)}
-              </Text>
-              <View style={styles.agendaTimeDivider} />
-              <Text style={styles.agendaTimeText}>
-                {formatAgendaTime(appt.endAt).substring(0, 5)}
-              </Text>
-            </View>
+        {dayAppointments.length === 0 ? (
+          <View style={styles.emptyState}>
+            <Ionicons name="calendar-outline" size={40} color="#E6E1DC" />
+            <Text style={styles.emptyStateText}>No appointments for this day</Text>
+          </View>
+        ) : (
+          dayAppointments.map((appt) => (
+            <TouchableOpacity
+              key={appt.id}
+              style={styles.agendaCard}
+              onPress={() => onAppointmentPress(appt)}
+              activeOpacity={0.8}
+            >
+              <View style={styles.agendaTimeCol}>
+                <Text style={styles.agendaTimeText}>
+                  {formatAgendaTime(appt.startAt).substring(0, 5)}
+                </Text>
+                <View style={styles.agendaTimeDivider} />
+                <Text style={styles.agendaTimeText}>
+                  {formatAgendaTime(appt.endAt).substring(0, 5)}
+                </Text>
+              </View>
 
-            <View style={styles.agendaAvatar}>
-              {appt.patientImage ? (
-                <Image source={{ uri: appt.patientImage }} style={styles.agendaAvatarImage} />
-              ) : (
-                <Image source={{ uri: 'https://i.pravatar.cc/150?img=44' }} style={styles.agendaAvatarImage} />
-              )}
-            </View>
+              <View style={styles.agendaAvatar}>
+                {appt.animalImage ? (
+                  <Image source={{ uri: appt.animalImage }} style={styles.agendaAvatarImage} />
+                ) : (
+                  <Image source={{ uri: 'https://i.pravatar.cc/150?img=44' }} style={styles.agendaAvatarImage} />
+                )}
+              </View>
 
-            <View style={styles.agendaInfo}>
-              <Text style={styles.agendaName}>
-                {appt.patientName || appt.animalName || `Patient #${appt.patientId}`}
-              </Text>
-              <Text style={styles.agendaDetail}>
-                {appt.symptoms || 'General Checkup'}
-              </Text>
-            </View>
+              <View style={styles.agendaInfo}>
+                <Text style={styles.agendaName}>
+                  {appt.animalName || appt.patientName || `Patient #${appt.patientId}`}
+                </Text>
+                <Text style={styles.agendaDetail}>
+                  {appt.symptoms || 'General Checkup'}
+                </Text>
+              </View>
 
-            <TouchableOpacity style={styles.agendaChatBtn} activeOpacity={0.8}>
-              <Ionicons name="chatbubble" size={22} color="#3B82F6" />
+              <TouchableOpacity style={styles.agendaChatBtn} activeOpacity={0.8}>
+                <Ionicons name="chatbubble" size={22} color="#3B82F6" />
+              </TouchableOpacity>
             </TouchableOpacity>
-          </TouchableOpacity>
-        ))}
+          ))
+        )}
       </View>
     </View>
   );
@@ -375,7 +375,7 @@ export default function DoctorBookingsScreen() {
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity
-          onPress={() => router.back()}
+          onPress={() => router.replace('/(tabs)/doctor-home')}
           style={styles.backBtn}
           activeOpacity={0.7}
         >
@@ -427,6 +427,7 @@ export default function DoctorBookingsScreen() {
             selectedDate={selectedDate}
             onSelectDate={setSelectedDate}
             bookings={bookings}
+            blockedDates={blockedDates}
             onAppointmentPress={handleAppointmentPress}
           />
         )}
@@ -527,9 +528,11 @@ const styles = StyleSheet.create({
   weekDateRow: { flexDirection: 'row' },
   weekDateCell: { flex: 1, alignItems: 'center', paddingVertical: 6 },
   weekDateCellSelected: { backgroundColor: '#BD632F', borderRadius: 20 },
+  weekDateCellBlocked: { backgroundColor: '#F0EAE1', borderRadius: 20 },
   weekDateNumber: { fontSize: 14, fontWeight: '600', color: '#1A1817' },
   weekDateNumberSelected: { color: '#FFFFFF', fontWeight: '700' },
   weekDateNumberToday: { color: '#BD632F', fontWeight: '700' },
+  weekDateNumberBlocked: { color: '#9C9690' },
   dayTimeline: { marginTop: 8 },
   dayTimelineHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
   dayTimelineHeader: { fontSize: 16, fontWeight: '700', color: '#1A1817' },
@@ -545,6 +548,8 @@ const styles = StyleSheet.create({
   agendaName: { fontSize: 15, fontWeight: '700', color: '#1A1817', marginBottom: 4 },
   agendaDetail: { fontSize: 13, color: '#8A92A6', fontWeight: '500' },
   agendaChatBtn: { width: 40, height: 40, justifyContent: 'center', alignItems: 'center' },
+  emptyState: { alignItems: 'center', paddingVertical: 40, gap: 12 },
+  emptyStateText: { fontSize: 14, fontWeight: '500', color: '#9C9690' },
   timelineRow: { flexDirection: 'row', marginBottom: 8 },
   timeLabelContainer: { width: 70 },
   timeLabel: { fontSize: 11, fontWeight: '600', color: '#9C9690' },

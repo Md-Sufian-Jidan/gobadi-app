@@ -43,6 +43,10 @@ export function useChatSocket(conversationId: number | undefined) {
           const conversation = draft.find((c) => c.id === conversationId);
           if (conversation) {
             conversation.lastMessageAt = message.createdAt;
+            conversation.lastMessageText = message.text;
+            if (message.sender === 'user') {
+              conversation.unreadCount = (conversation.unreadCount || 0) + 1;
+            }
           }
         }),
       );

@@ -38,6 +38,10 @@ export const medicalRecordsApi = createApi({
       query: () => '/medical-records',
       providesTags: ['MedicalRecord'],
     }),
+    getByPatientMedicalRecords: builder.query<Attachment[], string>({
+      query: (patientId) => `/medical-records?patientId=${patientId}`,
+      providesTags: (_result, _error, patientId) => [{ type: 'MedicalRecord', id: patientId }],
+    }),
     uploadMedicalRecord: builder.mutation<Attachment, FormData>({
       query: (formData) => ({
         url: '/medical-records/upload',
@@ -49,4 +53,4 @@ export const medicalRecordsApi = createApi({
   }),
 });
 
-export const { useGetMedicalRecordsQuery, useUploadMedicalRecordMutation } = medicalRecordsApi;
+export const { useGetMedicalRecordsQuery, useGetByPatientMedicalRecordsQuery, useUploadMedicalRecordMutation } = medicalRecordsApi;

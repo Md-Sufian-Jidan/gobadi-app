@@ -131,6 +131,7 @@ function RootNavigator() {
       <Stack.Screen name="appointment-cancel" />
       <Stack.Screen name="appointment-cancelled" />
       <Stack.Screen name="appointment-reschedule" />
+      <Stack.Screen name="doctor-patients" />
       <Stack.Screen name="schedule" />
       <Stack.Screen name="calendar-settings" />
       <Stack.Screen name="working-hours" />

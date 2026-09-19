@@ -33,7 +33,7 @@ function formatBookingTime(iso: string): string {
 const QUICK_TILES = [
   { id: 'appointments', label: 'Appointments', icon: 'document-text-outline' as const, route: '/appointments' },
   { id: 'schedule', label: 'Schedule', icon: 'calendar-outline' as const, route: '/schedule' },
-  { id: 'patients', label: 'Patients', icon: 'clipboard-outline' as const, route: '/patient-details' },
+  { id: 'patients', label: 'Patients', icon: 'clipboard-outline' as const, route: '/doctor-patients' },
   { id: 'discount', label: 'Apply Discount', icon: 'ticket-outline' as const, route: '/apply-discount' },
 ];
 
@@ -51,7 +51,7 @@ export default function DoctorHomeScreen() {
   const realOngoing = bookings.filter(
     (b) => b.status === 'CONFIRMED' || b.status === 'RESCHEDULED'
   );
-  
+
   // Use mock data if API returns empty to match Figma design
   const ongoingPatients = realOngoing.length > 0 ? realOngoing : [
     {
@@ -72,7 +72,7 @@ export default function DoctorHomeScreen() {
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
-      
+
       {/* Scrollable Content */}
       <ScrollView
         contentContainerStyle={styles.scrollContainer}
@@ -142,9 +142,9 @@ export default function DoctorHomeScreen() {
                   </View>
 
                   <View style={styles.patientAvatar}>
-                    <Image 
-                      source={{ uri: 'https://i.pravatar.cc/150?img=44' }} 
-                      style={styles.avatarImage} 
+                    <Image
+                      source={{ uri: 'https://i.pravatar.cc/150?img=44' }}
+                      style={styles.avatarImage}
                       contentFit="cover"
                     />
                   </View>
@@ -403,7 +403,7 @@ const styles = StyleSheet.create({
     borderRadius: 34,
     borderWidth: 3,
     borderColor: '#BD632F',
-    borderBottomColor: '#E6E1DC', 
+    borderBottomColor: '#E6E1DC',
     justifyContent: 'center',
     alignItems: 'center',
     transform: [{ rotate: '-45deg' }],

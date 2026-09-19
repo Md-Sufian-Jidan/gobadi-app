@@ -1,20 +1,27 @@
 import React, { useState, useEffect } from 'react';
 import { useRequireDoctor } from '@/hooks/use-require-doctor';
-import { StyleSheet, View, Text, TouchableOpacity, ScrollView, Switch, ActivityIndicator, Alert } from 'react-native';
+import {
+  StyleSheet,
+  View,
+  Text,
+  TouchableOpacity,
+  ScrollView,
+  Switch,
+  ActivityIndicator,
+  Alert,
+  Platform,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import {
   useGetMyDoctorProfileQuery,
   useGetAvailabilityQuery,
   useSetAvailabilityMutation,
-  type Availability,
 } from '@/store/doctorPortalApi';
 
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-const DAY_INDEX: Record<string, number> = {
-  Sunday: 0, Monday: 1, Tuesday: 2, Wednesday: 3, Thursday: 4, Friday: 5, Saturday: 6,
-};
 
 interface DaySchedule {
   day: string;
@@ -42,6 +49,19 @@ function time12to24(time12: string): string {
   return `${String(hour).padStart(2, '0')}:${m}`;
 }
 
+function time12ToDate(time12: string): Date {
+  const [h, m] = time12to24(time12).split(':').map(Number);
+  const d = new Date();
+  d.setHours(h, m, 0, 0);
+  return d;
+}
+
+function dateToTime12(d: Date): string {
+  const h = String(d.getHours()).padStart(2, '0');
+  const m = String(d.getMinutes()).padStart(2, '0');
+  return formatTime12h(`${h}:${m}`);
+}
+
 function buildEmptySchedule(): DaySchedule[] {
   return DAY_NAMES.map((day, idx) => ({
     day,
@@ -55,7 +75,6 @@ function buildEmptySchedule(): DaySchedule[] {
 export default function WorkingHoursScreen() {
   const router = useRouter();
   const isDoctor = useRequireDoctor();
-  if (!isDoctor) return null;
 
   const { data: profile } = useGetMyDoctorProfileQuery();
   const doctorId = profile?.id;
@@ -65,6 +84,10 @@ export default function WorkingHoursScreen() {
   const [schedule, setSchedule] = useState<DaySchedule[]>(buildEmptySchedule());
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [hasChanges, setHasChanges] = useState(false);
+
+  const [pickerVisible, setPickerVisible] = useState(false);
+  const [pickerTarget, setPickerTarget] = useState<{ dayIndex: number; field: 'startTime' | 'endTime' } | null>(null);
+  const [pickerDate, setPickerDate] = useState(new Date());
 
   useEffect(() => {
     if (availability && availability.length > 0) {
@@ -82,9 +105,11 @@ export default function WorkingHoursScreen() {
         }
         return { day, dayOfWeek: idx, enabled: false, startTime: '09:00 AM', endTime: '05:00 PM' };
       });
-      setSchedule(mapped);
+      setSchedule(mapped); // eslint-disable-line react-hooks/set-state-in-effect
     }
   }, [availability]);
+
+  if (!isDoctor) return null;
 
   const toggleDay = (index: number) => {
     setSchedule((prev) =>
@@ -97,22 +122,50 @@ export default function WorkingHoursScreen() {
     setSelectedDay(day);
   };
 
-  const handleSaveDay = (daySchedule: DaySchedule) => {
+  const openTimePicker = (dayIndex: number, field: 'startTime' | 'endTime') => {
+    const time12 = schedule[dayIndex][field];
+    setPickerTarget({ dayIndex, field });
+    setPickerDate(time12ToDate(time12));
+    setPickerVisible(true);
+  };
+
+  const handleTimeChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
+    if (Platform.OS === 'android') {
+      setPickerVisible(false);
+    }
+    if (event.type === 'dismissed' || !selectedDate || !pickerTarget) return;
+    const newTime12 = dateToTime12(selectedDate);
+    const { dayIndex, field } = pickerTarget;
     setSchedule((prev) =>
-      prev.map((item) => (item.day === daySchedule.day ? daySchedule : item))
+      prev.map((item, i) => (i === dayIndex ? { ...item, [field]: newTime12 } : item))
     );
     setHasChanges(true);
-    setSelectedDay(null);
+    if (Platform.OS === 'ios') {
+      setPickerVisible(false);
+    }
+  };
+
+  const toggleAmPm = (dayIndex: number, field: 'startTime' | 'endTime', ampm: 'AM' | 'PM') => {
+    const current12 = schedule[dayIndex][field];
+    const timePart = current12.split(' ')[0];
+    const currentAmPm = current12.includes('AM') ? 'AM' : 'PM';
+    if (currentAmPm === ampm) return;
+    const newTime12 = `${timePart} ${ampm}`;
+    setSchedule((prev) =>
+      prev.map((item, i) => (i === dayIndex ? { ...item, [field]: newTime12 } : item))
+    );
+    setHasChanges(true);
   };
 
   const handleSaveAll = async () => {
     if (!doctorId) return;
-    const entries = schedule.map((s) => ({
-      dayOfWeek: s.dayOfWeek,
-      startTime: time12to24(s.startTime),
-      endTime: time12to24(s.endTime),
-      isActive: s.enabled,
-    }));
+    const entries = schedule
+      .filter((s) => s.enabled)
+      .map((s) => ({
+        dayOfWeek: s.dayOfWeek,
+        startTime: time12to24(s.startTime),
+        endTime: time12to24(s.endTime),
+      }));
     try {
       await setAvailability({ doctorId, entries }).unwrap();
       setHasChanges(false);
@@ -123,11 +176,10 @@ export default function WorkingHoursScreen() {
   };
 
   if (selectedDay) {
-    const dayData = schedule.find((d) => d.day === selectedDay) || schedule[0];
-    const startHour12 = dayData.startTime;
-    const endHour12 = dayData.endTime;
-    const startIsAM = startHour12.includes('AM');
-    const endIsAM = endHour12.includes('AM');
+    const dayIndex = schedule.findIndex((d) => d.day === selectedDay);
+    const dayData = schedule[dayIndex];
+    const startIsAM = dayData.startTime.includes('AM');
+    const endIsAM = dayData.endTime.includes('AM');
 
     return (
       <SafeAreaView style={styles.container}>
@@ -136,33 +188,31 @@ export default function WorkingHoursScreen() {
             <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>{selectedDay}</Text>
-          <View style={{ width: 40 }} />
+          <View style={{ width: 44 }} />
         </View>
 
         <ScrollView contentContainerStyle={styles.timePickerContent}>
           <Text style={styles.timeLabel}>Start</Text>
           <View style={styles.timePickerRow}>
-            <View style={styles.timeBox}>
-              <Text style={styles.timeValue}>{startHour12.split(' ')[0]}</Text>
-            </View>
+            <TouchableOpacity
+              style={styles.timeBox}
+              activeOpacity={0.7}
+              onPress={() => openTimePicker(dayIndex, 'startTime')}
+            >
+              <Text style={styles.timeValue}>{dayData.startTime.split(' ')[0]}</Text>
+            </TouchableOpacity>
             <View style={styles.ampmRow}>
               <TouchableOpacity
                 style={[styles.ampmBtn, startIsAM && styles.ampmBtnActive]}
                 activeOpacity={0.8}
-                onPress={() => {
-                  const time = startHour12.split(' ')[0];
-                  handleSaveDay({ ...dayData, startTime: `${time} AM` });
-                }}
+                onPress={() => toggleAmPm(dayIndex, 'startTime', 'AM')}
               >
                 <Text style={[styles.ampmText, startIsAM && styles.ampmTextActive]}>am</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.ampmBtn, !startIsAM && styles.ampmBtnActive]}
                 activeOpacity={0.8}
-                onPress={() => {
-                  const time = startHour12.split(' ')[0];
-                  handleSaveDay({ ...dayData, startTime: `${time} PM` });
-                }}
+                onPress={() => toggleAmPm(dayIndex, 'startTime', 'PM')}
               >
                 <Text style={[styles.ampmText, !startIsAM && styles.ampmTextActive]}>pm</Text>
               </TouchableOpacity>
@@ -171,33 +221,41 @@ export default function WorkingHoursScreen() {
 
           <Text style={[styles.timeLabel, { marginTop: 32 }]}>End</Text>
           <View style={styles.timePickerRow}>
-            <View style={styles.timeBox}>
-              <Text style={styles.timeValue}>{endHour12.split(' ')[0]}</Text>
-            </View>
+            <TouchableOpacity
+              style={styles.timeBox}
+              activeOpacity={0.7}
+              onPress={() => openTimePicker(dayIndex, 'endTime')}
+            >
+              <Text style={styles.timeValue}>{dayData.endTime.split(' ')[0]}</Text>
+            </TouchableOpacity>
             <View style={styles.ampmRow}>
               <TouchableOpacity
                 style={[styles.ampmBtn, endIsAM && styles.ampmBtnActive]}
                 activeOpacity={0.8}
-                onPress={() => {
-                  const time = endHour12.split(' ')[0];
-                  handleSaveDay({ ...dayData, endTime: `${time} AM` });
-                }}
+                onPress={() => toggleAmPm(dayIndex, 'endTime', 'AM')}
               >
                 <Text style={[styles.ampmText, endIsAM && styles.ampmTextActive]}>am</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.ampmBtn, !endIsAM && styles.ampmBtnActive]}
                 activeOpacity={0.8}
-                onPress={() => {
-                  const time = endHour12.split(' ')[0];
-                  handleSaveDay({ ...dayData, endTime: `${time} PM` });
-                }}
+                onPress={() => toggleAmPm(dayIndex, 'endTime', 'PM')}
               >
                 <Text style={[styles.ampmText, !endIsAM && styles.ampmTextActive]}>pm</Text>
               </TouchableOpacity>
             </View>
           </View>
         </ScrollView>
+
+        {pickerVisible && pickerTarget && (
+          <DateTimePicker
+            value={pickerDate}
+            mode="time"
+            is24Hour={true}
+            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+            onChange={handleTimeChange}
+          />
+        )}
       </SafeAreaView>
     );
   }
@@ -210,7 +268,7 @@ export default function WorkingHoursScreen() {
             <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Working hours</Text>
-          <View style={{ width: 40 }} />
+          <View style={{ width: 44 }} />
         </View>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#BD632F" />
@@ -226,7 +284,7 @@ export default function WorkingHoursScreen() {
           <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Working hours</Text>
-        <View style={{ width: 40 }} />
+        <View style={{ width: 44 }} />
       </View>
 
       <ScrollView contentContainerStyle={styles.listContent}>
@@ -271,25 +329,74 @@ export default function WorkingHoursScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FAF9F6' },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 4, paddingBottom: 12 },
-  backBtn: { width: 44, height: 44, borderRadius: 12, backgroundColor: '#BD632F', justifyContent: 'center', alignItems: 'center' },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingTop: 4,
+    paddingBottom: 12,
+  },
+  backBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: '#BD632F',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   headerTitle: { fontSize: 24, fontWeight: '800', color: '#1A1817' },
   listContent: { paddingHorizontal: 20, paddingBottom: 100 },
-  dayRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 18, borderBottomWidth: 1, borderBottomColor: '#E6E1DC' },
+  dayRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 18,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E6E1DC',
+  },
   dayLabel: { flex: 1, fontSize: 15, fontWeight: '600', color: '#1A1817' },
   timeRange: { fontSize: 13, fontWeight: '500', color: '#7C7672', marginRight: 14 },
   timePickerContent: { paddingHorizontal: 20, paddingBottom: 100 },
   timeLabel: { fontSize: 14, fontWeight: '600', color: '#1A1817', marginBottom: 12 },
   timePickerRow: { flexDirection: 'row', alignItems: 'center', gap: 16 },
-  timeBox: { backgroundColor: '#FFFFFF', borderRadius: 14, borderWidth: 1, borderColor: '#E6E1DC', paddingHorizontal: 24, paddingVertical: 16 },
+  timeBox: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#E6E1DC',
+    paddingHorizontal: 24,
+    paddingVertical: 16,
+  },
   timeValue: { fontSize: 28, fontWeight: '700', color: '#BD632F' },
   ampmRow: { flexDirection: 'row', gap: 8 },
-  ampmBtn: { paddingHorizontal: 20, paddingVertical: 12, borderRadius: 12, borderWidth: 1, borderColor: '#E6E1DC', backgroundColor: '#FFFFFF' },
+  ampmBtn: {
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E6E1DC',
+    backgroundColor: '#FFFFFF',
+  },
   ampmBtnActive: { backgroundColor: '#BD632F', borderColor: '#BD632F' },
   ampmText: { fontSize: 14, fontWeight: '600', color: '#7C7672' },
   ampmTextActive: { color: '#FFFFFF' },
-  bottomBar: { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: '#FAF9F6', paddingHorizontal: 20, paddingVertical: 16, paddingBottom: 30 },
-  saveBtn: { backgroundColor: '#BD632F', height: 52, borderRadius: 26, justifyContent: 'center', alignItems: 'center' },
+  bottomBar: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: '#FAF9F6',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    paddingBottom: 30,
+  },
+  saveBtn: {
+    backgroundColor: '#BD632F',
+    height: 52,
+    borderRadius: 26,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   saveBtnDisabled: { backgroundColor: '#E6E1DC' },
   saveBtnText: { color: '#FFFFFF', fontSize: 16, fontWeight: '700' },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },

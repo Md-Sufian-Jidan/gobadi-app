@@ -29,7 +29,7 @@ export default function ApplyDiscountScreen() {
   });
 
   const filteredPatients = patients || [];
-  const discountGivenCount = patients?.filter((p) => p.hasActiveDiscount).length || 0;
+  const discountGivenCount = patients?.filter((p) => p.discount?.isActive).length || 0;
 
   return (
     <SafeAreaView style={styles.container}>
@@ -101,8 +101,8 @@ export default function ApplyDiscountScreen() {
                   params: {
                     patientId: patient.id.toString(),
                     patientName: patient.name,
-                    ownerName: patient.animalName || '',
-                    existingDiscount: patient.discountPercent?.toString() || '0',
+                    ownerName: patient.ownerName || '',
+                    existingDiscount: patient.discount?.percent?.toString() || '0',
                   },
                 })
               }
@@ -113,12 +113,12 @@ export default function ApplyDiscountScreen() {
               </View>
               <View style={styles.patientInfo}>
                 <Text style={styles.patientName}>{patient.name}</Text>
-                <Text style={styles.patientOwner}>Owner: {patient.animalName || 'N/A'}</Text>
-                <Text style={styles.patientPhone}>Phone: {patient.phone}</Text>
+                <Text style={styles.patientOwner}>Owner: {patient.ownerName || 'N/A'}</Text>
+                <Text style={styles.patientPhone}>{patient.breed}</Text>
               </View>
-              {patient.hasActiveDiscount && patient.discountPercent ? (
+              {patient.discount?.isActive && patient.discount?.percent ? (
                 <View style={styles.discountBadge}>
-                  <Text style={styles.discountBadgeText}>{patient.discountPercent}%</Text>
+                  <Text style={styles.discountBadgeText}>{patient.discount.percent}%</Text>
                 </View>
               ) : null}
               <Ionicons name="chevron-forward" size={18} color="#9C9690" />

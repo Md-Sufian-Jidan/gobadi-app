@@ -1,13 +1,27 @@
 import { createApi } from '@reduxjs/toolkit/query/react';
 import { baseQueryWithReauth } from './base-query-with-reauth';
 
+export interface PatientDiscount {
+  id: number;
+  doctorId: number;
+  patientId: number;
+  percent: number;
+  isActive: boolean;
+  createdAt: string;
+}
+
 export interface Patient {
   id: number;
+  userId?: number | null;
   name: string;
-  phone: string;
-  animalName?: string;
-  hasActiveDiscount?: boolean;
-  discountPercent?: number;
+  breed: string;
+  weight: string;
+  age: string;
+  color: string;
+  image?: string;
+  ownerName?: string;
+  ownerAvatar?: string;
+  discount?: PatientDiscount;
 }
 
 export interface Discount {

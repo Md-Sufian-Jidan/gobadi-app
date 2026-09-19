@@ -27,6 +27,8 @@ export interface Conversation {
   patientId: number;
   appointmentId?: number | null;
   lastMessageAt?: string | null;
+  lastMessageText?: string | null;
+  unreadCount?: number;
   createdAt: string;
 }
 

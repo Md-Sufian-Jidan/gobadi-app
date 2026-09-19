@@ -29,6 +29,12 @@ export class Conversation {
   @Column('timestamptz', { nullable: true })
   lastMessageAt?: Date | null;
 
+  @Column('text', { nullable: true })
+  lastMessageText?: string | null;
+
+  @Column('int', { default: 0 })
+  unreadCount: number;
+
   @CreateDateColumn()
   createdAt: Date;
 }
