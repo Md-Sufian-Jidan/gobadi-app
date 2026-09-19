@@ -1,5 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useRequireDoctor } from '@/hooks/use-require-doctor';
+import { useSelector } from 'react-redux';
+import type { RootState } from '@/store/store';
 import {
   StyleSheet,
   View,
@@ -12,6 +14,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useGetDoctorBookingsQuery, useGetMyDoctorProfileQuery } from '@/store/doctorPortalApi';
+import { useGetMyProfileQuery } from '@/store/usersApi';
+import { useGetReviewsQuery } from '@/store/reviewsApi';
 
 type Tab = 'about' | 'experience' | 'credentials';
 
@@ -24,6 +28,13 @@ export default function ProfileDetailsScreen() {
 
   const { data: doctorProfile } = useGetMyDoctorProfileQuery(undefined, { skip: !isDoctor });
   const { data: doctorBookings = [] } = useGetDoctorBookingsQuery(undefined, { skip: !isDoctor });
+  const { data: userProfile } = useGetMyProfileQuery(undefined, { skip: !isDoctor });
+  const { data: reviews = [] } = useGetReviewsQuery(
+    { targetType: 'doctor', targetId: doctorProfile?.id ?? 0 },
+    { skip: !isDoctor || !doctorProfile?.id }
+  );
+
+  const doctorPhone = userProfile?.phone || 'Not provided';
 
   const uniquePatients = useMemo(() => {
     const patientIds = new Set(doctorBookings.map((b) => b.patientId));
@@ -124,7 +135,7 @@ export default function ProfileDetailsScreen() {
             <View style={styles.fieldCard}>
               <Text style={styles.fieldLabel}>Mobile Number</Text>
               <View style={styles.fieldValue}>
-                <Text style={styles.fieldText}>+91 9988776655</Text>
+                <Text style={styles.fieldText}>{doctorPhone}</Text>
                 <Ionicons name="checkmark-circle" size={18} color="#4CAF50" />
               </View>
             </View>
@@ -201,18 +212,27 @@ export default function ProfileDetailsScreen() {
             </View>
 
             <View style={styles.qualificationCard}>
-              <View style={styles.qualHeader}>
-                <View style={styles.qualLogo}>
-                  <Ionicons name="school-outline" size={24} color="#BD632F" />
+              {doctorProfile?.qualifications && doctorProfile.qualifications.length > 0 ? (
+                doctorProfile.qualifications.map((qual, i) => (
+                  <View key={i} style={[styles.qualHeader, i > 0 && { marginTop: 10 }]}>
+                    <View style={styles.qualLogo}>
+                      <Ionicons name="school-outline" size={24} color="#BD632F" />
+                    </View>
+                    <View>
+                      <Text style={styles.qualSchool}>{qual}</Text>
+                    </View>
+                  </View>
+                ))
+              ) : (
+                <View style={styles.qualHeader}>
+                  <View style={styles.qualLogo}>
+                    <Ionicons name="school-outline" size={24} color="#BD632F" />
+                  </View>
+                  <View>
+                    <Text style={styles.qualSchool}>No qualifications added</Text>
+                  </View>
                 </View>
-                <View>
-                  <Text style={styles.qualSchool}>Boston University School of Medicine</Text>
-                  <Text style={styles.qualYear}>1985</Text>
-                </View>
-              </View>
-              <View style={styles.qualCertPlaceholder}>
-                <Text style={styles.qualCertText}>Certificate Image</Text>
-              </View>
+              )}
             </View>
 
             {/* Specialization */}
@@ -246,32 +266,41 @@ export default function ProfileDetailsScreen() {
 
             <View style={styles.reviewsRatingRow}>
               <Ionicons name="star" size={18} color="#F59E0B" />
-              <Text style={styles.reviewsScore}>4.8</Text>
-              <Text style={styles.reviewsCount}>(124 Reviews)</Text>
+              <Text style={styles.reviewsScore}>{doctorProfile?.rating ?? '0.0'}</Text>
+              <Text style={styles.reviewsCount}>({reviews.length} Reviews)</Text>
             </View>
 
-            {[
-              { name: 'Sarah J.', time: '2 days ago', stars: 5, text: 'Dr. Ariful was extremely professional and explained everything clearly. I felt very comfortable during the consultation.' },
-              { name: 'Michael R.', time: '5 days ago', stars: 5, text: 'Great experience. The staff was friendly and the doctor took his time to answer all my questions thoroughly.' },
-            ].map((review, i) => (
-              <View key={i} style={styles.reviewCard}>
-                <View style={styles.reviewHeader}>
-                  <View style={styles.reviewAvatar}>
-                    <Ionicons name="person-outline" size={16} color="#9C9690" />
-                  </View>
-                  <View style={styles.reviewInfo}>
-                    <Text style={styles.reviewName}>{review.name}</Text>
-                    <View style={styles.reviewStars}>
-                      {Array.from({ length: review.stars }).map((_, si) => (
-                        <Ionicons key={si} name="star" size={12} color="#F59E0B" />
-                      ))}
+            {reviews.length > 0 ? (
+              reviews.map((review) => (
+                <View key={review.id} style={styles.reviewCard}>
+                  <View style={styles.reviewHeader}>
+                    <View style={styles.reviewAvatar}>
+                      {review.user?.avatar ? (
+                        <Image source={{ uri: review.user.avatar }} style={{ width: 32, height: 32, borderRadius: 16 }} />
+                      ) : (
+                        <Ionicons name="person-outline" size={16} color="#9C9690" />
+                      )}
                     </View>
+                    <View style={styles.reviewInfo}>
+                      <Text style={styles.reviewName}>{review.user?.name || 'Anonymous'}</Text>
+                      <View style={styles.reviewStars}>
+                        {Array.from({ length: review.rating }).map((_, si) => (
+                          <Ionicons key={si} name="star" size={12} color="#F59E0B" />
+                        ))}
+                      </View>
+                    </View>
+                    <Text style={styles.reviewTime}>
+                      {new Date(review.createdAt).toLocaleDateString()}
+                    </Text>
                   </View>
-                  <Text style={styles.reviewTime}>{review.time}</Text>
+                  <Text style={styles.reviewText}>{review.text}</Text>
                 </View>
-                <Text style={styles.reviewText}>{review.text}</Text>
+              ))
+            ) : (
+              <View style={styles.reviewCard}>
+                <Text style={styles.reviewText}>No reviews yet</Text>
               </View>
-            ))}
+            )}
           </View>
         )}
 

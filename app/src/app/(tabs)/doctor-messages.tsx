@@ -64,9 +64,9 @@ export default function DoctorMessagesScreen() {
       return {
         id: String(conv.id),
         name: appointment?.patientName || `Patient #${conv.patientId}`,
-        lastMessage: '',
+        lastMessage: conv.lastMessageText || '',
         time: formatChatTime(conv.lastMessageAt),
-        unreadCount: 0,
+        unreadCount: conv.unreadCount || 0,
         isPending: false,
         animalImage: appointment?.animalImage,
       };

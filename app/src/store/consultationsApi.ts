@@ -29,6 +29,14 @@ export const consultationsApi = createApi({
       query: (id) => `/consultations/${id}`,
       providesTags: (_result, _error, id) => [{ type: 'Consultation', id }],
     }),
+    startConsultation: builder.mutation<Consultation, string>({
+      query: (id) => ({
+        url: `/consultations/${id}`,
+        method: 'PUT',
+        body: { status: 'IN_PROGRESS', startedAt: new Date().toISOString() },
+      }),
+      invalidatesTags: (_result, _error, id) => [{ type: 'Consultation', id }],
+    }),
     update: builder.mutation<Consultation, { id: string; data: Partial<Consultation> }>({
       query: ({ id, data }) => ({
         url: `/consultations/${id}`,
@@ -50,6 +58,7 @@ export const consultationsApi = createApi({
 export const {
   useGetByAnimalQuery,
   useGetByIdQuery,
+  useStartConsultationMutation,
   useUpdateMutation,
   useEndConsultationMutation,
 } = consultationsApi;

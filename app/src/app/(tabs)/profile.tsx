@@ -81,7 +81,7 @@ export default function ProfileScreen() {
               <View style={styles.doctorInfoRow}>
                 <View style={styles.avatarWrapper}>
                   <Image
-                    source={require('@/assets/images/doctor_avatar.png')}
+                    source={doctorProfile?.avatar ? { uri: doctorProfile.avatar } : require('@/assets/images/doctor_avatar.png')}
                     style={styles.doctorAvatar}
                     contentFit="cover"
                   />

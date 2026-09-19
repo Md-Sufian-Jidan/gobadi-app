@@ -102,9 +102,30 @@ export class ConversationService {
     });
   }
 
-  async touchLastMessageAt(conversationId: number): Promise<void> {
+  async touchLastMessageAt(
+    conversationId: number,
+    messageText?: string,
+  ): Promise<void> {
+    const update: any = { lastMessageAt: new Date() };
+    if (messageText !== undefined) {
+      update.lastMessageText =
+        messageText.length > 200 ? `${messageText.slice(0, 200)}…` : messageText;
+    }
+    await this.conversationRepository.update(conversationId, update);
+  }
+
+  async incrementUnread(conversationId: number): Promise<void> {
+    await this.conversationRepository
+      .createQueryBuilder()
+      .update(Conversation)
+      .set({ unreadCount: () => '"unreadCount" + 1' })
+      .where('id = :id', { id: conversationId })
+      .execute();
+  }
+
+  async resetUnread(conversationId: number): Promise<void> {
     await this.conversationRepository.update(conversationId, {
-      lastMessageAt: new Date(),
+      unreadCount: 0,
     });
   }
 }
