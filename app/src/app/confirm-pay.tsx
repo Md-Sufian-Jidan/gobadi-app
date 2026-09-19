@@ -20,25 +20,25 @@ export default function ConfirmPayScreen() {
 
   const doctor = doctorData
     ? {
-        id: String(doctorData.id),
-        name: doctorData.name,
-        specialty: doctorData.specialty,
-        location: 'Uttar Badda, Dhaka',
-        rating: doctorData.rating || 4.8,
-        reviews: 124,
-        image: doctorData.avatar === 'jessica_doctor.png'
-          ? require('@/assets/images/jessica_doctor.png')
-          : require('@/assets/images/doctor.png'),
-      }
+      id: String(doctorData.id),
+      name: doctorData.name,
+      specialty: doctorData.specialty,
+      location: 'Uttar Badda, Dhaka',
+      rating: doctorData.rating || 4.8,
+      reviews: 124,
+      image: doctorData.avatar === 'jessica_doctor.png'
+        ? require('@/assets/images/jessica_doctor.png')
+        : require('@/assets/images/doctor.png'),
+    }
     : {
-        id: doctorId || '1',
-        name: 'Loading...',
-        specialty: '',
-        location: '',
-        rating: 0,
-        reviews: 0,
-        image: require('@/assets/images/doctor.png'),
-      };
+      id: doctorId || '1',
+      name: 'Loading...',
+      specialty: '',
+      location: '',
+      rating: 0,
+      reviews: 0,
+      image: require('@/assets/images/doctor.png'),
+    };
 
   // Format Date value nicely
   const selectedDay = params.day ? String(params.day) : '28';
@@ -96,17 +96,17 @@ export default function ConfirmPayScreen() {
 
           {/* Your Slot Section */}
           <Text style={styles.sectionHeader}>Your Slot</Text>
-          
+
           <View style={styles.slotDetailRow}>
             <Text style={styles.slotLabel}>Hour</Text>
             <Text style={styles.slotValue}>{selectedTime}</Text>
           </View>
-          
+
           <View style={styles.slotDetailRow}>
             <Text style={styles.slotLabel}>Dates</Text>
             <Text style={styles.slotValue}>{fullDateDisplay}</Text>
           </View>
-          
+
           <View style={styles.slotDetailRow}>
             <Text style={styles.slotLabel}>Visit Type</Text>
             <Text style={[styles.slotValue, styles.onlineText]}>{selectedVisitType}</Text>
@@ -153,7 +153,7 @@ export default function ConfirmPayScreen() {
           activeOpacity={0.85}
         >
           <Text style={styles.confirmButtonIcon}>💵</Text>
-          <Text style={styles.confirmButtonText}>Confirm Payment</Text>
+          <Text style={styles.confirmButtonText}>Confirm Booking</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import {
   StyleSheet,
   View,
@@ -120,60 +120,60 @@ export default function AnimalsListScreen() {
             onAction={() => router.push('/add-animal')}
           />
         ) : (
-        animals.map((item) => (
-          <TouchableOpacity
-            key={item.id}
-            style={styles.card}
-            activeOpacity={0.9}
-            onPress={() => router.push({
-              pathname: '/my-animal-detail',
-              params: { id: item.id }
-            })}
-          >
-            <Image source={item.image ? { uri: item.image } : animalImage(item.breed)} style={styles.cardImage} contentFit="cover" />
+          animals.map((item) => (
+            <TouchableOpacity
+              key={item.id}
+              style={styles.card}
+              activeOpacity={0.9}
+              onPress={() => router.push({
+                pathname: '/my-animal-detail',
+                params: { id: item.id }
+              })}
+            >
+              <Image source={item.image ? { uri: item.image } : animalImage(item.breed)} style={styles.cardImage} contentFit="cover" />
 
-            <View style={styles.cardContent}>
-              <View style={styles.cardHeader}>
-                <Text style={styles.cardName}>{item.name}</Text>
-                <View
-                  style={[
-                    styles.statusBadge,
-                    animalStatus(item.id) === 'Healthy' ? styles.statusHealthy : styles.statusTreatment,
-                  ]}
-                >
-                  <Text
+              <View style={styles.cardContent}>
+                <View style={styles.cardHeader}>
+                  <Text style={styles.cardName}>{item.name}</Text>
+                  <View
                     style={[
-                      styles.statusText,
-                      animalStatus(item.id) === 'Healthy' ? styles.statusTextHealthy : styles.statusTextTreatment,
+                      styles.statusBadge,
+                      animalStatus(item.id) === 'Healthy' ? styles.statusHealthy : styles.statusTreatment,
                     ]}
                   >
-                    {animalStatus(item.id)}
-                  </Text>
+                    <Text
+                      style={[
+                        styles.statusText,
+                        animalStatus(item.id) === 'Healthy' ? styles.statusTextHealthy : styles.statusTextTreatment,
+                      ]}
+                    >
+                      {animalStatus(item.id)}
+                    </Text>
+                  </View>
+                </View>
+
+                <Text style={styles.cardDesc} numberOfLines={1}>
+                  {item.color ? `${item.color} colored coat and characteristics` : 'cream-colored coat and tuft of blond hair'}
+                </Text>
+
+                {/* Specs Row */}
+                <View style={styles.specsRow}>
+                  <View style={styles.specItem}>
+                    <Text style={styles.specLabel}>Species</Text>
+                    <Text style={styles.specValue}>{item.breed}</Text>
+                  </View>
+                  <View style={styles.specItem}>
+                    <Text style={styles.specLabel}>Age</Text>
+                    <Text style={styles.specValue}>{item.age}</Text>
+                  </View>
+                  <View style={styles.specItem}>
+                    <Text style={styles.specLabel}>Weight</Text>
+                    <Text style={styles.specValue}>{item.weight}</Text>
+                  </View>
                 </View>
               </View>
-
-              <Text style={styles.cardDesc} numberOfLines={1}>
-                {item.color ? `${item.color} colored coat and characteristics` : 'cream-colored coat and tuft of blond hair'}
-              </Text>
-
-              {/* Specs Row */}
-              <View style={styles.specsRow}>
-                <View style={styles.specItem}>
-                  <Text style={styles.specLabel}>Species</Text>
-                  <Text style={styles.specValue}>{item.breed}</Text>
-                </View>
-                <View style={styles.specItem}>
-                  <Text style={styles.specLabel}>Age</Text>
-                  <Text style={styles.specValue}>{item.age}</Text>
-                </View>
-                <View style={styles.specItem}>
-                  <Text style={styles.specLabel}>Weight</Text>
-                  <Text style={styles.specValue}>{item.weight}</Text>
-                </View>
-              </View>
-            </View>
-          </TouchableOpacity>
-        )))}
+            </TouchableOpacity>
+          )))}
       </ScrollView>
 
       {/* Floating Add Animal Button */}
