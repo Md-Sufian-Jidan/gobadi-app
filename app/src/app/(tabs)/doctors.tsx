@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import {
   StyleSheet,
   View,
@@ -138,14 +138,14 @@ export default function DoctorsScreen() {
 
               <View style={styles.cardDividerDashed} />
 
-              <View style={styles.doctorQuickInfo}>
+              {/* <View style={styles.doctorQuickInfo}>
                 <Image source={require('@/assets/images/doctor.png')} style={styles.doctorThumb} />
                 <View style={styles.doctorMeta}>
                   <Text style={styles.quickDocName}>Dr. David Patel</Text>
                   <Text style={styles.quickDocSpecialty}>Veterinary Surgery</Text>
                   <Text style={styles.quickDocTime}>09.00 AM • Dec 20, 2026</Text>
                 </View>
-              </View>
+              </View> */}
 
               {/* Dots */}
               <View style={styles.slideDots}>
@@ -237,7 +237,7 @@ export default function DoctorsScreen() {
           <View key={doc.id} style={styles.doctorCard}>
             <Image source={doc.image} style={styles.doctorPortrait} />
             <View style={styles.doctorDetails}>
-              <Text style={styles.doctorName}>{doc.name}</Text>
+              {/* <Text style={styles.doctorName}>{doc.name}</Text>
 
               <View style={styles.doctorCardDivider} />
 
@@ -252,10 +252,10 @@ export default function DoctorsScreen() {
                 <Text style={styles.starIcon}>⭐</Text>
                 <Text style={styles.ratingValue}>{doc.rating}</Text>
                 <Text style={styles.reviewsText}>| {doc.reviews.toLocaleString()} Reviews</Text>
-              </View>
+              </View> */}
 
               {/* Action Buttons inside Details Column */}
-              <View style={styles.doctorCardButtons}>
+              {/* <View style={styles.doctorCardButtons}>
                 <TouchableOpacity
                   style={styles.bookButton}
                   onPress={() => router.push({ pathname: '/book-slot', params: { id: doc.id } })}
@@ -270,7 +270,7 @@ export default function DoctorsScreen() {
                 >
                   <Text style={styles.detailsButtonText}>📄 Details</Text>
                 </TouchableOpacity>
-              </View>
+              </View> */}
             </View>
           </View>
         ))}

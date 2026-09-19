@@ -97,7 +97,15 @@ export default function AccountDetailsScreen() {
       <View style={styles.bottomBar}>
         <TouchableOpacity
           style={styles.closeButton}
-          onPress={() => (user ? router.replace('/(tabs)') : router.replace('/login'))}
+          onPress={() => {
+            if (!user) {
+              router.replace('/login');
+            } else if (user.role === 'doctor') {
+              router.replace('/(tabs)/doctor-home');
+            } else {
+              router.replace('/(tabs)');
+            }
+          }}
           activeOpacity={0.85}
         >
           <Text style={styles.closeButtonText}>Close</Text>

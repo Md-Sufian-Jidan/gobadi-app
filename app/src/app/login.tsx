@@ -20,6 +20,7 @@ import { useLoginMutation } from '@/store/authApi';
 import { useSocialAuth } from '@/hooks/use-social-auth';
 import { PasswordField } from '@/components/password-field';
 import { IdentifierTabs, IdentifierMode } from '@/components/identifier-tabs';
+import { store } from '@/store/store';
 
 const BD_PHONE_REGEX = /^01[3-9]\d{8}$/;
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -35,7 +36,14 @@ export default function LoginScreen() {
   const [errorMessage, setErrorMessage] = useState('');
 
   const [login, { isLoading }] = useLoginMutation();
-  const goToTabs = () => router.replace('/(tabs)');
+  const goToTabs = () => {
+    const currentUser = store.getState().auth.user;
+    if (currentUser?.role === 'doctor') {
+      router.replace('/(tabs)/doctor-home');
+    } else {
+      router.replace('/(tabs)');
+    }
+  };
   const { withGoogle, withFacebook, isLoading: isSocialLoading, error: socialError } = useSocialAuth(goToTabs);
 
   const handleLogin = async () => {
