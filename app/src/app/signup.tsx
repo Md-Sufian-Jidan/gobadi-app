@@ -35,6 +35,7 @@ export default function SignUpScreen() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
 
   const [errorMessage, setErrorMessage] = useState('');
 
@@ -90,6 +91,11 @@ export default function SignUpScreen() {
         return;
       }
       identifier = email.trim();
+    }
+
+    if (!agreedToTerms) {
+      setErrorMessage('You must agree to the Terms of Service.');
+      return;
     }
 
     if (!role) {
@@ -254,7 +260,7 @@ export default function SignUpScreen() {
                       secureTextEntry={!showPassword}
                     />
                     <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeIcon} activeOpacity={0.7}>
-                      <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={20} color="#A39E99" />
+                      <Ionicons name={showPassword ? 'eye-outline' : 'eye-off-outline'} size={20} color="#A39E99" />
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -271,7 +277,7 @@ export default function SignUpScreen() {
                       secureTextEntry={!showConfirmPassword}
                     />
                     <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)} style={styles.eyeIcon} activeOpacity={0.7}>
-                      <Ionicons name={showConfirmPassword ? 'eye-off-outline' : 'eye-outline'} size={20} color="#A39E99" />
+                      <Ionicons name={showConfirmPassword ? 'eye-outline' : 'eye-off-outline'} size={20} color="#A39E99" />
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -294,10 +300,19 @@ export default function SignUpScreen() {
             )}
 
             {/* Terms of Service */}
-            <Text style={styles.termsText}>
-              By continuing, you agree to our{' '}
-              <Text style={styles.termsHighlight}>terms of services</Text>
-            </Text>
+            <TouchableOpacity
+              style={styles.termsRow}
+              activeOpacity={0.7}
+              onPress={() => setAgreedToTerms(!agreedToTerms)}
+            >
+              <View style={[styles.checkbox, agreedToTerms && styles.checkboxChecked]}>
+                {agreedToTerms && <Ionicons name="checkmark" size={14} color="#FFFFFF" />}
+              </View>
+              <Text style={styles.termsText}>
+                By continuing, you agree to our{' '}
+                <Text style={styles.termsHighlight}>terms of services</Text>
+              </Text>
+            </TouchableOpacity>
 
             {/* Error message */}
             {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
@@ -552,11 +567,29 @@ const styles = StyleSheet.create({
   placeholderText: {
     color: '#A39E99',
   },
+  termsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 12,
+  },
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderRadius: 4,
+    borderWidth: 1.5,
+    borderColor: '#A39E99',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 8,
+  },
+  checkboxChecked: {
+    backgroundColor: '#BD632F',
+    borderColor: '#BD632F',
+  },
   termsText: {
     fontSize: 13,
     color: '#9C9690',
-    textAlign: 'center',
-    marginVertical: 12,
+    flex: 1,
   },
   termsHighlight: {
     color: '#BD632F',
